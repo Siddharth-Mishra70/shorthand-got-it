@@ -120,7 +120,7 @@ const LivePreviewSection = () => {
           <h2 className="text-4xl sm:text-5xl font-black text-gray-900 mb-3">
             See{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1e3a8a] to-blue-500">
-              Rapid Steno
+              Shorthandians
             </span>{' '}
             in Action
           </h2>
