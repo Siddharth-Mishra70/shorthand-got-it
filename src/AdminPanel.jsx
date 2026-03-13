@@ -5,7 +5,10 @@ import {
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.min.mjs';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+).toString();
 
 const AdminPanel = ({ user, onLogout }) => {
     const [currentTab, setCurrentTab] = useState('students');
