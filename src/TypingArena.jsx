@@ -381,7 +381,10 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete }) => {
                     {/* Reference Text Area */}
                     <div className="flex flex-col">
                         <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Reference Text</h3>
-                        <div className="flex-1 bg-white border border-gray-200 rounded-xl p-5 shadow-sm overflow-y-auto leading-relaxed text-lg min-h-[300px]">
+                        <div 
+                            ref={referenceScrollRef}
+                            className="flex-1 bg-white border border-gray-200 rounded-xl p-5 shadow-sm overflow-y-auto leading-relaxed text-lg min-h-[300px] scroll-smooth"
+                        >
                             {renderHighlightedText()}
                         </div>
                     </div>
