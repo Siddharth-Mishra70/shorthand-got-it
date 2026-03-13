@@ -105,10 +105,10 @@ function App() {
   };
 
   const courses = [
-    { title: 'Kailash Chandra Vol 1-24', type: 'Dictation Series', isPremium: false, view: 'arena' },
-    { title: 'SSC Grade C & D', type: 'Exam Preparation', isPremium: true, view: 'arena' },
-    { title: 'Patna High Court', type: 'Court Specific', isPremium: true, view: 'formatting' },
-    { title: 'Allahabad HC APS', type: 'Exercise 110 (Pitman)', isPremium: false, view: 'pitman' },
+    { id: 'kc-1', title: 'Kailash Chandra Vol 1-24', type: 'Dictation Series', isPremium: false, view: 'arena-kc' },
+    { id: 'ssc-cd', title: 'SSC Grade C & D', type: 'Exam Preparation', isPremium: true, view: 'arena-ssc' },
+    { id: 'patna', title: 'Patna High Court', type: 'Court Specific', isPremium: true, view: 'formatting' },
+    { id: 'allahabad', title: 'Allahabad HC APS', type: 'Exercise 110 (Pitman)', isPremium: false, view: 'pitman' },
   ];
 
   const currentViewData = courses.find((c) => c.view === currentView);
@@ -144,7 +144,7 @@ function App() {
   // ── Protected View Guard ──────────────────────────────────
   // If user navigates directly to a protected view via state, kick them out
   useEffect(() => {
-    const protectedViews = ['dashboard', 'arena', 'formatting', 'pitman', 'results'];
+    const protectedViews = ['dashboard', 'arena-kc', 'arena-ssc', 'formatting', 'pitman', 'results'];
     const isProtected = protectedViews.includes(currentView) || currentView.startsWith('results:');
     if (isProtected && !isLoggedIn) {
       setCurrentView('auth');
@@ -162,7 +162,7 @@ function App() {
   }
 
   // ── Course Sub-views (Protected) ──────────────────────────
-  if (currentView === 'arena') {
+  if (currentView === 'arena-kc' || currentView === 'arena-ssc') {
     return (
       <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
         {/* Arena Header with Tabs */}
@@ -211,7 +211,9 @@ function App() {
         <div className="flex-1 flex flex-col min-h-0">
           {arenaTab === 'transcribe' ? (
             <TypingArena
-              initialCourse={currentViewData?.title || 'Kailash Chandra'}
+              initialCourse={currentViewData?.id || 'kc-1'}
+              courses={courses}
+              onNavigateCourse={setCurrentView}
               onTestComplete={(id) => {
                 setLastAttemptId(id);
                 setArenaTab('analysis');

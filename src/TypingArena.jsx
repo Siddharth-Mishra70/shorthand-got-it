@@ -30,7 +30,7 @@ const mockExercises = [
     }
 ];
 
-const TypingArena = ({ initialCourse = 'kc-1', onTestComplete }) => {
+const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNavigateCourse }) => {
     const [availableExercises, setAvailableExercises] = useState(() => {
         const stored = localStorage.getItem('admin_kailash_data_list');
         let newKc = [];
@@ -63,6 +63,13 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete }) => {
     const [selectedExercise, setSelectedExercise] = useState(() => {
         return availableExercises.find(e => e.title.includes(initialCourse) || e.id === initialCourse) || availableExercises[0];
     });
+
+    useEffect(() => {
+        const found = availableExercises.find(e => e.title.includes(initialCourse) || e.id === initialCourse) || availableExercises[0];
+        setSelectedExercise(found);
+        handleReset();
+    }, [initialCourse, availableExercises]);
+
     const mockReferenceLines = selectedExercise.lines;
     const mockReferenceText = mockReferenceLines.join(' ');
 
@@ -343,15 +350,23 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete }) => {
                         <h2 className="text-xl font-bold tracking-wide">Exercise:</h2>
                         <select
                             className="bg-blue-800/50 text-white text-sm font-bold px-3 py-1.5 rounded-lg outline-none border border-blue-700 focus:border-blue-400"
-                            value={selectedExercise.id}
+                            value={courses ? courses.find(c => c.id === initialCourse)?.view : selectedExercise.id}
                             onChange={(e) => {
-                                const ex = availableExercises.find(x => x.id === e.target.value);
-                                setSelectedExercise(ex);
-                                handleReset();
+                                if (onNavigateCourse && courses) {
+                                    onNavigateCourse(e.target.value);
+                                } else {
+                                    const ex = availableExercises.find(x => x.id === e.target.value);
+                                    if (ex) {
+                                        setSelectedExercise(ex);
+                                        handleReset();
+                                    }
+                                }
                             }}
                             disabled={isStarted}
                         >
-                            {availableExercises.map(ex => (
+                            {courses ? courses.map(c => (
+                                <option key={c.view} value={c.view} className="bg-white text-gray-900">{c.title}</option>
+                            )) : availableExercises.map(ex => (
                                 <option key={ex.id} value={ex.id} className="bg-white text-gray-900">{ex.title}</option>
                             ))}
                         </select>
