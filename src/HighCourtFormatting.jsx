@@ -28,7 +28,7 @@ const HighCourtFormatting = ({ onBack }) => {
     const [showPastAttempts, setShowPastAttempts] = useState(false);
     const editorRef = useRef(null);
 
-    const sampleDocument = `IN THE HIGH COURT OF JUDICATURE AT PATNA
+    const sampleDocument = localStorage.getItem('admin_highcourt_pdf_text') || `IN THE HIGH COURT OF JUDICATURE AT PATNA
 Civil Writ Jurisdiction Case No. 1234 of 2024
 
 In the matter of:

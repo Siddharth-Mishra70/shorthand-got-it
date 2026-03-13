@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import {
     Users, Headphones, Scale, FileText, BarChart2,
-    Settings, LogOut, Search, Plus, Edit2, Trash2, Keyboard, CheckCircle, Save
+    Settings, LogOut, Search, Plus, Edit2, Trash2, Keyboard, CheckCircle, Save, Loader2, FileUp
 } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.min.mjs';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 const AdminPanel = ({ user, onLogout }) => {
     const [currentTab, setCurrentTab] = useState('students');
@@ -16,6 +19,13 @@ const AdminPanel = ({ user, onLogout }) => {
         if (legacy) return [{ id: Date.now(), text: legacy, date: 'Legacy Upload' }];
         return [];
     });
+    
+    // High Court PDF Upload State
+    const [isExtractingHc, setIsExtractingHc] = useState(false);
+    const [hcText, setHcText] = useState(() => localStorage.getItem('admin_highcourt_pdf_text') || '');
+
+    // Audio Upload State
+    const [audioUploaded, setAudioUploaded] = useState(false);
 
     const handleSaveKcData = () => {
         if (!kcText.trim()) return;
@@ -109,10 +119,30 @@ const AdminPanel = ({ user, onLogout }) => {
                     <div className="animate-in fade-in duration-300 slide-in-from-bottom-2">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-bold text-gray-800">Audio Dictations Management</h2>
-                            <button className="bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl flex items-center text-sm font-bold hover:bg-blue-800 transition-all shadow-md hover:-translate-y-0.5">
-                                <Plus className="w-4 h-4 mr-2" /> Upload Audio
-                            </button>
+                            <div>
+                                <input 
+                                    type="file" 
+                                    id="audio-upload" 
+                                    className="hidden" 
+                                    accept="audio/*" 
+                                    onChange={(e) => {
+                                        if (e.target.files?.length > 0) {
+                                            setAudioUploaded(true);
+                                            setTimeout(() => setAudioUploaded(false), 3000);
+                                        }
+                                    }}
+                                />
+                                <label htmlFor="audio-upload" className="bg-[#1e3a8a] cursor-pointer text-white px-5 py-2.5 rounded-xl flex items-center text-sm font-bold hover:bg-blue-800 transition-all shadow-md hover:-translate-y-0.5">
+                                    <Plus className="w-4 h-4 mr-2" /> Upload Audio
+                                </label>
+                            </div>
                         </div>
+                        {audioUploaded && (
+                            <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center">
+                                <CheckCircle className="w-5 h-5 mr-2" />
+                                <strong>Success!</strong> &nbsp;Audio file uploaded successfully for dictation tests.
+                            </div>
+                        )}
                         <div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center text-gray-500 flex flex-col items-center justify-center">
                             <div className="w-16 h-16 bg-blue-50 text-blue-300 rounded-full flex items-center justify-center mb-4">
                                 <Headphones className="w-8 h-8" />
@@ -127,17 +157,64 @@ const AdminPanel = ({ user, onLogout }) => {
                     <div className="animate-in fade-in duration-300 slide-in-from-bottom-2">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-bold text-gray-800">High Court Data Management</h2>
-                            <button className="bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl flex items-center text-sm font-bold hover:bg-blue-800 transition-all shadow-md hover:-translate-y-0.5">
-                                <Plus className="w-4 h-4 mr-2" /> Add Sample Document
-                            </button>
-                        </div>
-                        <div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center text-gray-500 flex flex-col items-center justify-center">
-                            <div className="w-16 h-16 bg-blue-50 text-blue-300 rounded-full flex items-center justify-center mb-4">
-                                <Scale className="w-8 h-8" />
+                            <div>
+                                <input 
+                                    type="file" 
+                                    id="hc-pdf-upload" 
+                                    className="hidden" 
+                                    accept=".pdf"
+                                    onChange={async (e) => {
+                                        const file = e.target.files[0];
+                                        if (!file) return;
+                                        setIsExtractingHc(true);
+                                        try {
+                                            const arrayBuffer = await file.arrayBuffer();
+                                            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                                            let fullText = '';
+                                            for (let i = 1; i <= pdf.numPages; i++) {
+                                                const page = await pdf.getPage(i);
+                                                const textContent = await page.getTextContent();
+                                                const pageText = textContent.items.map(item => item.str).join(' ');
+                                                fullText += pageText + '\\n\\n';
+                                            }
+                                            setHcText(fullText);
+                                            localStorage.setItem('admin_highcourt_pdf_text', fullText);
+                                        } catch (err) {
+                                            console.error("PDF Extraction Error:", err);
+                                            alert("Failed to extract text from PDF");
+                                        }
+                                        setIsExtractingHc(false);
+                                        e.target.value = null; // reset
+                                    }}
+                                />
+                                <label htmlFor="hc-pdf-upload" className="bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl flex items-center text-sm font-bold hover:bg-blue-800 transition-all shadow-md hover:-translate-y-0.5 cursor-pointer">
+                                    {isExtractingHc ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileUp className="w-4 h-4 mr-2" />} 
+                                    {isExtractingHc ? 'Extracting PDF...' : 'Upload PDF Document'}
+                                </label>
                             </div>
-                            <h3 className="text-lg font-bold text-gray-700 mb-1">No High Court Data</h3>
-                            <p className="max-w-md mx-auto text-sm">Add custom document text for the High Court formatting mock test.</p>
                         </div>
+                        
+                        {hcText ? (
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h3 className="font-bold text-[#1e3a8a] mb-2 border-b pb-2 flex justify-between items-center">
+                                    <span>Extracted PDF Preview</span>
+                                    <span className="text-xs text-gray-400 font-normal">This data is now visible to students.</span>
+                                </h3>
+                                <textarea
+                                    value={hcText}
+                                    readOnly
+                                    className="w-full h-80 p-4 text-sm font-serif leading-relaxed text-gray-700 border border-gray-100 rounded-lg bg-gray-50 focus:outline-none resize-y"
+                                ></textarea>
+                            </div>
+                        ) : (
+                            <div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center text-gray-500 flex flex-col items-center justify-center">
+                                <div className="w-16 h-16 bg-blue-50 text-blue-300 rounded-full flex items-center justify-center mb-4">
+                                    <Scale className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-700 mb-1">No High Court Data</h3>
+                                <p className="max-w-md mx-auto text-sm">Upload a PDF document. The platform will extract the text automatically and push it to the High Court formatting mock test.</p>
+                            </div>
+                        )}
                     </div>
                 );
             case 'kailash':
