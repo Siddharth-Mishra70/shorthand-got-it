@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Volume2, FastForward, Clock, Activity, CheckCircle2, Share2, X, FileCheck } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, FastForward, Clock, Activity, CheckCircle2, Share2, X, FileCheck, TrendingUp } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { saveTestResult } from './lib/saveTestResult';
 
@@ -361,7 +361,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete }) => {
                     <div className="flex items-center bg-white border border-gray-200 rounded-xl shadow-sm p-1">
                         <Volume2 className="w-4 h-4 text-gray-400 mx-2" />
                         <div className="flex space-x-1 border-l border-gray-100 pl-2">
-                            {[0.7, 0.8, 1.0, 1.2].map(speed => (
+                            {[0.5, 0.7, 0.8, 1.0, 1.2].map(speed => (
                                 <button
                                     key={speed}
                                     onClick={() => changeSpeed(speed)}

@@ -1,67 +1,19 @@
+const LOCAL_STORAGE_KEY = 'shorthandians_local_results';
+
 /**
  * saveTestResult
  * ─────────────────────────────────────────────────────────────────────────────
- * Saves a completed typing test attempt to the Supabase `TestAttempts` table.
- *
- * REQUIRED SUPABASE TABLE  (run once in the SQL Editor):
- * ─────────────────────────────────────────────────────
- * create table public."TestAttempts" (
- *   id              uuid primary key default gen_random_uuid(),
- *   user_id         text        not null,
- *   exercise_id     text        not null,
- *   wpm             numeric     not null,
- *   accuracy        numeric     not null,
- *   mistakes_count  int         not null default 0,
- *   attempted_text  text        not null,
- *   original_text   text        not null,
- *   created_at      timestamptz not null default now()
- * );
- *
- * -- Enable Row-Level Security (recommended)
- * alter table public."TestAttempts" enable row level security;
- *
- * -- Allow authenticated users to insert and read their own rows
- * create policy "Users can insert own attempts"
- *   on public."TestAttempts" for insert
- *   with check (auth.uid()::text = user_id);
- *
- * create policy "Users can view own attempts"
- *   on public."TestAttempts" for select
- *   using (auth.uid()::text = user_id);
- *
- * @param {import('@supabase/supabase-js').SupabaseClient} supabase
- * @param {{
- *   userId:        string,
- *   exerciseId:    string,
- *   wpm:           number,
- *   accuracy:      number,
- *   attemptedText: string,
- *   originalText:  string,
- *   mistakesCount: number,
- * }} params
- *
- * @returns {Promise<{ attemptId: string }>}
- * @throws  {Error} with a descriptive message when the insert fails
+ * Saves a completed typing test attempt. Falls back to LocalStorage if Supabase fails.
  */
-export async function saveTestResult(supabase, {
-  userId,
-  exerciseId,
-  wpm,
-  accuracy,
-  attemptedText,
-  originalText,
-  mistakesCount,
-}) {
+export async function saveTestResult(supabase, params) {
+  const { userId, exerciseId, wpm, accuracy, attemptedText, originalText, mistakesCount } = params;
+
   /* ── Input validation ──────────────────────────────────────── */
   if (!userId)        throw new Error('saveTestResult: userId is required.');
   if (!exerciseId)    throw new Error('saveTestResult: exerciseId is required.');
-  if (typeof wpm !== 'number')      throw new Error('saveTestResult: wpm must be a number.');
-  if (typeof accuracy !== 'number') throw new Error('saveTestResult: accuracy must be a number.');
-  if (!attemptedText) throw new Error('saveTestResult: attemptedText is required.');
-  if (!originalText)  throw new Error('saveTestResult: originalText is required.');
-
-  /* ── Build row ─────────────────────────────────────────────── */
+  
   const row = {
+    id:              crypto.randomUUID(),
     user_id:        userId,
     exercise_id:    exerciseId,
     wpm:            Math.round(wpm),
@@ -69,72 +21,90 @@ export async function saveTestResult(supabase, {
     mistakes_count: mistakesCount ?? 0,
     attempted_text: attemptedText,
     original_text:  originalText,
-    // created_at is auto-set by Supabase default
+    created_at:     new Date().toISOString()
   };
 
-  /* ── Insert into Supabase ─────────────────────────────────── */
-  const { data, error } = await supabase
-    .from('TestAttempts')
-    .insert(row)
-    .select('id')          // return only the new row's id
-    .single();             // expect exactly one row back
-
-  if (error) {
-    console.error('[saveTestResult] Supabase error:', error);
-    throw new Error(error.message || 'Failed to save test result.');
+  try {
+    /* ── Attempt Supabase Insert ────────────────────────────── */
+    if (supabase && !supabase.supabaseUrl.includes('placeholder')) {
+        const { data, error } = await supabase
+          .from('TestAttempts')
+          .insert(row)
+          .select('id')
+          .single();
+          
+        if (!error && data) return { attemptId: data.id };
+        console.warn("[saveTestResult] Supabase failed, falling back to LocalStorage:", error?.message);
+    }
+  } catch (err) {
+    console.warn("[saveTestResult] Network error, falling back to LocalStorage.");
   }
 
-  return { attemptId: data.id };
+  /* ── LocalStorage Fallback ────────────────────────────────── */
+  const existing = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+  existing.push(row);
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(existing));
+
+  return { attemptId: row.id };
 }
 
 /**
  * fetchTestResult
  * ─────────────────────────────────────────────────────────────────────────────
- * Fetches a single attempt row by its UUID primary key.
- *
- * @param {import('@supabase/supabase-js').SupabaseClient} supabase
- * @param {string} attemptId  UUID of the TestAttempts row
- * @returns {Promise<Object>} The raw row from Supabase
+ * Fetches result from Supabase OR LocalStorage.
  */
 export async function fetchTestResult(supabase, attemptId) {
   if (!attemptId) throw new Error('fetchTestResult: attemptId is required.');
 
-  const { data, error } = await supabase
-    .from('TestAttempts')
-    .select('*')
-    .eq('id', attemptId)
-    .single();
+  try {
+    if (supabase && !supabase.supabaseUrl.includes('placeholder')) {
+        const { data, error } = await supabase
+          .from('TestAttempts')
+          .select('*')
+          .eq('id', attemptId)
+          .single();
+        if (!error && data) return data;
+    }
+  } catch (err) {}
 
-  if (error) {
-    console.error('[fetchTestResult] Supabase error:', error);
-    throw new Error(error.message || 'Failed to fetch test result.');
-  }
+  // Local lookup
+  const local = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+  const match = local.find(r => r.id === attemptId);
+  if (match) return match;
 
-  return data;
+  throw new Error('Result not found in Database or LocalStorage.');
 }
 
 /**
  * fetchAllResults
  * ─────────────────────────────────────────────────────────────────────────────
- * Fetches all attempts for a specific user.
- *
- * @param {import('@supabase/supabase-js').SupabaseClient} supabase
- * @param {string} userId
- * @returns {Promise<Array>}
+ * Combines results from Supabase and LocalStorage.
  */
 export async function fetchAllResults(supabase, userId) {
-  if (!userId) throw new Error('fetchAllResults: userId is required.');
+  let results = [];
 
-  const { data, error } = await supabase
-    .from('TestAttempts')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('[fetchAllResults] Supabase error:', error);
-    throw new Error(error.message || 'Failed to fetch results history.');
+  // 1. Try Supabase
+  try {
+    if (supabase && !supabase.supabaseUrl.includes('placeholder')) {
+        const { data, error } = await supabase
+          .from('TestAttempts')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        if (!error && data) results = data;
+    }
+  } catch (err) {
+    console.warn("[fetchAllResults] Supabase unreachable.");
   }
 
-  return data;
+  // 2. Add Local Results
+  const local = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+  const filteredLocal = local.filter(r => r.user_id === userId);
+  
+  // Merge and sort
+  const combined = [...results, ...filteredLocal].sort((a, b) => 
+    new Date(b.created_at) - new Date(a.created_at)
+  );
+
+  return combined;
 }
