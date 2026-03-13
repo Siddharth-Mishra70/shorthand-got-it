@@ -31,21 +31,37 @@ const mockExercises = [
 ];
 
 const TypingArena = ({ initialCourse = 'kc-1', onTestComplete }) => {
-    const [selectedExercise, setSelectedExercise] = useState(() => {
-        const found = mockExercises.find(e => e.title.includes(initialCourse) || e.id === initialCourse) || mockExercises[0];
-        
-        // Dynamically insert uploaded Kailash Chandra data if available
-        if (found.id === 'kc-1') {
-            const adminData = localStorage.getItem('admin_kailash_data');
-            if (adminData) {
-                return {
-                    ...found,
+    const [availableExercises, setAvailableExercises] = useState(() => {
+        const stored = localStorage.getItem('admin_kailash_data_list');
+        let newKc = [];
+        if (stored) {
+            const list = JSON.parse(stored);
+            newKc = list.map((item, idx) => ({
+                id: `kc-${idx + 1}`,
+                title: `Kailash Chandra Vol (Test #${list.length - idx})`,
+                lines: item.text.split('\n').filter(line => line.trim() !== '')
+            }));
+        } else {
+            const legacy = localStorage.getItem('admin_kailash_data');
+            if (legacy) {
+                newKc = [{
+                    id: 'kc-1',
                     title: 'Kailash Chandra Vol (Daily Update)',
-                    lines: adminData.split('\n').filter(line => line.trim() !== '')
-                };
+                    lines: legacy.split('\n').filter(line => line.trim() !== '')
+                }];
             }
         }
-        return found;
+        
+        let exercises = [...mockExercises];
+        if (newKc.length > 0) {
+            exercises = exercises.filter(e => e.id !== 'kc-1');
+            exercises = [...newKc, ...exercises];
+        }
+        return exercises;
+    });
+
+    const [selectedExercise, setSelectedExercise] = useState(() => {
+        return availableExercises.find(e => e.title.includes(initialCourse) || e.id === initialCourse) || availableExercises[0];
     });
     const mockReferenceLines = selectedExercise.lines;
     const mockReferenceText = mockReferenceLines.join(' ');
@@ -329,13 +345,13 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete }) => {
                             className="bg-blue-800/50 text-white text-sm font-bold px-3 py-1.5 rounded-lg outline-none border border-blue-700 focus:border-blue-400"
                             value={selectedExercise.id}
                             onChange={(e) => {
-                                const ex = mockExercises.find(x => x.id === e.target.value);
+                                const ex = availableExercises.find(x => x.id === e.target.value);
                                 setSelectedExercise(ex);
                                 handleReset();
                             }}
                             disabled={isStarted}
                         >
-                            {mockExercises.map(ex => (
+                            {availableExercises.map(ex => (
                                 <option key={ex.id} value={ex.id} className="bg-white text-gray-900">{ex.title}</option>
                             ))}
                         </select>
@@ -360,6 +376,21 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete }) => {
                         </div>
                     </div>
                 </div>
+
+                {/* Tabs for Multiple KC Tests */}
+                {selectedExercise.id.startsWith('kc-') && availableExercises.filter(e => e.id.startsWith('kc-')).length > 1 && (
+                    <div className="bg-blue-50 border-b border-gray-200 px-6 py-3 flex space-x-3 overflow-x-auto custom-scrollbar">
+                        {availableExercises.filter(e => e.id.startsWith('kc-')).map((test) => (
+                            <button
+                                key={test.id}
+                                onClick={() => { setSelectedExercise(test); handleReset(); }}
+                                className={`px-4 py-2 text-sm font-bold rounded-lg whitespace-nowrap transition-colors shadow-sm ${selectedExercise.id === test.id ? 'bg-[#1e3a8a] text-white ring-2 ring-blue-300 ring-offset-1' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'}`}
+                            >
+                                {test.title}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Action / Dictation Area */}
                 <div className="p-6 bg-blue-50/30 border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">

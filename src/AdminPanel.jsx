@@ -8,10 +8,27 @@ const AdminPanel = ({ user, onLogout }) => {
     const [currentTab, setCurrentTab] = useState('students');
     const [kcText, setKcText] = useState('');
     const [kcSaved, setKcSaved] = useState(false);
+    const [isAddingNewKc, setIsAddingNewKc] = useState(false);
+    const [kailashTests, setKailashTests] = useState(() => {
+        const saved = localStorage.getItem('admin_kailash_data_list');
+        if (saved) return JSON.parse(saved);
+        const legacy = localStorage.getItem('admin_kailash_data');
+        if (legacy) return [{ id: Date.now(), text: legacy, date: 'Legacy Upload' }];
+        return [];
+    });
 
     const handleSaveKcData = () => {
         if (!kcText.trim()) return;
-        localStorage.setItem('admin_kailash_data', kcText);
+        const newTest = {
+            id: Date.now(),
+            text: kcText,
+            date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        const updatedTests = [newTest, ...kailashTests];
+        setKailashTests(updatedTests);
+        localStorage.setItem('admin_kailash_data_list', JSON.stringify(updatedTests));
+        setKcText('');
+        setIsAddingNewKc(false);
         setKcSaved(true);
         setTimeout(() => setKcSaved(false), 3000);
     };
@@ -127,26 +144,70 @@ const AdminPanel = ({ user, onLogout }) => {
                 return (
                     <div className="animate-in fade-in duration-300 slide-in-from-bottom-2">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold text-gray-800">Kailash Chandra Upload</h2>
+                            <h2 className="text-2xl font-bold text-gray-800">Kailash Chandra Uploads</h2>
                             <button 
-                                onClick={handleSaveKcData}
-                                className={`px-5 py-2.5 rounded-xl flex items-center text-sm font-bold transition-all shadow-md ${kcSaved ? 'bg-green-500 text-white' : 'bg-[#1e3a8a] text-white hover:bg-blue-800 hover:-translate-y-0.5'}`}
+                                onClick={() => setIsAddingNewKc(true)}
+                                className={`px-5 py-2.5 rounded-xl flex items-center text-sm font-bold transition-all shadow-md bg-[#1e3a8a] text-white hover:bg-blue-800 hover:-translate-y-0.5`}
                             >
-                                {kcSaved ? <CheckCircle className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                                {kcSaved ? 'Saved to Portal!' : 'Publish to Students'}
+                                <Plus className="w-4 h-4 mr-2" /> Add New Test
                             </button>
                         </div>
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                            <div className="mb-4">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Daily Dictation Text (Kailash Chandra Vol)</label>
-                                <p className="text-xs text-gray-500 mb-4">Paste the text content here. This will immediately overwrite the default Kailash Chandra test for all students.</p>
-                                <textarea
-                                    value={kcText}
-                                    onChange={(e) => setKcText(e.target.value)}
-                                    placeholder="Start typing or pasting the passage here..."
-                                    className="w-full h-[400px] p-4 text-base font-serif leading-relaxed border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:border-transparent resize-y"
-                                ></textarea>
+                        
+                        {kcSaved && (
+                            <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center">
+                                <CheckCircle className="w-5 h-5 mr-2" />
+                                <strong>Success!</strong> &nbsp;The new Dictation Test has been published to students.
                             </div>
+                        )}
+
+                        {isAddingNewKc && (
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-[#1e3a8a]/20 mb-8 animate-in slide-in-from-top-2">
+                                <div className="mb-4">
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">New Dictation Text (Kailash Chandra Vol)</label>
+                                    <p className="text-xs text-gray-500 mb-4">Paste the text content here. It will be added as a selectable tab for the students.</p>
+                                    <textarea
+                                        value={kcText}
+                                        onChange={(e) => setKcText(e.target.value)}
+                                        placeholder="Start typing or pasting the passage here..."
+                                        className="w-full h-[250px] p-4 text-base font-serif leading-relaxed border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-[#1e3a8a] focus:border-transparent resize-y"
+                                    ></textarea>
+                                </div>
+                                <div className="flex justify-end space-x-3 mt-4">
+                                    <button 
+                                        onClick={() => { setIsAddingNewKc(false); setKcText(''); }}
+                                        className="px-5 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        onClick={handleSaveKcData}
+                                        className="px-5 py-2 rounded-lg text-sm font-bold bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center shadow"
+                                    >
+                                        <Save className="w-4 h-4 mr-2" /> Save & Publish
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-gray-700 mb-3 border-b pb-2">Uploaded Tests ({kailashTests.length})</h3>
+                            {kailashTests.length === 0 ? (
+                                <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                                    No tests uploaded yet.
+                                </div>
+                            ) : (
+                                kailashTests.map((test, idx) => (
+                                    <div key={test.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="font-bold text-[#1e3a8a]">Kailash Chandra Vol Test #{kailashTests.length - idx}</h4>
+                                            <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-1 rounded">{test.date}</span>
+                                        </div>
+                                        <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed font-serif">
+                                            {test.text}
+                                        </p>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 );
