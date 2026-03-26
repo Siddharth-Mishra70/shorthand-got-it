@@ -132,7 +132,7 @@ const OfferingsSection = ({ onNavigate }) => {
       icon: PenTool,
       title: 'Pitman Exercises',
       description:
-        'Structured Pitman shorthand exercises from the Allahabad HC APS module with stroke-by-stroke guidance.',
+        'Structured Pitman shorthand exercises with stroke-by-stroke guidance for rapid speed building.',
       badge: 'FREE',
       badgeColor: 'bg-green-100 text-green-700',
       gradient: 'bg-gradient-to-r from-blue-400 to-cyan-500',

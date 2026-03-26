@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from './supabaseClient';
 import {
   GraduationCap,
   Headphones,
@@ -11,6 +12,7 @@ import {
   LogOut,
   User,
   BarChart2,
+  CheckCircle,
 } from 'lucide-react';
 
 import TypingArena from './TypingArena';
@@ -22,9 +24,10 @@ import OfferingsSection from './OfferingsSection';
 import AboutContactSection from './AboutContactSection';
 import AuthPage from './AuthPage';
 import LoginRequiredModal from './LoginRequiredModal';
-import LivePreviewSection from './LivePreviewSection';
+import LiveDemoInteractive from './LiveDemoInteractive';
 import ResultAnalysisPage from './ResultAnalysisPage';
 import AdminPanel from './AdminPanel';
+import StateExamModule from './StateExamModule';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dashboard Sub-components
@@ -105,10 +108,11 @@ function App() {
   };
 
   const courses = [
-    { id: 'kc-1', title: 'Kailash Chandra Vol 1-24', type: 'Dictation Series', isPremium: false, view: 'arena-kc' },
-    { id: 'ssc-cd', title: 'SSC Grade C & D', type: 'Exam Preparation', isPremium: true, view: 'arena-ssc' },
-    { id: 'patna', title: 'Patna High Court', type: 'Court Specific', isPremium: true, view: 'formatting' },
-    { id: 'allahabad', title: 'Allahabad HC APS', type: 'Exercise 110 (Pitman)', isPremium: false, view: 'pitman' },
+    { id: 'hc-formatting', title: 'Allahabad High Court', type: 'Formatting Test', isPremium: true, view: 'formatting' },
+    { id: 'pitman-ex', title: 'Pitman Shorthand', type: 'Exercise Practice', isPremium: false, view: 'pitman' },
+    { id: 'audio-dict', title: 'Audio Dictations', type: '80/100/120 WPM', isPremium: false, view: 'arena-audio' },
+    { id: 'comprehension', title: 'Comprehension', type: 'Kailash Chandra Vol', isPremium: false, view: 'arena-kc' },
+    { id: 'state-exam', title: 'State Exams', type: 'Selection Focused', isPremium: true, view: 'arena-state' },
   ];
 
   const currentViewData = courses.find((c) => c.view === currentView);
@@ -144,7 +148,7 @@ function App() {
   // ── Protected View Guard ──────────────────────────────────
   // If user navigates directly to a protected view via state, kick them out
   useEffect(() => {
-    const protectedViews = ['dashboard', 'arena-kc', 'arena-ssc', 'formatting', 'pitman', 'results'];
+    const protectedViews = ['dashboard', 'arena-kc', 'arena-state', 'arena-audio', 'formatting', 'pitman', 'results'];
     const isProtected = protectedViews.includes(currentView) || currentView.startsWith('results:');
     if (isProtected && !isLoggedIn) {
       setCurrentView('auth');
@@ -162,7 +166,22 @@ function App() {
   }
 
   // ── Course Sub-views (Protected) ──────────────────────────
-  if (currentView === 'arena-kc' || currentView === 'arena-ssc') {
+  if (currentView === 'arena-state') {
+    return (
+        <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+            <div className="bg-white border-b shadow-sm sticky top-0 z-50">
+                <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+                    <button onClick={() => setCurrentView('dashboard')} className="flex items-center space-x-2 text-[#1e3a8a] font-bold hover:text-blue-800 transition-colors">
+                        <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Back to Dashboard</span> <span className="sm:hidden text-xs">Back</span>
+                    </button>
+                </div>
+            </div>
+            <StateExamModule onBack={() => setCurrentView('dashboard')} onNavigateCourse={setCurrentView} />
+        </div>
+    );
+  }
+
+  if (currentView === 'arena-kc' || currentView === 'arena-audio') {
     return (
       <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
         {/* Arena Header with Tabs */}
@@ -223,6 +242,7 @@ function App() {
             <ResultAnalysisPage
               attemptId={lastAttemptId}
               onBack={() => setArenaTab('transcribe')}
+              user={user}
             />
           )}
         </div>
@@ -290,6 +310,7 @@ function App() {
             <ResultAnalysisPage
               attemptId={lastAttemptId}
               onBack={() => setArenaTab('transcribe')}
+              user={user}
             />
           )}
         </div>
@@ -299,13 +320,87 @@ function App() {
 
   // ── Result Analysis Page (Protected) ─────────────────────
   // Supports both 'results' (demo) and 'results:UUID' (real data)
+  // ── Result Analysis Page (Protected) ─────────────────────
+  // Supports both 'results' (demo) and 'results:UUID' (real data)
   if (currentView === 'results' || currentView.startsWith('results:')) {
     const attemptId = currentView.includes(':') ? currentView.split(':')[1] : undefined;
     return (
       <ResultAnalysisPage
         attemptId={attemptId}
         onBack={() => setCurrentView('dashboard')}
+        user={user}
       />
+    );
+  }
+
+
+  // ── Subscription Detail Page (Protected) ───────────────────
+  if (currentView === 'subscription') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        {/* Reuse Header */}
+        <header className="bg-white shadow-sm border-b z-10">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+             <button onClick={() => setCurrentView('dashboard')} className="flex items-center space-x-2 text-[#1e3a8a] font-bold hover:text-blue-800 transition-colors">
+                 <ArrowLeft className="w-4 h-4" /> <span>Back to Dashboard</span>
+             </button>
+             <h2 className="text-xl font-black text-gray-800">My Subscription</h2>
+             <div className="w-10 opacity-0 pointer-events-none" />
+          </div>
+        </header>
+        
+        <div className="flex-1 max-w-4xl w-full mx-auto p-6 md:p-12">
+            <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 animate-in fade-in slide-in-from-bottom-5">
+                <div className="bg-gradient-to-r from-[#0f2167] to-[#1e3a8a] p-8 text-white text-center">
+                    <div className="inline-block px-4 py-1.5 bg-amber-400 text-blue-900 rounded-full text-xs font-black uppercase tracking-wider mb-4 shadow-lg">Premium Active</div>
+                    <h3 className="text-3xl font-black mb-2">Master Course Plan</h3>
+                    <p className="opacity-80 text-sm">Valid until: 22 March 2027</p>
+                </div>
+                
+                <div className="p-8 md:p-10 space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest">Plan Features</h4>
+                            <ul className="space-y-3">
+                                {[
+                                    'Unlimited Shorthand Dictations',
+                                    'Full High Court Formatting Access',
+                                    'Pitman Exercise Mastery Course',
+                                    'Advanced Result Analytics',
+                                    'Personalized Performance Tracking'
+                                ].map(feat => (
+                                    <li key={feat} className="flex items-center text-gray-700 text-sm font-bold">
+                                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" /> {feat}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest">Account Details</h4>
+                            <div className="space-y-3 bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500 font-bold">Student:</span>
+                                    <span className="text-gray-900 font-black">{user?.name}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500 font-bold">Phone:</span>
+                                    <span className="text-gray-900 font-black">{user?.phone}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500 font-bold">Joined:</span>
+                                    <span className="text-gray-900 font-black">{user?.joinedDate || '21 Mar 2026'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-black transition-all shadow-xl">
+                        Download Payment Receipt
+                    </button>
+                </div>
+            </div>
+        </div>
+      </div>
     );
   }
 
@@ -330,7 +425,7 @@ function App() {
           onDashboard={() => navigate('dashboard')}
         />
         <HeroSection onJoinNow={() => navigate('dashboard')} />
-        <LivePreviewSection />
+        <LiveDemoInteractive onRegister={() => setCurrentView('auth')} />
         <OfferingsSection onNavigate={(view) => navigate(view)} />
         <AboutContactSection />
       </div>
@@ -339,7 +434,7 @@ function App() {
 
   // ── Dashboard (Protected) ─────────────────────────────────
   if (user?.role === 'admin') {
-    return <AdminPanel user={user} onLogout={handleLogout} />;
+    return <AdminPanel user={user} onLogout={handleLogout} supabase={supabase} />;
   }
 
   return (
@@ -402,20 +497,17 @@ function App() {
               active={currentView === 'dashboard'}
               onClick={() => setCurrentView('dashboard')}
             />
-            <SidebarItem icon={Headphones} label="Audio Dictations" />
-            <SidebarItem
-              icon={Scale}
-              label="High Court Formatting"
-              active={currentView === 'formatting'}
-              onClick={() => setCurrentView('formatting')}
-            />
-            <SidebarItem icon={FileText} label="Mock Tests" />
-            <SidebarItem icon={CreditCard} label="Subscription" />
             <SidebarItem
               icon={BarChart2}
-              label="Result Analysis"
+              label="My Performance"
               active={currentView === 'results'}
               onClick={() => setCurrentView('results')}
+            />
+            <SidebarItem 
+               icon={CreditCard} 
+               label="Subscription Detail" 
+               active={currentView === 'subscription'}
+               onClick={() => setCurrentView('subscription')}
             />
           </nav>
 

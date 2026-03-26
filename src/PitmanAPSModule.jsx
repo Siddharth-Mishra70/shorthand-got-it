@@ -19,7 +19,8 @@ const pitmanExercises = [
             "The progress we have made so far is very encouraging.",
             "I am sure that under the able leadership of our Prime Minister we shall achieve our goals.",
             "Let us all unite and work together for the prosperity of our great nation."
-        ]
+        ],
+        created_at: '2024-01-01T00:00:00.000Z'
     },
     {
         id: 'ex-111',
@@ -32,7 +33,8 @@ const pitmanExercises = [
             "In this dictation you will find many joined phrases and special contractions.",
             "Read the shorthand passage carefully before attempting transcription.",
             "Remember that accuracy is just as important as speed when submitting exams."
-        ]
+        ],
+        created_at: '2024-01-01T00:00:00.000Z'
     },
     {
         id: 'ex-112',
@@ -45,17 +47,100 @@ const pitmanExercises = [
             "All pending dues were processed along with the statutory interest demanded.",
             "Focus completely on the audio and immediately map sounds to strokes.",
             "The High Court requires dedicated commitment and error-free typing."
-        ]
+        ],
+        created_at: '2024-01-01T00:00:00.000Z'
     }
 ];
 
 const PitmanAPSModule = ({ onBack, onTestComplete }) => {
+    const [exercises, setExercises] = useState(pitmanExercises);
     const [selectedExercise, setSelectedExercise] = useState(pitmanExercises[0]);
+    const [viewMode, setViewMode] = useState('selection'); // 'selection' | 'practice'
+    const [activeDateTab, setActiveDateTab] = useState('Today');
+    const [isLoadingExercises, setIsLoadingExercises] = useState(true);
+
+    // Load dynamic tests from Admin
+    useEffect(() => {
+        const load = async () => {
+            setIsLoadingExercises(true);
+            let remoteTests = [];
+            
+            // 1. Fetch from Supabase
+            try {
+                if (supabase && !supabase.supabaseUrl.includes('placeholder')) {
+                    const { data, error } = await supabase
+                        .from('exercises')
+                        .select('*')
+                        .eq('category', 'pitman')
+                        .order('created_at', { ascending: false });
+                    
+                    if (!error && data) {
+                        remoteTests = data.map(d => ({
+                            ...d,
+                            isDynamic: true,
+                            image: d.pdf, 
+                            lines: (d.original_text || '').split('\n').filter(l => l.trim() !== '')
+                        }));
+                    }
+                }
+            } catch(e) {}
+
+            // 2. Load from LocalStorage
+            let localTests = [];
+            const saved = localStorage.getItem('admin_pitman_data_list');
+            if (saved) {
+                try {
+                    const dynamic = JSON.parse(saved);
+                    localTests = dynamic.map(d => ({
+                        ...d,
+                        isDynamic: true,
+                        image: d.pdf,
+                        lines: (d.original_text || d.text || '').split('\n').filter(l => l.trim() !== '')
+                    }));
+                } catch (e) {}
+            }
+                    
+            // Merge: Remote -> Local -> Static
+            const merged = [...remoteTests, ...localTests, ...pitmanExercises];
+            setExercises(merged);
+            
+            if (merged.length > 0 && selectedExercise.id === pitmanExercises[0].id) {
+                setSelectedExercise(merged[0]);
+            }
+            setIsLoadingExercises(false);
+        };
+
+        load();
+        window.addEventListener('storage', load);
+        return () => window.removeEventListener('storage', load);
+    }, []);
+
+    // ── Grouping Logic ──────────────────────────────────────────
+    const groupedTests = React.useMemo(() => {
+        const today = new Date().toLocaleDateString();
+        const yesterday = new Date(Date.now() - 86400000).toLocaleDateString();
+
+        const categories = { 'Today': [], 'Yesterday': [], 'All Practice': [] };
+        
+        exercises.forEach(ex => {
+            const exDate = ex.created_at ? new Date(ex.created_at) : new Date();
+            const dateStr = exDate.toLocaleDateString();
+            
+            if (dateStr === today) categories['Today'].push(ex);
+            else if (dateStr === yesterday) categories['Yesterday'].push(ex);
+            
+            categories['All Practice'].push(ex);
+        });
+
+        return categories;
+    }, [exercises]);
+
     const mockReferenceText = selectedExercise.lines.join(' ');
 
     const [inputText, setInputText] = useState('');
     const [isStarted, setIsStarted] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(600); // 10 mins
+    const [timerPreset, setTimerPreset] = useState(600); // default 10 mins
+    const [timeLeft, setTimeLeft] = useState(600);
     const [wpm, setWpm] = useState(0);
     const [accuracy, setAccuracy] = useState(100);
 
@@ -87,7 +172,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
 
     useEffect(() => {
         if (!isStarted || inputText.length === 0) return;
-        const timeElapsed = (600 - timeLeft) / 60;
+        const timeElapsed = (timerPreset - timeLeft) / 60;
         if (timeElapsed > 0) {
             const wordsTyped = inputText.trim().split(/\s+/).length;
             setWpm(Math.round(wordsTyped / timeElapsed));
@@ -167,7 +252,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
     const handleReset = () => {
         setInputText('');
         setIsStarted(false);
-        setTimeLeft(600);
+        setTimeLeft(timerPreset);
         setWpm(0);
         setAccuracy(100);
         setIsPlaying(false);
@@ -200,7 +285,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
             fullMistakes += (typedWords.length - refWords.length);
         }
 
-        const timeElapsedMin = (600 - timeLeft) / 60;
+        const timeElapsedMin = (timerPreset - timeLeft) / 60;
         const validTime = timeElapsedMin > 0 ? timeElapsedMin : 1;
         const totalWords = typedWords.length;
         const deduction = fullMistakes + (halfMistakes * 0.5);
@@ -220,9 +305,18 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
         setIsSaving(true);
         setHasSubmitted(true);
 
+        let resolvedUserId = '00000000-0000-0000-0000-000000000000';
+        let resolvedUserName = 'Guest Student';
+        try {
+            const currentSession = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            if (currentSession.id) resolvedUserId = currentSession.id;
+            if (currentSession.name) resolvedUserName = currentSession.name;
+        } catch {}
+
         try {
             const { attemptId: newId } = await saveTestResult(supabase, {
-                userId: '00000000-0000-0000-0000-000000000000',
+                userId: resolvedUserId,
+                studentName: resolvedUserName,
                 exerciseId: `${selectedExercise.title} (Pitman_APS)`,
                 wpm: stats.wpm,
                 accuracy: stats.accuracy,
@@ -239,7 +333,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
     };
 
     const handleWhatsAppShare = () => {
-        const text = `Hi Ayush Sir, I've just completed the Pitman APS mock test.\n\n*Exercise:* ${selectedExercise.title} (Allahabad HC)\n*WPM:* ${finalStats?.wpm}\n*Accuracy:* ${finalStats?.accuracy}%\n*Full Mistakes:* ${finalStats?.fullMistakes}\n*Half Mistakes:* ${finalStats?.halfMistakes}\n\nPlease review my performance. Thank you!`;
+        const text = `Hi Ayush Sir, I've just completed the Pitman APS mock test.\n\n*Exercise:* ${selectedExercise.title} (Pitman Practice)\n*WPM:* ${finalStats?.wpm}\n*Accuracy:* ${finalStats?.accuracy}%\n*Full Mistakes:* ${finalStats?.fullMistakes}\n*Half Mistakes:* ${finalStats?.halfMistakes}\n\nPlease review my performance. Thank you!`;
         window.open(`https://wa.me/917080811235?text=${encodeURIComponent(text)}`, '_blank');
     };
 
@@ -249,17 +343,115 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
         ));
     };
 
+    // ── Loading Skeleton ─────────────────────────
+    if (isLoadingExercises) {
+        return (
+            <div className="h-screen bg-gray-50 flex flex-col items-center justify-center p-8 font-sans">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-[#1e3a8a] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-[#1e3a8a] font-bold text-lg">Loading Pitman exercises...</p>
+                    <p className="text-gray-400 text-sm mt-1">Connecting to Shorthand Database</p>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Selection UI ───────────────────────────────────────
+    if (viewMode === 'selection') {
+        const activeList = groupedTests[activeDateTab] || [];
+        
+        return (
+            <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
+                {/* Header */}
+                <div className="bg-[#1e3a8a] text-white px-6 py-4 flex justify-between items-center shadow-md">
+                    <div className="flex items-center space-x-4">
+                        <button onClick={onBack} className="hover:bg-blue-800 p-2 rounded-full transition-colors"><ArrowLeft className="w-6 h-6" /></button>
+                        <h2 className="text-xl font-bold tracking-wide">Pitman Shorthand Module</h2>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 md:p-10">
+                    <div className="max-w-7xl mx-auto w-full space-y-8">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <h3 className="text-3xl font-black text-[#1e3a8a] tracking-tight">Pitman Dashboard</h3>
+                                <p className="text-gray-500 font-bold mt-1">Practice your strokes with specialized day-wise exercises.</p>
+                            </div>
+                            <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
+                                {['Today', 'Yesterday', 'All Practice'].map( tab => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveDateTab(tab)}
+                                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeDateTab === tab ? 'bg-[#1e3a8a] text-white shadow-lg' : 'text-gray-400 hover:text-[#1e3a8a]'}`}
+                                    >
+                                        {tab}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {activeList.length === 0 ? (
+                            <div className="bg-white rounded-[2rem] border-2 border-dashed border-gray-200 p-20 text-center">
+                                <Activity className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                                <h3 className="text-xl font-black text-gray-800">No exercises found for {activeDateTab}</h3>
+                                <p className="text-gray-400 max-w-xs mx-auto mt-2 font-bold">New Pitman exercises will appear here once published by the Admin.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 pb-10">
+                                {activeList.map((test) => (
+                                    <div 
+                                        key={test.id}
+                                        onClick={() => {
+                                            setSelectedExercise(test);
+                                            setViewMode('practice');
+                                            handleReset();
+                                        }}
+                                        className="group bg-white rounded-[2rem] p-6 shadow-xl shadow-gray-200/50 border border-gray-100 hover:border-[#1e3a8a] hover:translate-y-[-8px] transition-all cursor-pointer relative overflow-hidden"
+                                    >
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#1e3a8a]/5 rounded-bl-[4rem] group-hover:bg-[#1e3a8a]/10 transition-colors" />
+                                        <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mb-6 shadow-sm">
+                                            <Eye className="w-7 h-7 text-amber-600" />
+                                        </div>
+                                        <h3 className="text-lg font-black text-gray-900 mb-2 leading-tight group-hover:text-[#1e3a8a] h-12 overflow-hidden">
+                                            {test.title}
+                                        </h3>
+                                        <div className="flex items-center gap-3 text-xs font-bold text-gray-400 mb-6 uppercase tracking-wider">
+                                            <span>{test.words || test.lines.join(' ').split(' ').length} Words</span>
+                                            <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                                            <span>{test.created_at ? new Date(test.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'Exercise'}</span>
+                                        </div>
+                                        <button className="w-full py-3 bg-gray-50 group-hover:bg-[#1e3a8a] group-hover:text-white rounded-xl text-gray-600 text-xs font-black uppercase tracking-widest transition-all">
+                                            Start Practice
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+        <div className="min-h-screen bg-gray-50 flex flex-col font-sans relative">
+            {/* Floating Back Button */}
+            <button 
+                onClick={() => setViewMode('selection')}
+                className="fixed top-[4.5rem] left-6 z-[90] bg-white border border-gray-200 px-4 py-2 rounded-xl text-xs font-black text-[#1e3a8a] shadow-sm hover:bg-blue-50 transition-all flex items-center gap-2"
+            >
+                <ArrowLeft className="w-3 h-3" /> Back to Dashboard
+            </button>
+
             {/* Top Bar */}
             <div className="bg-[#1e3a8a] text-white px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-md z-10">
                 <div className="flex items-center space-x-4 mb-4 md:mb-0">
-                    <button onClick={onBack} className="hover:bg-blue-800 p-2 rounded-full transition-colors" title="Back to Dashboard">
+                    <button onClick={() => setViewMode('selection')} className="hover:bg-blue-800 p-2 rounded-full transition-colors" title="Back to Dashboard">
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div>
                         <h2 className="text-lg md:text-xl font-bold tracking-wide">Pitman APS Module</h2>
-                        <span className="text-xs text-blue-200">{selectedExercise.title} • Allahabad High Court</span>
+                        <span className="text-xs text-blue-200">{selectedExercise.title} • Pitman Shorthand Practice</span>
                     </div>
                 </div>
                 <div className="flex items-center space-x-4">
@@ -267,14 +459,18 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
                         className="bg-blue-800/50 text-white text-sm font-bold px-3 py-1.5 rounded-lg outline-none border border-blue-700 focus:border-blue-400"
                         value={selectedExercise.id}
                         onChange={(e) => {
-                            const ex = pitmanExercises.find(x => x.id === e.target.value);
-                            setSelectedExercise(ex);
-                            handleReset();
+                            const ex = exercises.find(x => x.id.toString() === e.target.value.toString());
+                            if (ex) {
+                                setSelectedExercise(ex);
+                                handleReset();
+                            }
                         }}
                         disabled={isStarted || hasSubmitted}
                     >
-                        {pitmanExercises.map(ex => (
-                            <option key={ex.id} value={ex.id} className="bg-white text-gray-900">{ex.title}</option>
+                        {exercises.map((ex) => (
+                            <option key={ex.id} value={ex.id} className="bg-white text-gray-900">
+                                {ex.isDynamic ? '🆕 ' : ''}{ex.title}
+                            </option>
                         ))}
                     </select>
 
@@ -325,17 +521,22 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
                 {/* Left Side: Shorthand Strokes Image */}
                 <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden h-full">
                     <div className="bg-gray-100 px-4 py-3 border-b text-sm font-bold text-gray-600 uppercase flex justify-between items-center">
-                        <span>Shorthand Outlines</span>
-                        <span className="text-xs font-normal text-gray-400">{selectedExercise.title} ({selectedExercise.words} Words)</span>
+                        <div className="flex items-center space-x-3">
+                            <span>Shorthand Outlines</span>
+                        </div>
+                        <span className="text-xs font-normal text-gray-400">{selectedExercise.title}</span>
                     </div>
                     <div className="flex-1 p-6 flex flex-col items-center overflow-y-auto bg-[#f8fbff]">
-                        {/* Placeholder image resembling shorthand script */}
-                        <img
-                            src={selectedExercise.image}
-                            alt="Pitman Shorthand Strokes"
-                            className="max-w-full h-auto opacity-70 contrast-125 filter mix-blend-multiply"
-                        />
-                        <p className="mt-8 text-sm text-gray-400 font-medium italic">Read these strokes and transcribe the passage exactly onto the right panel.</p>
+                        {selectedExercise.image && selectedExercise.image.startsWith('data:application/pdf') ? (
+                            <iframe src={selectedExercise.image} className="w-full h-full border-none min-h-[400px]" title="Pitman PDF" />
+                        ) : (
+                            <img
+                                src={selectedExercise.image}
+                                alt="Shorthand Strokes"
+                                className="max-w-full h-auto opacity-80 contrast-125 filter mix-blend-multiply"
+                            />
+                        )}
+                        <p className="mt-8 text-sm text-gray-400 font-medium italic">Refer to the script and transcribe exactly onto the right panel.</p>
                     </div>
                 </div>
 
@@ -346,11 +547,28 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
                             <FileCheck className="w-5 h-5 text-green-600" />
                             <span>Your Transcription</span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            <span className={`font-mono font-bold text-lg ${timeLeft <= 60 ? 'text-red-500 animate-pulse' : 'text-gray-700'}`}>
-                                {formatTime(timeLeft)}
-                            </span>
+                        <div className="flex items-center space-x-4">
+                            {!isStarted && !hasSubmitted && (
+                                <select 
+                                    className="bg-gray-50 border border-gray-200 text-xs font-bold text-gray-600 px-2 py-1 rounded outline-none"
+                                    value={timerPreset}
+                                    onChange={(e) => {
+                                        const newTime = Number(e.target.value);
+                                        setTimerPreset(newTime);
+                                        setTimeLeft(newTime);
+                                    }}
+                                >
+                                    <option value={300}>5 mins</option>
+                                    <option value={600}>10 mins</option>
+                                    <option value={900}>15 mins</option>
+                                </select>
+                            )}
+                            <div className="flex items-center space-x-2">
+                                <Clock className="w-4 h-4 text-gray-400" />
+                                <span className={`font-mono font-bold text-lg ${timeLeft <= 60 ? 'text-red-500 animate-pulse' : 'text-gray-700'}`}>
+                                    {formatTime(timeLeft)}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -424,7 +642,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
                                 </button>
                                 <FileCheck className="w-16 h-16 mx-auto mb-3 text-blue-100" />
                                 <h2 className="text-2xl font-black">Submission Successful</h2>
-                                <p className="text-blue-200 font-medium tracking-wide">Allahabad HC (APS) Results</p>
+                                <p className="text-blue-200 font-medium tracking-wide">Pitman Exercise Results</p>
                             </div>
 
                             <div className="p-6">
@@ -486,3 +704,4 @@ const PitmanAPSModule = ({ onBack, onTestComplete }) => {
 };
 
 export default PitmanAPSModule;
+

@@ -161,6 +161,7 @@ const MiniStat = ({ label, value, color }) => (
  */
 const DetailedAnalysisPanel = ({
   originalText  = DEMO_ORIGINAL,
+  originalHtml  = null,
   attemptedText = DEMO_TYPED,
   durationSec   = null,
   title         = 'Detailed Analysis',
@@ -195,6 +196,105 @@ const DetailedAnalysisPanel = ({
       return { ...token, orig: '' };
     });
   }, [wordDiff, originalText]);
+
+  // ── Inject Diff into HTML (for formatted Comparison View) ──
+  const comparisonHtml = useMemo(() => {
+    if (!originalHtml) return null;
+
+    // We implement a fast, client-safe HTML string renderer replacing react-dom/server
+    // Which crashes standard Vite builds due to node environments missing.
+    const ICONS_SVG = {
+      correct: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m9 12 2 2 4-4"></path></svg>`,
+      wrong: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`,
+      capital: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>`,
+      missing: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>`,
+      extra: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>`
+    };
+
+    const renderTokenHtml = (token) => {
+      const cfg = TOKEN_CONFIG[token.type];
+      if (!cfg) return `<span>${token.word} </span>`;
+      const tipText = typeof cfg.tip === 'function' ? cfg.tip(token.orig || token.word) : cfg.tip;
+      const safeWord = token.word.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const safeTip = tipText.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      const iconHtml = (token.type !== 'correct') ? `<span class="inline-block flex-shrink-0 ml-0.5" style="width:10px; height:10px; color:${cfg.color}">${ICONS_SVG[token.type]}</span>` : '';
+      const tipIconHtml = `<span style="display:inline-block; vertical-align:middle; width:11px; height:11px">${ICONS_SVG[token.type].replace('width="10" height="10"', 'width="11" height="11"')}</span>`;
+
+      return `
+        <span class="relative inline-block group">
+          <span class="inline-flex items-center gap-0.5 px-1 py-0.5 text-sm font-mono leading-relaxed cursor-help transition-all duration-150 group-hover:shadow-md ${cfg.base}">
+            ${safeWord}
+            ${iconHtml}
+          </span>
+          <span class="pointer-events-none absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 rounded-lg shadow-xl text-[11px] font-bold text-white" style="background: ${cfg.color}; min-width: 80px">
+            <span class="absolute top-full left-1/2 -translate-x-1/2 -mt-px" style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid ${cfg.color}"></span>
+            ${tipIconHtml}
+            ${safeTip}
+          </span>
+        </span>
+      `;
+    };
+
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(originalHtml, 'text/html');
+      
+      const walk = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null, false);
+      const textNodes = [];
+      let n;
+      while ((n = walk.nextNode())) textNodes.push(n);
+
+      let tokenIdx = 0;
+
+      for (const node of textNodes) {
+        const text = node.nodeValue || '';
+        const parts = text.split(/(\s+)/);
+        const span = doc.createElement('span');
+
+        for (const p of parts) {
+          if (!p) continue;
+          if (/^\s+$/.test(p)) {
+            // It's whitespace.
+            span.appendChild(doc.createTextNode(p));
+          } else {
+            // It's a word
+            // First, dump any 'extra' tokens that occur before this word
+            while (tokenIdx < enrichedDiff.length && enrichedDiff[tokenIdx].type === 'extra') {
+              const extraWrapper = doc.createElement('span');
+              extraWrapper.innerHTML = renderTokenHtml(enrichedDiff[tokenIdx]);
+              span.appendChild(extraWrapper);
+              span.appendChild(doc.createTextNode(' '));
+              tokenIdx++;
+            }
+            // Now handle the actual word
+            if (tokenIdx < enrichedDiff.length) {
+              const wordWrapper = doc.createElement('span');
+              wordWrapper.innerHTML = renderTokenHtml(enrichedDiff[tokenIdx]);
+              span.appendChild(wordWrapper);
+              tokenIdx++;
+            } else {
+              span.appendChild(doc.createTextNode(p));
+            }
+          }
+        }
+        node.parentNode.insertBefore(span, node);
+        node.parentNode.removeChild(node);
+      }
+
+      // Handle trailing 'extra' tokens
+      while (tokenIdx < enrichedDiff.length && enrichedDiff[tokenIdx].type === 'extra') {
+        const extraWrapper = doc.createElement('span');
+        extraWrapper.innerHTML = renderTokenHtml(enrichedDiff[tokenIdx]) + ' ';
+        doc.body.appendChild(extraWrapper);
+        tokenIdx++;
+      }
+
+      return doc.body.innerHTML;
+    } catch (e) {
+      console.error("Error creating comparison HTML", e);
+      return null;
+    }
+  }, [originalHtml, enrichedDiff]);
 
   // ── Sync scroll between panels ──────────────────────────────
   const origRef  = useRef(null);
@@ -288,16 +388,23 @@ const DetailedAnalysisPanel = ({
           <div
             ref={origRef}
             onScroll={syncScroll(origRef, compRef)}
-            className="p-5 h-64 overflow-y-auto text-sm text-gray-700 leading-8 font-mono"
+            className={`p-5 h-64 overflow-y-auto leading-8 ${originalHtml ? 'font-serif' : 'text-sm text-gray-700 font-mono'}`}
           >
-            {originalText.trim().split(/\s+/).map((word, i) => (
-              <span key={i}>
-                <span className="inline-block px-1 py-0.5 text-sm font-mono leading-loose text-gray-700">
-                  {word}
+            {originalHtml ? (
+              <div
+                dangerouslySetInnerHTML={{ __html: originalHtml }}
+                style={{ fontFamily: "'Courier New', Courier, monospace" }}
+              />
+            ) : (
+              originalText.trim().split(/\s+/).map((word, i) => (
+                <span key={i}>
+                  <span className="inline-block px-1 py-0.5 text-sm font-mono leading-loose text-gray-700">
+                    {word}
+                  </span>
+                  {' '}
                 </span>
-                {' '}
-              </span>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -322,14 +429,21 @@ const DetailedAnalysisPanel = ({
           <div
             ref={compRef}
             onScroll={syncScroll(compRef, origRef)}
-            className="p-5 h-64 overflow-y-auto leading-8"
+            className={`p-5 h-64 overflow-y-auto leading-8 ${comparisonHtml ? 'font-serif' : 'text-sm text-gray-700 font-mono'}`}
           >
-            {enrichedDiff.map((token, i) => (
-              <span key={i}>
-                <WordToken token={token} />
-                {' '}
-              </span>
-            ))}
+            {comparisonHtml ? (
+              <div
+                dangerouslySetInnerHTML={{ __html: comparisonHtml }}
+                style={{ fontFamily: "'Courier New', Courier, monospace" }}
+              />
+            ) : (
+              enrichedDiff.map((token, i) => (
+                <span key={i}>
+                  <WordToken token={token} />
+                  {' '}
+                </span>
+              ))
+            )}
           </div>
         </div>
       </div>
