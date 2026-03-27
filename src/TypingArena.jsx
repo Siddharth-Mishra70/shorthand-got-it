@@ -730,6 +730,31 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             <span>{accuracy}% Acc</span>
                         </div>
 
+                        {/* Top Control Section for Audio Dictations */}
+                        {selectedExercise.isAudioCourse && (
+                            <div className="flex items-center space-x-3 pl-4 border-l border-blue-400">
+                                {!isTestActive && countdown === null ? (
+                                    <button
+                                        onClick={() => setCountdown(10)}
+                                        className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)] active:scale-95 flex items-center space-x-2"
+                                    >
+                                        <Play className="w-4 h-4 fill-current" />
+                                        <span>Start Test (10s)</span>
+                                    </button>
+                                ) : countdown !== null ? (
+                                    <div className="px-8 py-2 bg-red-600 text-white text-lg font-black uppercase tracking-widest rounded-xl animate-pulse flex items-center space-x-3 border-2 border-red-400">
+                                        <Clock className="w-6 h-6 animate-spin-slow" />
+                                        <span>Starts in: {countdown}s</span>
+                                    </div>
+                                ) : (
+                                    <div className="px-6 py-2 bg-white/20 border border-white/40 text-white text-xs font-black uppercase tracking-widest rounded-xl flex items-center space-x-2">
+                                        <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse" />
+                                        <span>ACTIVE</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Moved Buttons from Bottom to Header */}
                         <div className="flex items-center space-x-2 pl-4 border-l border-blue-400">
                             <button
@@ -901,27 +926,6 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     {/* Massive Transcription Field */}
                                     <div className="flex flex-col flex-1 min-h-[450px] bg-white border-2 border-gray-200 rounded-[2rem] p-8 shadow-xl shadow-blue-900/5">
                                         
-                                        {!isTestActive && countdown === null && (
-                                            <div className="mb-6 flex justify-center animate-in fade-in zoom-in duration-500">
-                                                <button 
-                                                    onClick={() => setCountdown(10)}
-                                                    className="px-10 py-4 bg-[#1e3a8a] hover:bg-blue-800 text-white font-black text-xl rounded-2xl shadow-xl shadow-blue-200 hover:scale-105 transition-all transform active:scale-95 flex items-center space-x-3 group"
-                                                >
-                                                    <Play className="w-6 h-6 fill-current group-hover:animate-ping" />
-                                                    <span>START PRACTICE TEST (10s Countdown)</span>
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {countdown !== null && (
-                                            <div className="mb-6 py-4 bg-red-50 border-2 border-red-200 rounded-2xl text-center animate-pulse">
-                                                <h2 className="text-3xl font-black text-red-600 tracking-wider">
-                                                    TEST STARTING IN: {countdown} SECONDS
-                                                </h2>
-                                                <p className="text-red-400 font-bold text-sm uppercase tracking-widest mt-1">Get your fingers ready...</p>
-                                            </div>
-                                        )}
-
                                         <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3 h-12 shrink-0">
                                             <div className="flex items-center space-x-2">
                                                 <div className={`w-2 h-2 rounded-full ${isTestActive ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
