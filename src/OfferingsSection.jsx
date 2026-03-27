@@ -150,13 +150,13 @@ const OfferingsSection = ({ onNavigate }) => {
       icon: Gauge,
       title: 'Real-time WPM Tracking',
       description:
-        'Live words-per-minute counter updates as you type so you always know exactly how fast you are going.',
+        'Real-time words-per-minute counter updates as you type so you always know exactly how fast you are going.',
       color: 'text-[#1e3a8a]',
       bgColor: 'bg-blue-50',
     },
     {
       icon: Volume2,
-      title: 'Audio Speed Control (0.7× – 1.2×)',
+      title: 'Audio Speed Control (0.7× – 2.0×)',
       description:
         'Fine-tune playback speed to build comfort at slower paces and push limits at faster ones.',
       color: 'text-purple-600',
