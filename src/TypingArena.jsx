@@ -705,6 +705,27 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             <CheckCircle2 className="w-5 h-5 text-blue-200" />
                             <span>{accuracy}% Acc</span>
                         </div>
+
+                        {/* Moved Buttons from Bottom to Header */}
+                        <div className="flex items-center space-x-2 pl-4 border-l border-blue-400">
+                            <button
+                                onClick={handleReset}
+                                className="px-4 py-2 bg-white/10 hover:bg-red-500/20 border border-white/20 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                            >
+                                Reset
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={!isStarted && inputText.length === 0}
+                                className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg flex items-center space-x-2 active:scale-95 ${(!isStarted && inputText.length === 0)
+                                    ? 'bg-blue-400/50 text-blue-200 cursor-not-allowed border border-blue-400'
+                                    : 'bg-green-500 hover:bg-green-600 text-white'
+                                    }`}
+                            >
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Submit</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -854,20 +875,36 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     </div>
 
                                     {/* Massive Transcription Field */}
-                                    <div className="flex flex-col flex-1 min-h-[400px] bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                                        <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3 h-10 shrink-0">
+                                    <div className="flex flex-col flex-1 min-h-[450px] bg-white border-2 border-gray-200 rounded-[2rem] p-8 shadow-xl shadow-blue-900/5">
+                                        <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3 h-12 shrink-0">
                                             <div className="flex items-center space-x-2">
                                                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                                                 <h3 className="text-sm font-bold text-gray-600 uppercase tracking-widest">Live Transcription Area</h3>
                                             </div>
-                                            <div className="text-[10px] bg-red-50 text-red-600 px-3 py-1.5 rounded-full font-black italic tracking-wider shadow-sm">
-                                                COPY-PASTE DISABLED
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={handleReset}
+                                                    className="px-4 py-2 bg-white hover:bg-red-50 border border-gray-200 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all active:scale-95"
+                                                >
+                                                    Reset Practice
+                                                </button>
+                                                <button
+                                                    onClick={handleSubmit}
+                                                    disabled={!isStarted && inputText.length === 0}
+                                                    className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-md flex items-center space-x-2 active:scale-95 ${(!isStarted && inputText.length === 0)
+                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                                        : 'bg-green-600 hover:bg-green-700 text-white'
+                                                        }`}
+                                                >
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    <span>STET & SUBMIT</span>
+                                                </button>
                                             </div>
                                         </div>
-                                        <div className="flex-1 bg-white border-2 border-gray-200 focus-within:border-[#1e3a8a] rounded-2xl p-2 shadow-sm flex flex-col transition-all">
+                                        <div className="flex-1 bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm flex flex-col min-h-[300px]">
                                             <textarea
-                                                className="flex-1 w-full h-full bg-transparent text-xl leading-relaxed text-gray-800 outline-none resize-none placeholder-gray-400 font-medium scroll-custom p-4"
-                                                placeholder="The timer starts with your first keystroke. Listen carefully and transcribe the dictation here..."
+                                                className="flex-1 w-full h-full bg-transparent text-xl leading-relaxed text-gray-900 outline-none resize-none placeholder-gray-300 font-bold scroll-custom p-8"
+                                                placeholder="Listen to the audio and transcribe here. All words are visible as you type."
                                                 value={inputText}
                                                 onChange={handleInputChange}
                                                 onCopy={(e) => { e.preventDefault(); alert("Copying is disabled!"); }}
@@ -900,6 +937,25 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     <div className="flex flex-col flex-1 h-full min-h-0">
                                         <div className="flex items-center justify-between mb-3 shrink-0">
                                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Your Translation</h3>
+                                            <div className="flex items-center space-x-2">
+                                                <button
+                                                    onClick={handleReset}
+                                                    className="px-4 py-1.5 bg-white hover:bg-red-50 border border-red-100 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all active:scale-95"
+                                                >
+                                                    Reset
+                                                </button>
+                                                <button
+                                                    onClick={handleSubmit}
+                                                    disabled={!isStarted && inputText.length === 0}
+                                                    className={`px-5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-md flex items-center space-x-2 active:scale-95 ${(!isStarted && inputText.length === 0)
+                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                                        : 'bg-green-600 hover:bg-green-700 text-white shadow-green-200/50'
+                                                        }`}
+                                                >
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    <span>Submit</span>
+                                                </button>
+                                            </div>
                                         </div>
                                         
                                         {/* Native HTML5 Audio Player conditionally displayed for Standard Texts that have Audio attached */}
@@ -925,8 +981,8 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                         )}
 
                                         <textarea
-                                            className="flex-1 w-full bg-white border-2 border-gray-200 focus:border-[#1e3a8a] rounded-xl p-5 shadow-sm text-lg outline-none resize-none transition-colors"
-                                            placeholder="Start typing here... (Timer will start on your first keystroke)"
+                                            className="flex-1 w-full bg-white border-4 border-gray-100 focus:border-[#1e3a8a] rounded-2xl p-6 shadow-xl shadow-gray-200/50 text-2xl font-bold text-gray-900 outline-none resize-none transition-all duration-300"
+                                            placeholder="Start typing your response here. The timer will automatically begin on your first keystroke..."
                                             value={inputText}
                                             onChange={handleInputChange}
                                             onCopy={(e) => { e.preventDefault(); alert("Copying is disabled!"); }}
@@ -944,27 +1000,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             )}
                         </div>
 
-                        {/* Bottom Actions (Sticky Footer) */}
-                        <div className="bg-gray-50 px-6 py-5 border-t border-gray-200 flex justify-end items-center space-x-6 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-
-                            <button
-                                onClick={handleReset}
-                                className="px-8 py-3.5 bg-white hover:bg-red-50 border-2 border-red-100 hover:border-red-200 text-red-600 font-black rounded-2xl transition-all shadow-sm active:scale-95"
-                            >
-                                Reset Practice
-                            </button>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={!isStarted && inputText.length === 0}
-                                className={`px-12 py-3.5 font-black rounded-2xl transition-all shadow-lg flex items-center space-x-3 transform active:scale-95 ${(!isStarted && inputText.length === 0)
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed border-2 border-gray-300'
-                                    : 'bg-green-600 hover:bg-green-700 text-white hover:shadow-green-200/50'
-                                    }`}
-                            >
-                                <CheckCircle2 className="w-6 h-6" />
-                                <span className="text-lg">STET & SUBMIT</span>
-                            </button>
-                        </div>
+                        
                     </div>
                 </div>
             </div>
