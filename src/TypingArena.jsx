@@ -41,6 +41,25 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
     const [countdown, setCountdown] = useState(null);
     const textareaRef = useRef(null);
 
+    // Additional state & refs for Typing Arena
+    const [inputText, setInputText] = useState('');
+    const [isStarted, setIsStarted] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(600); // 10 minutes = 600 seconds
+    const [wpm, setWpm] = useState(0);
+    const [accuracy, setAccuracy] = useState(100);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+    const [audioProgress, setAudioProgress] = useState(0);
+    
+    const referenceScrollRef = useRef(null);
+    const utteranceRef = useRef(null);
+    const audioRef = useRef(null);
+
+    const [showModal, setShowModal] = useState(false);
+    const [finalStats, setFinalStats] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [attemptId, setAttemptId] = useState(null);
+
     // Test Countdown Effect
     useEffect(() => {
         let timer;
@@ -50,15 +69,22 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
             }, 1000);
         } else if (countdown === 0) {
             setIsTestActive(true);
+            setIsStarted(true); // Start the 10-minute timer immediately
             setCountdown(null);
             setTimeout(() => {
                 if (textareaRef.current) {
                     textareaRef.current.focus();
                 }
+                // Automatically start audio for dictation exercises
+                if (selectedExercise?.isAudioCourse && audioRef.current) {
+                    audioRef.current.playbackRate = playbackSpeed;
+                    audioRef.current.play().catch(e => console.warn("Audio auto-play failed:", e));
+                    setIsPlaying(true);
+                }
             }, 100);
         }
         return () => clearTimeout(timer);
-    }, [countdown]);
+    }, [countdown, selectedExercise, playbackSpeed]);
 
 
 
@@ -164,10 +190,6 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
         fetchExercisesAndUser();
     }, []);
 
-    const [audioProgress, setAudioProgress] = useState(0);
-    const utteranceRef = useRef(null);
-    const audioRef = useRef(null);
-
     useEffect(() => {
         // Skip this effect while DB exercises are still loading
         if (isLoadingExercises) return;
@@ -253,21 +275,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
     const mockReferenceLines = selectedExercise?.lines || [];
     const mockReferenceText = mockReferenceLines.join(' ');
 
-    const [inputText, setInputText] = useState('');
-    const [isStarted, setIsStarted] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(600); // 10 minutes = 600 seconds
-    const [wpm, setWpm] = useState(0);
-    const [accuracy, setAccuracy] = useState(100);
 
-    // Audio Player State
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
-    const referenceScrollRef = useRef(null);
-
-    const [showModal, setShowModal] = useState(false);
-    const [finalStats, setFinalStats] = useState(null);
-    const [isSaving, setIsSaving] = useState(false);
-    const [attemptId, setAttemptId] = useState(null);
 
     // Timer logic
     useEffect(() => {
@@ -735,11 +743,11 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             <div className="flex items-center space-x-3 pl-4 border-l border-blue-400">
                                 {!isTestActive && countdown === null ? (
                                     <button
-                                        onClick={() => setCountdown(10)}
+                                        onClick={() => setCountdown(5)}
                                         className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)] active:scale-95 flex items-center space-x-2"
                                     >
                                         <Play className="w-4 h-4 fill-current" />
-                                        <span>Start Test (10s)</span>
+                                        <span>Start Test (5s)</span>
                                     </button>
                                 ) : countdown !== null ? (
                                     <div className="px-8 py-2 bg-red-600 text-white text-lg font-black uppercase tracking-widest rounded-xl animate-pulse flex items-center space-x-3 border-2 border-red-400">

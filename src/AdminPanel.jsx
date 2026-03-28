@@ -251,6 +251,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [stateUploadPdf, setStateUploadPdf] = useState(null);
     const [isAddingStateContent, setIsAddingStateContent] = useState(false);
     const [stateUploadSaving, setStateUploadSaving] = useState(false);
+    const [editingStateId, setEditingStateId] = useState(null);
 
     // Supabase Auto-Sync
     React.useEffect(() => {
@@ -442,47 +443,80 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         if (!stateUploadTitle.trim() || (!stateUploadText.trim() && !stateUploadPdf)) return;
         setStateUploadSaving(true);
         const key = `${selectedState}__${stateSubModule}`;
-        const existing = stateExams[key] || [];
+        
+        const isEdit = !!editingStateId;
+        const testId = isEdit ? editingStateId : crypto.randomUUID();
+        const existingItems = stateExams[key] || [];
+        const existingItem = isEdit ? existingItems.find(i => i.id === testId) : null;
+
         const newItem = {
-            id: crypto.randomUUID(),
+            id: testId,
             title: stateUploadTitle,
             original_text: stateUploadText,
             pdf: stateUploadPdf,
             state: selectedState,
             type: stateSubModule,
-            created_at: new Date().toISOString()
+            created_at: existingItem?.created_at || new Date().toISOString()
         };
-        const updated = { ...stateExams, [key]: [newItem, ...existing] };
+
+        const updatedItems = isEdit 
+            ? existingItems.map(i => i.id === testId ? newItem : i)
+            : [newItem, ...existingItems];
+
+        const updatedExams = { ...stateExams, [key]: updatedItems };
+        
+        // Helper to update global lists
+        const updateGlobalList = (list, setFunc, storageKey, category) => {
+            const globalItem = { ...newItem, category };
+            const updated = isEdit 
+                ? list.map(t => t.id === testId ? globalItem : t)
+                : [globalItem, ...list];
+            // If it's an edit and the item wasn't in the global list, we might want to add it?
+            // But usually they should be in sync. 
+            // For safety, let's check if it exists in edit mode
+            if (isEdit && !list.find(t => t.id === testId)) {
+                updated.unshift(globalItem);
+            }
+            setFunc(updated);
+            localStorage.setItem(storageKey, JSON.stringify(updated));
+        };
+
         // Also push to matching global lists so student portal sees them
         if (stateSubModule === 'highcourt') {
-            const hcUpdated = [{ ...newItem, category: 'highcourt' }, ...hcTests];
-            setHcTests(hcUpdated);
-            localStorage.setItem('admin_highcourt_data_list', JSON.stringify(hcUpdated));
+            updateGlobalList(hcTests, setHcTests, 'admin_highcourt_data_list', 'highcourt');
         } else if (stateSubModule === 'pitman') {
-            const pitUpdated = [{ ...newItem, category: 'pitman' }, ...pitmanTests];
-            setPitmanTests(pitUpdated);
-            localStorage.setItem('admin_pitman_data_list', JSON.stringify(pitUpdated));
+            updateGlobalList(pitmanTests, setPitmanTests, 'admin_pitman_data_list', 'pitman');
         } else if (stateSubModule === 'kailash') {
-            const kcUpdated = [newItem, ...kailashTests];
-            setKailashTests(kcUpdated);
-            localStorage.setItem('admin_kailash_data_list', JSON.stringify(kcUpdated));
+            updateGlobalList(kailashTests, setKailashTests, 'admin_kailash_data_list', 'kailash');
         } else if (stateSubModule === 'comprehension') {
-            const compUpdated = [{ ...newItem, category: 'comprehension' }, ...compTests];
-            setCompTests(compUpdated);
-            localStorage.setItem('admin_comprehension_data_list', JSON.stringify(compUpdated));
+            updateGlobalList(compTests, setCompTests, 'admin_comprehension_data_list', 'comprehension');
         } else if (stateSubModule === 'audio') {
-            try {
-                if (stateUploadPdf) {
-                    localStorage.setItem('admin_published_audio_list', JSON.stringify([{ ...newItem, audio: stateUploadPdf }]));
-                }
-            } catch (e) { console.warn(e); }
+            const audioItem = { ...newItem, audio: stateUploadPdf, category: 'audio' };
+            const updated = isEdit 
+                ? audioTests.map(t => t.id === testId ? audioItem : t)
+                : [audioItem, ...audioTests];
+            if (isEdit && !audioTests.find(t => t.id === testId)) updated.unshift(audioItem);
+            setAudioTests(updated);
+            localStorage.setItem('admin_published_audio_list', JSON.stringify(updated));
         }
-        saveStateExams(updated);
+
+        saveStateExams(updatedExams);
         setStateUploadTitle('');
         setStateUploadText('');
         setStateUploadPdf(null);
         setIsAddingStateContent(false);
         setStateUploadSaving(false);
+        setEditingStateId(null);
+    };
+
+    const handleEditStateItem = (id, key) => {
+        const item = (stateExams[key] || []).find(i => i.id === id);
+        if (!item) return;
+        setStateUploadTitle(item.title || '');
+        setStateUploadText(item.original_text || item.text || '');
+        setStateUploadPdf(item.pdf || null);
+        setEditingStateId(id);
+        setIsAddingStateContent(true);
     };
 
     const handleDeleteStateItem = (key, id) => {
@@ -1292,21 +1326,27 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             <p className="text-xs text-gray-400 uppercase font-bold tracking-wide">{selectedState} › State Exam</p>
                             <h2 className="text-2xl font-bold text-gray-800">{subLabel}</h2>
                         </div>
-                        <button onClick={() => setIsAddingStateContent(true)} className="ml-auto bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-red-800 shadow"><Plus className="w-4 h-4 mr-1" />Add New</button>
+                        <button onClick={() => {
+                            if (isAddingStateContent) { setIsAddingStateContent(false); setEditingStateId(null); setStateUploadTitle(''); setStateUploadText(''); setStateUploadPdf(null); }
+                            else { setIsAddingStateContent(true); setEditingStateId(null); }
+                        }} className="ml-auto bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-red-800 shadow">
+                            {isAddingStateContent && !editingStateId ? <><X className="w-4 h-4 mr-1" />Cancel</> : <><Plus className="w-4 h-4 mr-1" />Add New</>}
+                        </button>
                     </div>
                     {isAddingStateContent && (
                         <UploadForm
+                            isEdit={!!editingStateId}
                             title={stateUploadTitle} setTitle={setStateUploadTitle}
                             text={stateUploadText} setText={setStateUploadText}
                             pdf={stateUploadPdf} setPdf={setStateUploadPdf}
                             onSave={handleSaveStateContent}
-                            onCancel={() => { setIsAddingStateContent(false); setStateUploadTitle(''); setStateUploadText(''); setStateUploadPdf(null); }}
+                            onCancel={() => { setIsAddingStateContent(false); setEditingStateId(null); setStateUploadTitle(''); setStateUploadText(''); setStateUploadPdf(null); }}
                             saving={stateUploadSaving}
                             accept={acceptMap[stateSubModule]}
                             textLabel={stateSubModule === 'audio' ? 'Dictation Transcription Text' : 'Content Text'}
                         />
                     )}
-                    <TestList tests={stateItems} onDelete={(id) => handleDeleteStateItem(stateKey, id)} emptyMsg={`No ${subLabel} content uploaded for ${selectedState} yet.`} />
+                    <TestList tests={stateItems} onDelete={(id) => handleDeleteStateItem(stateKey, id)} onEdit={(id) => handleEditStateItem(id, stateKey)} emptyMsg={`No ${subLabel} content uploaded for ${selectedState} yet.`} />
                 </div>
             );
         }
@@ -1731,7 +1771,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                     ...hcTests.map(t => ({ ...t, mod: 'highcourt', icon: '⚖️' })),
                                     ...pitmanTests.map(t => ({ ...t, mod: 'pitman', icon: '✍️' })),
                                     ...kailashTests.map(t => ({ ...t, mod: 'kailash', icon: '📖' })),
-                                    ...audioTests.map(t => ({ ...t, mod: 'audio', icon: '🎧' }))
+                                    ...audioTests.map(t => ({ ...t, mod: 'audio', icon: '🎧' })),
+                                    ...compTests.map(t => ({ ...t, mod: 'comprehension', icon: '📝' }))
                                 ]
                                 .sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
                                 .slice(0, 5)
