@@ -73,7 +73,7 @@ const ModuleCard = ({ mod, onClick }) => {
     );
 };
 
-const UploadForm = ({ title, setTitle, text, setText, pdf, setPdf, onFileSelect, onSave, onCancel, saving, accept = ".pdf,image/*", textLabel = "Practice Text", fileLabel = "File Upload (Optional)", isEdit = false }) => (
+const UploadForm = ({ title, setTitle, text, setText, pdf, setPdf, onFileSelect, onSave, onCancel, jobTitle, setJobTitle, testType, setTestType, saving, accept = ".pdf,image/*", textLabel = "Practice Text", fileLabel = "File Upload (Optional)", isEdit = false }) => (
     <div className="bg-white p-6 rounded-xl shadow border border-gray-200 mb-6 animate-in slide-in-from-top-2">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
             <div>
@@ -91,6 +91,16 @@ const UploadForm = ({ title, setTitle, text, setText, pdf, setPdf, onFileSelect,
                         const r = new FileReader(); r.onload = ev => setPdf(ev.target.result); r.readAsDataURL(f);
                     }} />
                 </label>
+            </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Job Title / Exam</label>
+                <input type="text" value={jobTitle || ''} onChange={e => setJobTitle(e.target.value)} placeholder="e.g. Stenographer Gr. C" className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
+            </div>
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Test Type Section</label>
+                <input type="text" value={testType || ''} onChange={e => setTestType(e.target.value)} placeholder="e.g. Skill Test, Mock Test" className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
             </div>
         </div>
         <div className="mb-5">
@@ -253,6 +263,15 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [stateUploadSaving, setStateUploadSaving] = useState(false);
     const [editingStateId, setEditingStateId] = useState(null);
 
+    // Global extra fields for Test Data (Job Title & Test Type)
+    const [globalJobTitle, setGlobalJobTitle] = useState('');
+    const [globalTestType, setGlobalTestType] = useState('');
+
+    const resetGlobalDocs = () => {
+        setGlobalJobTitle('');
+        setGlobalTestType('');
+    };
+
     // Supabase Auto-Sync
     React.useEffect(() => {
         const syncData = async () => {
@@ -335,6 +354,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const openQuickEdit = (item, moduleKey) => {
         setQuickModule(moduleKey);
         setQuickTitle(item.title || '');
+        setGlobalJobTitle(item.job_title || '');
+        setGlobalTestType(item.test_type || '');
         setQuickText(item.original_text || item.text || '');
         setQuickFile(null); // We don't load dataURLs back into state usually, just show "current file" in the UI if we want
         setEditingQuickId(item.id);
@@ -370,6 +391,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             pdf: quickFile || existingItem?.pdf || existingItem?.image_url,
             audio: quickModule === 'audio' ? (quickFile || existingItem?.audio || existingItem?.audio_url) : undefined,
             category: quickModule,
+            job_title: globalJobTitle,
+            test_type: globalTestType,
             state: quickState || null,
             created_at: existingItem?.created_at || new Date().toISOString(),
         };
@@ -407,6 +430,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 // Determine appropriate DB column names for the shared exercises table
                 const dbPayload = {
                     title: newItem.title,
+                    job_title: globalJobTitle,
+                    test_type: globalTestType,
                     original_text: isHc ? newItem.formatted_html : newItem.original_text,
                     category: quickModule === 'audio' ? 'Audio Dictation' : quickModule,
                     audio_url: quickModule === 'audio' ? newItem.audio : undefined,
@@ -431,7 +456,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 setQuickOpen(false);
                 setQuickModule('');
                 setQuickState('');
-                setQuickTitle('');
+                setQuickTitle(''); resetGlobalDocs();
                 setQuickText('');
                 setQuickFile(null);
                 if (quickHcEditorRef.current) quickHcEditorRef.current.innerHTML = '';
@@ -456,6 +481,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             pdf: stateUploadPdf,
             state: selectedState,
             type: stateSubModule,
+            job_title: globalJobTitle,
+            test_type: globalTestType,
             created_at: existingItem?.created_at || new Date().toISOString()
         };
 
@@ -491,7 +518,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         } else if (stateSubModule === 'comprehension') {
             updateGlobalList(compTests, setCompTests, 'admin_comprehension_data_list', 'comprehension');
         } else if (stateSubModule === 'audio') {
-            const audioItem = { ...newItem, audio: stateUploadPdf, category: 'audio' };
+            const audioItem = { ...newItem, audio: stateUploadPdf, category: 'audio', job_title: globalJobTitle, test_type: globalTestType };
             const updated = isEdit 
                 ? audioTests.map(t => t.id === testId ? audioItem : t)
                 : [audioItem, ...audioTests];
@@ -501,7 +528,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         }
 
         saveStateExams(updatedExams);
-        setStateUploadTitle('');
+        setStateUploadTitle(''); resetGlobalDocs();
         setStateUploadText('');
         setStateUploadPdf(null);
         setIsAddingStateContent(false);
@@ -513,6 +540,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const item = (stateExams[key] || []).find(i => i.id === id);
         if (!item) return;
         setStateUploadTitle(item.title || '');
+        setGlobalJobTitle(item.job_title || '');
+        setGlobalTestType(item.test_type || '');
         setStateUploadText(item.original_text || item.text || '');
         setStateUploadPdf(item.pdf || null);
         setEditingStateId(id);
@@ -567,6 +596,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 // 3. Save to DB exactly to the remote schema column names explicitly given by user
                 const dbPayload = {
                     title: audioTitle,
+                    job_title: globalJobTitle,
+                    test_type: globalTestType,
                     audio_url: finalAudioUrl, // Needs to match user's custom created DB column 
                     category: 'Audio Dictation', // Explicit user mapping
                     original_text: pendingAudioText
@@ -589,6 +620,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             const newTest = { 
                 id: testId, 
                 title: audioTitle, 
+                job_title: globalJobTitle,
+                test_type: globalTestType, 
                 original_text: pendingAudioText, 
                 audio: finalAudioUrl, // maintain internal property name for array rendering
                 category: 'audio', 
@@ -614,7 +647,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             setAudioPublishing(false); 
             setIsAddingAudio(false); 
             setEditingAudioId(null);
-            setAudioTitle(''); 
+            setAudioTitle(''); resetGlobalDocs(); 
             setPendingAudio(''); 
             setPendingAudioFile(null);
             setPendingAudioText(''); 
@@ -626,6 +659,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const test = audioTests.find(t => t.id === id);
         if (!test) return;
         setAudioTitle(test.title || '');
+        setGlobalJobTitle(test.job_title || '');
+        setGlobalTestType(test.test_type || '');
         setPendingAudioText(test.original_text || test.text || '');
         setPendingAudio(test.audio_url || test.audio || test.pdf || null);
         setPendingAudioFile(null);
@@ -660,6 +695,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const newTest = {
             id: testId,
             title: hcTitle,
+            job_title: globalJobTitle,
+            test_type: globalTestType,
             original_text: editorText.trim(),      // plain text — shown to student as reference
             formatted_html: editorHtml,             // rich HTML — used as answer key for scoring
             pdf: hcPdf,
@@ -672,6 +709,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 // Stripped down Payload to precisely match the remote DB schema without throwing 400 errors
                 const dbPayload = {
                     title: hcTitle,
+                    job_title: globalJobTitle,
+                    test_type: globalTestType,
                     original_text: editorHtml, // Mapped to the HTML string as originally requested
                     category: 'highcourt'
                 };
@@ -706,7 +745,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         } finally {
             setIsUploadingHc(false);
             // Clear the form
-            setHcTitle(''); 
+            setHcTitle(''); resetGlobalDocs(); 
             setHcText(''); 
             setHcFormattedHtml(''); 
             setHcPdf(null);
@@ -720,6 +759,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const test = hcTests.find(t => t.id === id);
         if (!test) return;
         setHcTitle(test.title || '');
+        setGlobalJobTitle(test.job_title || '');
+        setGlobalTestType(test.test_type || '');
         setHcText(test.original_text || test.text || '');
         setHcFormattedHtml(test.formatted_html || '');
         setHcPdf(test.pdf || null);
@@ -760,6 +801,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
 
                 const dbPayload = {
                     title: pitmanTitle,
+                    job_title: globalJobTitle,
+                    test_type: globalTestType,
                     original_text: pitmanText,
                     image_url: finalImageUrl,
                     category: 'Pitman Shorthand'
@@ -781,7 +824,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             setTimeout(() => setPitmanSuccess(false), 3000);
 
             const newTest = {
-                id: testId, title: pitmanTitle, original_text: pitmanText, image_url: finalImageUrl, pdf: finalImageUrl, category: 'Pitman Shorthand',
+                id: testId, title: pitmanTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: pitmanText, image_url: finalImageUrl, pdf: finalImageUrl, category: 'Pitman Shorthand',
                 created_at: isEdit ? pitmanTests.find(t => t.id === testId)?.created_at || new Date().toISOString() : new Date().toISOString()
             };
             const updated = isEdit ? pitmanTests.map(t => t.id === testId ? newTest : t) : [newTest, ...pitmanTests];
@@ -796,7 +839,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             alert('Supabase save failed. Data cached locally. Check console.');
         } finally { 
             setIsUploadingPitman(false); 
-            setPitmanTitle(''); 
+            setPitmanTitle(''); resetGlobalDocs(); 
             setPitmanText(''); 
             setPitmanPdf(null); 
             setRawPitmanFile(null);
@@ -809,6 +852,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const test = pitmanTests.find(t => t.id === id);
         if (!test) return;
         setPitmanTitle(test.title || '');
+        setGlobalJobTitle(test.job_title || '');
+        setGlobalTestType(test.test_type || '');
         setPitmanText(test.original_text || test.text || '');
         setPitmanPdf(test.pdf || null);
         setEditingPitmanId(id);
@@ -836,6 +881,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const newTest = { 
             id: testId, 
             title: finalTitle, 
+            job_title: globalJobTitle,
+            test_type: globalTestType,
             original_text: kcText, 
             category: 'kailash', 
             created_at: isEdit ? kailashTests.find(t => t.id === testId)?.created_at || new Date().toISOString() : new Date().toISOString() 
@@ -844,7 +891,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
                 if (isEdit) {
-                    const { error } = await supabase.from('exercises').update({ title: finalTitle, original_text: kcText }).eq('id', testId);
+                    const { error } = await supabase.from('exercises').update({ title: finalTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: kcText }).eq('id', testId);
                     if (error) throw error;
                 } else {
                     const { error } = await supabase.from('exercises').insert(newTest);
@@ -858,7 +905,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             const updated = isEdit ? kailashTests.map(t => t.id === testId ? newTest : t) : [newTest, ...kailashTests];
             setKailashTests(updated);
             try { localStorage.setItem('admin_kailash_data_list', JSON.stringify(updated)); } catch {}
-        } finally { setKcText(''); setKcTitle(''); setKcVolume('Volume 1'); setIsAddingNewKc(false); setEditingKcId(null); }
+        } finally { setKcText(''); setKcTitle(''); resetGlobalDocs(); setKcVolume('Volume 1'); setIsAddingNewKc(false); setEditingKcId(null); }
     };
 
     const handleEditKc = (id) => {
@@ -872,7 +919,9 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             // if it's not a standard predefined Volume list item, still populate it
             setKcVolume(match[2].trim());
         } else {
-            setKcTitle(test.title || '');
+            setGlobalJobTitle(test.job_title || '');
+        setGlobalTestType(test.test_type || '');
+        setKcTitle(test.title || '');
             setKcVolume('Volume 1');
         }
         
@@ -910,6 +959,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const newTest = {
             id: testId,
             title: compTitle,
+            job_title: globalJobTitle,
+            test_type: globalTestType,
             original_text: compText,
             pdf: compPdf,
             category: 'comprehension',
@@ -918,7 +969,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
 
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
-                const dbPayload = { title: compTitle, original_text: compText, category: 'comprehension' };
+                const dbPayload = { title: compTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: compText, category: 'comprehension' };
                 if (isEdit) await supabase.from('exercises').update(dbPayload).eq('id', testId);
                 else await supabase.from('exercises').insert([{ id: testId, ...dbPayload }]);
             }
@@ -928,7 +979,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         } catch (err) {
             console.error(err);
         } finally {
-            setIsSavingComp(false); setCompTitle(''); setCompText(''); setCompPdf(null); setIsAddingComp(false); setEditingCompId(null);
+            setIsSavingComp(false); setCompTitle(''); resetGlobalDocs(); setCompText(''); setCompPdf(null); setIsAddingComp(false); setEditingCompId(null);
         }
     };
 
@@ -936,6 +987,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const test = compTests.find(t => t.id === id);
         if (!test) return;
         setCompTitle(test.title || '');
+        setGlobalJobTitle(test.job_title || '');
+        setGlobalTestType(test.test_type || '');
         setCompText(test.original_text || test.text || '');
         setCompPdf(test.pdf || null);
         setEditingCompId(id);
@@ -980,7 +1033,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         <button onClick={() => setActiveModule('home')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
                         <h2 className="text-2xl font-bold text-gray-800">Allahabad High Court Formatting</h2>
                         <button onClick={() => {
-                            if (isAddingHc) { setIsAddingHc(false); setEditingHcId(null); setHcTitle(''); setHcPdf(null); if (hcEditorRef.current) hcEditorRef.current.innerHTML = '<p><br></p>'; }
+                            if (isAddingHc) { setIsAddingHc(false); setEditingHcId(null); setHcTitle(''); resetGlobalDocs(); setHcPdf(null); if (hcEditorRef.current) hcEditorRef.current.innerHTML = '<p><br></p>'; }
                             else { setIsAddingHc(true); setEditingHcId(null); }
                         }} className="ml-auto bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-red-800 transition-colors shadow">
                             {isAddingHc && !editingHcId ? <><X className="w-4 h-4 mr-1" />Cancel</> : <><Plus className="w-4 h-4 mr-1" />Add New</>}
@@ -1012,6 +1065,16 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                     </label>
                                 </div>
                             </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Job Title / Exam (Optional)</label>
+                                        <input type="text" value={globalJobTitle || ''} onChange={e => setGlobalJobTitle(e.target.value)} placeholder="e.g. Stenographer Gr. C" className="w-full p-3 p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Test Type Section (Optional)</label>
+                                        <input type="text" value={globalTestType || ''} onChange={e => setGlobalTestType(e.target.value)} placeholder="e.g. Mock Test, Skill Test" className="w-full p-3 p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
+                                    </div>
+                                </div>
 
                             {/* Rich-text editor — ANSWER KEY */}
                             <div className="mb-5">
@@ -1051,7 +1114,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             </div>
 
                             <div className="flex justify-end space-x-3">
-                                <button onClick={() => { setIsAddingHc(false); setEditingHcId(null); setHcTitle(''); setHcPdf(null); if (hcEditorRef.current) hcEditorRef.current.innerHTML = '<p><br></p>'; }} className="px-5 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                                <button onClick={() => { setIsAddingHc(false); setEditingHcId(null); setHcTitle(''); resetGlobalDocs(); setHcPdf(null); if (hcEditorRef.current) hcEditorRef.current.innerHTML = '<p><br></p>'; }} className="px-5 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
                                 <button onClick={handleSaveHcData} disabled={isUploadingHc} className="px-5 py-2 rounded-lg text-sm font-bold bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center shadow">
                                     {isUploadingHc ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} {editingHcId ? 'Update' : 'Save & Publish'}
                                 </button>
@@ -1071,7 +1134,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         <button onClick={() => setActiveModule('home')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
                         <h2 className="text-2xl font-bold text-gray-800">Pitman Shorthand Exercises</h2>
                         <button onClick={() => {
-                            if (isAddingPitman) { setIsAddingPitman(false); setEditingPitmanId(null); setPitmanTitle(''); setPitmanPdf(null); setRawPitmanFile(null); setPitmanText(''); }
+                            if (isAddingPitman) { setIsAddingPitman(false); setEditingPitmanId(null); setPitmanTitle(''); resetGlobalDocs(); setPitmanPdf(null); setRawPitmanFile(null); setPitmanText(''); }
                             else { setIsAddingPitman(true); setEditingPitmanId(null); }
                         }} className="ml-auto bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-red-800 transition-colors shadow">
                             {isAddingPitman && !editingPitmanId ? <><X className="w-4 h-4 mr-1" />Cancel</> : <><Plus className="w-4 h-4 mr-1" />Add New</>}
@@ -1088,7 +1151,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     {isAddingPitman && (
                         <>
                             {editingPitmanId && <div className="mb-2 text-xs font-bold text-blue-600 bg-blue-50 py-2 px-3 rounded inline-block animate-in fade-in">✎ Editing Existing Pitman Test</div>}
-                            <UploadForm isEdit={!!editingPitmanId} title={pitmanTitle} setTitle={setPitmanTitle} text={pitmanText} setText={setPitmanText} pdf={pitmanPdf} setPdf={setPitmanPdf} onFileSelect={setRawPitmanFile} onSave={handleSavePitmanData} onCancel={() => { setIsAddingPitman(false); setEditingPitmanId(null); setPitmanTitle(''); setPitmanText(''); setPitmanPdf(null); setRawPitmanFile(null); }} saving={isUploadingPitman} textLabel="English Transcription Text (Solution)" fileLabel="Shorthand Image Upload (Required)" accept="image/*" />
+                            <UploadForm jobTitle={globalJobTitle} setJobTitle={setGlobalJobTitle} testType={globalTestType} setTestType={setGlobalTestType} isEdit={!!editingPitmanId} title={pitmanTitle} setTitle={setPitmanTitle} text={pitmanText} setText={setPitmanText} pdf={pitmanPdf} setPdf={setPitmanPdf} onFileSelect={setRawPitmanFile} onSave={handleSavePitmanData} onCancel={() => { setIsAddingPitman(false); setEditingPitmanId(null); setPitmanTitle(''); resetGlobalDocs(); setPitmanText(''); setPitmanPdf(null); setRawPitmanFile(null); }} saving={isUploadingPitman} textLabel="English Transcription Text (Solution)" fileLabel="Shorthand Image Upload (Required)" accept="image/*" />
                         </>
                     )}
                     <TestList tests={pitmanTests} onDelete={handleDeletePitman} onEdit={handleEditPitman} emptyMsg="No Pitman exercises uploaded yet." />
@@ -1103,7 +1166,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         <button onClick={() => setActiveModule('home')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
                         <h2 className="text-2xl font-bold text-gray-800">Kailash Chandra Management</h2>
                         <button onClick={() => {
-                            if (isAddingNewKc) { setIsAddingNewKc(false); setEditingKcId(null); setKcText(''); setKcTitle(''); setKcVolume('Volume 1'); }
+                            if (isAddingNewKc) { setIsAddingNewKc(false); setEditingKcId(null); setKcText(''); setKcTitle(''); resetGlobalDocs(); setKcVolume('Volume 1'); }
                             else { setIsAddingNewKc(true); setEditingKcId(null); }
                         }} className="ml-auto bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-red-800 transition-colors shadow">
                             {isAddingNewKc && !editingKcId ? <><X className="w-4 h-4 mr-1" />Cancel</> : <><Plus className="w-4 h-4 mr-1" />Add New</>}
@@ -1130,12 +1193,22 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Exercise Title / Number</label>
                                 <input type="text" value={kcTitle} onChange={e => setKcTitle(e.target.value)} placeholder="e.g. Exercise 5" className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
                             </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Job Title / Exam (Optional)</label>
+                                        <input type="text" value={globalJobTitle || ''} onChange={e => setGlobalJobTitle(e.target.value)} placeholder="e.g. Stenographer Gr. C" className="w-full p-3 p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Test Type Section (Optional)</label>
+                                        <input type="text" value={globalTestType || ''} onChange={e => setGlobalTestType(e.target.value)} placeholder="e.g. Mock Test, Skill Test" className="w-full p-3 p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
+                                    </div>
+                                </div>
                             <div className="mb-4">
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Dictation Text</label>
                                 <textarea value={kcText} onChange={e => setKcText(e.target.value)} placeholder="Paste dictation text here..." className="w-full h-48 p-4 font-serif border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500 resize-y" />
                             </div>
                             <div className="flex justify-end space-x-3">
-                                <button onClick={() => { setIsAddingNewKc(false); setEditingKcId(null); setKcText(''); setKcTitle(''); setKcVolume('Volume 1'); }} className="px-5 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                                <button onClick={() => { setIsAddingNewKc(false); setEditingKcId(null); setKcText(''); setKcTitle(''); resetGlobalDocs(); setKcVolume('Volume 1'); }} className="px-5 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
                                 <button onClick={handleSaveKcData} className="px-5 py-2 rounded-lg text-sm font-bold bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center shadow">
                                     <Save className="w-4 h-4 mr-2" />{editingKcId ? 'Update' : 'Save & Publish'}
                                 </button>
@@ -1154,14 +1227,14 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         <button onClick={() => setActiveModule('home')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
                         <h2 className="text-2xl font-bold text-gray-800">Comprehension Management</h2>
                         <button onClick={() => {
-                            if (isAddingComp) { setIsAddingComp(false); setEditingCompId(null); setCompTitle(''); setCompText(''); setCompPdf(null); }
+                            if (isAddingComp) { setIsAddingComp(false); setEditingCompId(null); setCompTitle(''); resetGlobalDocs(); setCompText(''); setCompPdf(null); }
                             else { setIsAddingComp(true); setEditingCompId(null); }
                         }} className="ml-auto bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-red-800 transition-colors shadow">
                             {isAddingComp && !editingCompId ? <><X className="w-4 h-4 mr-1" />Cancel</> : <><Plus className="w-4 h-4 mr-1" />Add New</>}
                         </button>
                     </div>
                     {isAddingComp && (
-                        <UploadForm isEdit={!!editingCompId} title={compTitle} setTitle={setCompTitle} text={compText} setText={setCompText} pdf={compPdf} setPdf={setCompPdf} onSave={handleSaveCompData} onCancel={() => { setIsAddingComp(false); setEditingCompId(null); setCompTitle(''); setCompText(''); setCompPdf(null); }} saving={isSavingComp} />
+                        <UploadForm jobTitle={globalJobTitle} setJobTitle={setGlobalJobTitle} testType={globalTestType} setTestType={setGlobalTestType} isEdit={!!editingCompId} title={compTitle} setTitle={setCompTitle} text={compText} setText={setCompText} pdf={compPdf} setPdf={setCompPdf} onSave={handleSaveCompData} onCancel={() => { setIsAddingComp(false); setEditingCompId(null); setCompTitle(''); resetGlobalDocs(); setCompText(''); setCompPdf(null); }} saving={isSavingComp} />
                     )}
                     <TestList tests={compTests} onDelete={handleDeleteComp} onEdit={handleEditComp} emptyMsg="No Comprehension exercises uploaded yet." />
                 </div>
@@ -1175,7 +1248,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         <button onClick={() => setActiveModule('home')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
                         <h2 className="text-2xl font-bold text-gray-800">Audio Dictation Management</h2>
                         <button onClick={() => {
-                            if (isAddingAudio) { setIsAddingAudio(false); setEditingAudioId(null); setAudioTitle(''); setPendingAudio(null); setPendingAudioFile(null); setPendingAudioText(''); setAudioState(''); }
+                            if (isAddingAudio) { setIsAddingAudio(false); setEditingAudioId(null); setAudioTitle(''); resetGlobalDocs(); setPendingAudio(null); setPendingAudioFile(null); setPendingAudioText(''); setAudioState(''); }
                             else { setIsAddingAudio(true); setEditingAudioId(null); }
                         }} className="ml-auto bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-red-800 transition-colors shadow">
                             {isAddingAudio && !editingAudioId ? <><X className="w-4 h-4 mr-1" />Cancel</> : <><Plus className="w-4 h-4 mr-1" />Add New</>}
@@ -1205,6 +1278,16 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                     </select>
                                 </div>
                             </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Job Title / Exam (Optional)</label>
+                                        <input type="text" value={globalJobTitle || ''} onChange={e => setGlobalJobTitle(e.target.value)} placeholder="e.g. Stenographer Gr. C" className="w-full p-3 p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Test Type Section (Optional)</label>
+                                        <input type="text" value={globalTestType || ''} onChange={e => setGlobalTestType(e.target.value)} placeholder="e.g. Mock Test, Skill Test" className="w-full p-3 p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
+                                    </div>
+                                </div>
                             
                             <div className="mb-4">
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Transcription Text (Solution & Accuracy)</label>
@@ -1231,7 +1314,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             </div>
 
                             <div className="flex justify-end space-x-3">
-                                <button onClick={() => { setIsAddingAudio(false); setEditingAudioId(null); setAudioTitle(''); setPendingAudio(null); setPendingAudioFile(null); setPendingAudioText(''); setAudioState(''); }} className="px-5 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                                <button onClick={() => { setIsAddingAudio(false); setEditingAudioId(null); setAudioTitle(''); resetGlobalDocs(); setPendingAudio(null); setPendingAudioFile(null); setPendingAudioText(''); setAudioState(''); }} className="px-5 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
                                 <button onClick={handleSaveAudioData} disabled={audioPublishing} className="px-5 py-2 rounded-lg text-sm font-bold bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center shadow">
                                     {audioPublishing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} {editingAudioId ? 'Update' : 'Save & Publish'}
                                 </button>
@@ -1327,7 +1410,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             <h2 className="text-2xl font-bold text-gray-800">{subLabel}</h2>
                         </div>
                         <button onClick={() => {
-                            if (isAddingStateContent) { setIsAddingStateContent(false); setEditingStateId(null); setStateUploadTitle(''); setStateUploadText(''); setStateUploadPdf(null); }
+                            if (isAddingStateContent) { setIsAddingStateContent(false); setEditingStateId(null); setStateUploadTitle(''); resetGlobalDocs(); setStateUploadText(''); setStateUploadPdf(null); }
                             else { setIsAddingStateContent(true); setEditingStateId(null); }
                         }} className="ml-auto bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-red-800 shadow">
                             {isAddingStateContent && !editingStateId ? <><X className="w-4 h-4 mr-1" />Cancel</> : <><Plus className="w-4 h-4 mr-1" />Add New</>}
@@ -1335,12 +1418,13 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     </div>
                     {isAddingStateContent && (
                         <UploadForm
+                            jobTitle={globalJobTitle} setJobTitle={setGlobalJobTitle} testType={globalTestType} setTestType={setGlobalTestType}
                             isEdit={!!editingStateId}
                             title={stateUploadTitle} setTitle={setStateUploadTitle}
                             text={stateUploadText} setText={setStateUploadText}
                             pdf={stateUploadPdf} setPdf={setStateUploadPdf}
                             onSave={handleSaveStateContent}
-                            onCancel={() => { setIsAddingStateContent(false); setEditingStateId(null); setStateUploadTitle(''); setStateUploadText(''); setStateUploadPdf(null); }}
+                            onCancel={() => { setIsAddingStateContent(false); setEditingStateId(null); setStateUploadTitle(''); resetGlobalDocs(); setStateUploadText(''); setStateUploadPdf(null); }}
                             saving={stateUploadSaving}
                             accept={acceptMap[stateSubModule]}
                             textLabel={stateSubModule === 'audio' ? 'Dictation Transcription Text' : 'Content Text'}
@@ -1686,7 +1770,18 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
 
                                     {/* File upload */}
                                     <div className="mb-4">
-                                        <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                                        
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Job Title / Exam (Optional)</label>
+                                        <input type="text" value={globalJobTitle || ''} onChange={e => setGlobalJobTitle(e.target.value)} placeholder="e.g. Stenographer Gr. C" className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Test Type Section (Optional)</label>
+                                        <input type="text" value={globalTestType || ''} onChange={e => setGlobalTestType(e.target.value)} placeholder="e.g. Mock Test, Skill Test" className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
+                                    </div>
+                                </div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1.5">
                                             {quickModule === 'audio' ? 'Audio File' : 'PDF / Image'}
                                             <span className="ml-1 text-gray-400 font-normal">(optional)</span>
                                         </label>
