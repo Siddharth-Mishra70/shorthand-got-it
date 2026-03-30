@@ -607,7 +607,7 @@ ORAL ORDER
                 {!submitted || !finalText ? (
                     <div className="flex-1 flex flex-col gap-0 overflow-hidden bg-gray-300">
                         {/* Top Half: PDF or Sample Document */}
-                        <div className="h-[40vh] min-h-[250px] flex overflow-hidden border-b-2 border-gray-300">
+                        <div className="flex-1 flex overflow-hidden border-b-2 border-gray-300">
                             {/* Reference Content */}
                             <div className="flex-1 bg-white overflow-hidden flex flex-col">
                                 <div className="bg-gray-100 px-4 py-2 border-b text-xs font-bold text-gray-600 uppercase tracking-wider flex justify-between items-center">
@@ -643,10 +643,11 @@ ORAL ORDER
                                         {selectedTest && docViewMode === 'pdf' && selectedTest.pdf ? (
                                             <iframe src={selectedTest.pdf} className="absolute inset-0 w-full h-full border-none" title="Reference PDF" />
                                         ) : (
-                                            /* WORD VIEW (A4 Page Style) */
-                                            <div className="absolute inset-0 overflow-y-auto py-8 px-4">
+                                            /* WORD VIEW (Admin style full width) */
+                                            <div className="absolute inset-0 overflow-y-auto bg-white">
                                                 <div 
-                                                    className="bg-white p-10 md:p-16 shadow-2xl max-w-4xl mx-auto min-h-[1000px] font-mono text-[16px] md:text-[18px] leading-loose text-black whitespace-pre-wrap break-words"
+                                                    className="min-h-full p-5 font-serif text-sm leading-relaxed text-black whitespace-pre-wrap outline-none"
+                                                    style={{ fontFamily: "'Courier New', Courier, monospace" }}
                                                     dangerouslySetInnerHTML={{ __html: displayHtml }}
                                                 />
                                                 {!selectedTest && (
