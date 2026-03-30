@@ -251,18 +251,33 @@ ORAL ORDER
     // Decode HC content — supports multiple storage formats
     const decodeHcContent = (test) => {
         if (!test) return { plain: '', html: null };
-        const raw = String(test.original_text || test.text || '').trim();
+        
+        // Ensure we handling a string and trim any hidden leading/trailing whitespace/BOM
+        const rawRaw = test.original_text || test.text || '';
+        const raw = String(rawRaw).trim();
 
         // High priority: Standard JSON encoding check
-        if (raw.startsWith('{') && (raw.includes('"__hc"') || raw.includes('"plain"'))) {
+        // We look for the presence of markers even if it doesn't strictly start with { 
+        // to be resilient against database anomalies.
+        if ((raw.startsWith('{') || raw.includes('{"__hc"')) && raw.includes('"plain"')) {
             try {
+                // Find the first '{' in case of leading junk
+                const jsonStart = raw.indexOf('{');
+                const jsonStr = raw.substring(jsonStart);
+                
                 // Try resilient parse for potential literal newlines
-                const sanitized = raw.replace(/\r?\n/g, '\\n');
+                const sanitized = jsonStr.replace(/\r?\n/g, '\\n');
                 const parsed = JSON.parse(sanitized);
+                
                 if (parsed.__hc || parsed.plain || parsed.html) {
-                    return { plain: parsed.plain || '', html: parsed.html || null };
+                    return { 
+                        plain: parsed.plain || '', 
+                        html: parsed.html || null 
+                    };
                 }
-            } catch (_) {}
+            } catch (err) {
+                console.warn('decodeHcContent: Failed to parse JSON', err);
+            }
         }
 
         // Secondary priority: Separate formatted_html field
@@ -271,7 +286,6 @@ ORAL ORDER
         }
 
         // Tertiary priority: Raw HTML string detection
-        // Improved regex to avoid incorrectly matching JSON keys as HTML tags
         if (/<[^>]+>/.test(raw) && !raw.startsWith('{')) {
             return { plain: null, html: raw }; 
         }
@@ -585,7 +599,7 @@ ORAL ORDER
                                         <span className="font-black text-[#1e3a8a]">{selectedTest?.title || 'No Test Selected'}</span>
                                         <div className="h-4 w-px bg-gray-300" />
                                         <span>Reference Document</span>
-                                        {answerKeyHtml && (
+                                        {decodedHtml && (
                                             <span className="text-[10px] bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
                                                 ✦ Formatted reference — replicate this exactly
                                             </span>
@@ -690,7 +704,7 @@ ORAL ORDER
                                     </div>
                                     <DetailedAnalysisPanel
                                         originalText={plainReferenceForScoring}
-                                        originalHtml={getFormattedContent(referenceText)}
+                                        originalHtml={decodedHtml || decodedPlain || getFormattedContent(referenceText)}
                                         attemptedText={pastAttempts[0].text}
                                         attemptedHtml={pastAttempts[0].html}
                                         title="Formatting Analysis"
@@ -717,18 +731,24 @@ ORAL ORDER
                                     
                                     {showPastAttempts && (
                                         <div className="flex flex-col space-y-6 mt-6 animate-in slide-in-from-top-2 fade-in duration-200">
-                                            {pastAttempts.slice(1).map((attempt, idx) => (
-                                                <div key={idx} className="opacity-90 transform scale-[0.98] origin-top bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                                                    <div className="text-sm font-bold text-gray-500 mb-2 border-b pb-2">Attempt at {attempt.timestamp}</div>
-                                                    <DetailedAnalysisPanel
-                                                        originalText={plainReferenceForScoring}
-                                                        originalHtml={getFormattedContent(referenceText)}
-                                                        attemptedText={attempt.text}
-                                                        attemptedHtml={attempt.html}
-                                                        title={`Previous Attempt ${pastAttempts.length - 1 - idx}`}
-                                                    />
-                                                </div>
-                                            ))}
+                                            {pastAttempts.slice(1).map((attempt, idx) => {
+                                                // Try to decode the original text for this specific attempt if it exists
+                                                // Fallback to the current test's reference if item ID matches
+                                                const attemptDecoded = decodeHcContent(selectedTest); 
+                                                
+                                                return (
+                                                    <div key={idx} className="opacity-90 transform scale-[0.98] origin-top bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                        <div className="text-sm font-bold text-gray-500 mb-2 border-b pb-2">Attempt at {attempt.timestamp}</div>
+                                                        <DetailedAnalysisPanel
+                                                            originalText={attemptDecoded.plain || (attemptDecoded.html ? stripHtml(attemptDecoded.html) : attempt.text)}
+                                                            originalHtml={attemptDecoded.html || attemptDecoded.plain || getFormattedContent(referenceText)}
+                                                            attemptedText={attempt.text}
+                                                            attemptedHtml={attempt.html}
+                                                            title={`Previous Attempt ${pastAttempts.length - 1 - idx}`}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
