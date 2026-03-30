@@ -173,38 +173,6 @@ const HighCourtFormatting = ({ onBack, user }) => {
         return () => window.removeEventListener('storage', loadTests);
     }, []);
 
-    // Inject srcdoc into the reference iframe whenever displayHtml changes.
-    // Using a ref+effect is safer than a JSX template literal because court HTML
-    // may contain backticks, single-quotes, or special chars that would corrupt
-    // a JSX template string.
-    useEffect(() => {
-        const iframe = referenceIframeRef.current;
-        if (!iframe) return;
-        const doc = [
-            '<!DOCTYPE html><html><head><meta charset="UTF-8"/>',
-            '<style>',
-            '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }',
-            'html, body { width: 100%; background: white; }',
-            'body {',
-            '  font-family: \'Courier New\', Courier, monospace;',
-            '  font-size: 14px;',
-            '  line-height: 1.625;',
-            '  color: black;',
-            '  padding: 20px;',
-            '  white-space: pre-wrap;',
-            '  word-wrap: break-word;',
-            '}',
-            'b, strong { font-weight: bold; }',
-            'i, em { font-style: italic; }',
-            'u { text-decoration: underline; }',
-            'center { display: block; text-align: center; }',
-            'div { display: block; }',
-            '</style></head><body>',
-            displayHtml || '<p style="color:#9ca3af; font-style:italic;">Select a test to view the reference document.</p>',
-            '</body></html>'
-        ].join('');
-        iframe.srcdoc = doc;
-    }, [displayHtml]);
 
     useEffect(() => {
         if (!isTimerRunning && !submitted) {
@@ -360,6 +328,38 @@ ORAL ORDER
     const displayHtml = decodedHtml
         || (decodedPlain ? decodedPlain.replace(/\n/g, '<br/>') : null)
         || getFormattedContent(referenceText);
+
+    // Inject content into the reference iframe whenever displayHtml changes.
+    // useEffect is placed AFTER displayHtml declaration (required — can't hoist const).
+    useEffect(() => {
+        const iframe = referenceIframeRef.current;
+        if (!iframe) return;
+        const doc = [
+            '<!DOCTYPE html><html><head><meta charset="UTF-8"/>',
+            '<style>',
+            '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }',
+            'html, body { width: 100%; background: white; }',
+            'body {',
+            "  font-family: 'Courier New', Courier, monospace;",
+            '  font-size: 14px;',
+            '  line-height: 1.625;',
+            '  color: black;',
+            '  padding: 20px;',
+            '  white-space: pre-wrap;',
+            '  word-wrap: break-word;',
+            '}',
+            'b, strong { font-weight: bold; }',
+            'i, em { font-style: italic; }',
+            'u { text-decoration: underline; }',
+            'center { display: block; text-align: center; }',
+            'div { display: block; }',
+            '</style></head><body>',
+            displayHtml || '<p style="color:#9ca3af;font-style:italic;">Select a test to view the reference document.</p>',
+            '</body></html>'
+        ].join('');
+        iframe.srcdoc = doc;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [displayHtml]);
 
     // Render plain text preserving newlines and punctuation
     const renderFormattedText = (text) => {
