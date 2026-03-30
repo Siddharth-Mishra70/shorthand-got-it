@@ -248,49 +248,55 @@ ORAL ORDER
     const [docViewMode, setDocViewMode] = useState('word');
 
     // ── Content Parsing ──────────────────────────────────────────
-    // Decode HC content — supports multiple storage formats
+    // Decode HC content — supports ALL storage formats in correct priority
     const decodeHcContent = (test) => {
         if (!test) return { plain: '', html: null };
         
-        // Ensure we handling a string and trim any hidden leading/trailing whitespace/BOM
         const rawRaw = test.original_text || test.text || '';
         const raw = String(rawRaw).trim();
 
-        // High priority: Standard JSON encoding check
-        // We look for the presence of markers even if it doesn't strictly start with { 
-        // to be resilient against database anomalies.
+        // ── Extract plain + html from JSON (highest fidelity for new saves) ──
+        let jsonPlain = null;
+        let jsonHtml = null;
         if ((raw.startsWith('{') || raw.includes('{"__hc"')) && raw.includes('"plain"')) {
             try {
-                // Find the first '{' in case of leading junk
                 const jsonStart = raw.indexOf('{');
-                const jsonStr = raw.substring(jsonStart);
-                
-                // Try resilient parse for potential literal newlines
-                const sanitized = jsonStr.replace(/\r?\n/g, '\\n');
+                const sanitized = raw.substring(jsonStart).replace(/\r?\n/g, '\\n');
                 const parsed = JSON.parse(sanitized);
-                
                 if (parsed.__hc || parsed.plain || parsed.html) {
-                    return { 
-                        plain: parsed.plain || '', 
-                        html: parsed.html || null 
-                    };
+                    jsonPlain = parsed.plain || null;
+                    jsonHtml  = parsed.html  || null;
                 }
             } catch (err) {
-                console.warn('decodeHcContent: Failed to parse JSON', err);
+                console.warn('decodeHcContent: JSON parse failed', err);
             }
         }
 
-        // Secondary priority: Separate formatted_html field
-        if (test.formatted_html) {
-            return { plain: raw, html: test.formatted_html };
+        // PRIORITY 1 — Explicit formatted_html column (most reliable for full content)
+        // Use jsonPlain for scoring accuracy, but the column HTML for display
+        if (test.formatted_html && test.formatted_html.trim().length > 10) {
+            return {
+                plain: jsonPlain || raw,
+                html:  test.formatted_html
+            };
         }
 
-        // Tertiary priority: Raw HTML string detection
+        // PRIORITY 2 — JSON-embedded html (new saves via rich editor)
+        if (jsonHtml && jsonHtml.trim().length > 10) {
+            return { plain: jsonPlain || '', html: jsonHtml };
+        }
+
+        // PRIORITY 3 — JSON plain text only (render as formatted plain text)
+        if (jsonPlain) {
+            return { plain: jsonPlain, html: null };
+        }
+
+        // PRIORITY 4 — Raw HTML in original_text field
         if (/<[^>]+>/.test(raw) && !raw.startsWith('{')) {
-            return { plain: null, html: raw }; 
+            return { plain: null, html: raw };
         }
 
-        // Plain text only fallback
+        // PRIORITY 5 — Plain text fallback
         return { plain: raw, html: null };
     };
 
@@ -305,12 +311,22 @@ ORAL ORDER
         return (tmp.innerText || tmp.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
     };
 
-    // Raw reference content for UI rendering
+    // Raw reference content (used as absolute fallback)
     const referenceText = selectedTest?.original_text || selectedTest?.text || defaultSample;
 
-    // Decoded version for scoring (plain text)
+    // Decoded version — plain for scoring, html for rich display
     const { plain: decodedPlain, html: decodedHtml } = decodeHcContent(selectedTest);
-    const plainReferenceForScoring = decodedPlain || (decodedHtml ? stripHtml(decodedHtml) : defaultSample);
+
+    // Best plain text for scoring: prefer explicit plain, then strip HTML, then raw fallback
+    const plainReferenceForScoring = decodedPlain
+        || (decodedHtml ? stripHtml(decodedHtml) : '')
+        || stripHtml(referenceText)
+        || defaultSample;
+
+    // Best HTML for display: prefer rich HTML, then convert plain with line breaks
+    const displayHtml = decodedHtml
+        || (decodedPlain ? decodedPlain.replace(/\n/g, '<br/>') : null)
+        || getFormattedContent(referenceText);
 
     // Render plain text preserving newlines and punctuation
     const renderFormattedText = (text) => {
@@ -631,7 +647,7 @@ ORAL ORDER
                                             <div className="absolute inset-0 overflow-y-auto py-8 px-4">
                                                 <div 
                                                     className="bg-white p-10 md:p-16 shadow-2xl max-w-4xl mx-auto min-h-[1000px] font-mono text-[16px] md:text-[18px] leading-loose text-justify text-black"
-                                                    dangerouslySetInnerHTML={{ __html: getFormattedContent(decodedHtml || decodedPlain || referenceText) }}
+                                                    dangerouslySetInnerHTML={{ __html: displayHtml }}
                                                 />
                                                 {!selectedTest && (
                                                     <p className="mt-4 text-center text-xs text-gray-400 font-bold uppercase italic">Viewing default reference format</p>

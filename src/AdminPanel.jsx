@@ -462,6 +462,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 const dbPayload = {
                     title: newItem.title,
                     original_text: isHc ? hcEncoded : quickText,
+                    formatted_html: isHc ? qHtml : undefined,  // ← full HTML for student display
                     category: quickModule === 'audio' ? 'Audio Dictation' : quickModule,
                     audio_url: quickModule === 'audio' ? newItem.audio : undefined,
                     image_url: quickModule === 'pitman' ? newItem.pdf : undefined
@@ -733,8 +734,9 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
-                // Pack ALL metadata into original_text JSON — avoids issues with missing DB columns.
-                // Only 'title', 'original_text', 'category' are guaranteed to exist in the exercises table.
+                // Save ALL content to Supabase:
+                // - original_text: JSON-encoded (for compatibility & scoring)
+                // - formatted_html: the raw rich HTML (gives student portal full document)
                 const encodedContent = JSON.stringify({
                     __hc: true,
                     plain: editorText.trim(),
@@ -743,10 +745,10 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     test_type: globalTestType || ''
                 });
 
-                // Only send columns confirmed to exist in Supabase schema
                 const dbPayload = {
                     title: hcTitle,
                     original_text: encodedContent,
+                    formatted_html: editorHtml,   // ← save full HTML as dedicated column
                     category: 'highcourt'
                 };
 
