@@ -644,9 +644,9 @@ ORAL ORDER
                                             <iframe src={selectedTest.pdf} className="absolute inset-0 w-full h-full border-none" title="Reference PDF" />
                                         ) : (
                                             /* WORD VIEW (Admin style full width) */
-                                            <div className="absolute inset-0 overflow-auto bg-white">
+                                            <div className="absolute inset-0 overflow-y-auto bg-white">
                                                 <div 
-                                                    className="min-h-full p-5 font-serif text-sm leading-relaxed text-black whitespace-pre outline-none w-max min-w-full"
+                                                    className="min-h-full p-5 font-serif text-sm leading-relaxed text-black whitespace-pre-wrap outline-none"
                                                     style={{ fontFamily: "'Courier New', Courier, monospace" }}
                                                     dangerouslySetInnerHTML={{ __html: displayHtml }}
                                                 />
@@ -700,8 +700,7 @@ ORAL ORDER
                                                 e.preventDefault();
                                             }
                                         }}
-                                        className="flex-1 p-5 outline-none font-serif text-sm leading-relaxed text-black whitespace-pre overflow-auto"
-                                        style={{ fontFamily: "'Courier New', Courier, monospace" }}
+                                        className="flex-1 p-10 md:p-16 outline-none font-mono text-[16px] md:text-[18px] leading-loose text-justify text-black overflow-y-auto"
                                         spellCheck={false}
                                     >
                                         <p><br /></p>
