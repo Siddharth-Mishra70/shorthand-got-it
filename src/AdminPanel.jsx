@@ -792,6 +792,29 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         }
     };
 
+    // Decode HC JSON to extract rich HTML for the editor
+    const decodeHcHtmlForEditor = (test) => {
+        if (!test) return '<p><br></p>';
+        // Priority 1: explicit formatted_html column
+        if (test.formatted_html && test.formatted_html.trim().length > 10) {
+            return test.formatted_html;
+        }
+        // Priority 2: extract html from JSON-encoded original_text
+        const raw = String(test.original_text || test.text || '').trim();
+        if (raw.startsWith('{') && raw.includes('"plain"')) {
+            try {
+                const jsonStart = raw.indexOf('{');
+                const sanitized = raw.substring(jsonStart).replace(/\r?\n/g, '\\n');
+                const parsed = JSON.parse(sanitized);
+                if (parsed.html && parsed.html.trim().length > 10) return parsed.html;
+                if (parsed.plain) return `<p>${parsed.plain.replace(/\n/g, '<br/>')}</p>`;
+            } catch (e) { /* fall through */ }
+        }
+        // Priority 3: raw HTML or plain text
+        if (/<[^>]+>/.test(raw)) return raw;
+        return `<p>${raw.replace(/\n/g, '<br/>')}</p>`;
+    };
+
     const handleEditHc = (id) => {
         const test = hcTests.find(t => t.id === id);
         if (!test) return;
@@ -803,10 +826,10 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         setHcPdf(test.pdf || null);
         setEditingHcId(id);
         setIsAddingHc(true);
-        // We must delay setting innerHTML slightly so that the editor is mounted if it wasn't
+        // Delay slightly so the editor ref is mounted
         setTimeout(() => {
             if (hcEditorRef.current) {
-                hcEditorRef.current.innerHTML = test.formatted_html || `<p>${(test.original_text || test.text || '').replace(/\\n/g, '<br/>')}</p>`;
+                hcEditorRef.current.innerHTML = decodeHcHtmlForEditor(test);
             }
         }, 50);
     };

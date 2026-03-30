@@ -82,6 +82,7 @@ const HighCourtFormatting = ({ onBack, user }) => {
     const [timeLeft, setTimeLeft] = useState(600);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const editorRef = useRef(null);
+    const referenceIframeRef = useRef(null);
 
     const [hcTests, setHcTests] = useState([]);
     const [selectedTestId, setSelectedTestId] = useState(null); // Initialize as null, will be set in useEffect
@@ -172,7 +173,39 @@ const HighCourtFormatting = ({ onBack, user }) => {
         return () => window.removeEventListener('storage', loadTests);
     }, []);
 
-    // Timer SYNC effect
+    // Inject srcdoc into the reference iframe whenever displayHtml changes.
+    // Using a ref+effect is safer than a JSX template literal because court HTML
+    // may contain backticks, single-quotes, or special chars that would corrupt
+    // a JSX template string.
+    useEffect(() => {
+        const iframe = referenceIframeRef.current;
+        if (!iframe) return;
+        const doc = [
+            '<!DOCTYPE html><html><head><meta charset="UTF-8"/>',
+            '<style>',
+            '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }',
+            'html, body { width: 100%; background: white; }',
+            'body {',
+            '  font-family: \'Courier New\', Courier, monospace;',
+            '  font-size: 14px;',
+            '  line-height: 1.625;',
+            '  color: black;',
+            '  padding: 20px;',
+            '  white-space: pre-wrap;',
+            '  word-wrap: break-word;',
+            '}',
+            'b, strong { font-weight: bold; }',
+            'i, em { font-style: italic; }',
+            'u { text-decoration: underline; }',
+            'center { display: block; text-align: center; }',
+            'div { display: block; }',
+            '</style></head><body>',
+            displayHtml || '<p style="color:#9ca3af; font-style:italic;">Select a test to view the reference document.</p>',
+            '</body></html>'
+        ].join('');
+        iframe.srcdoc = doc;
+    }, [displayHtml]);
+
     useEffect(() => {
         if (!isTimerRunning && !submitted) {
             setTimeLeft(selectedDuration * 60);
@@ -606,10 +639,10 @@ ORAL ORDER
             <div className="flex-1 w-full flex flex-col overflow-hidden p-0">
                 {!submitted || !finalText ? (
                     <div className="flex-1 flex flex-col gap-0 overflow-hidden bg-gray-300">
-                        {/* Top Half: PDF or Sample Document */}
-                        <div className="flex-1 flex overflow-hidden border-b-2 border-gray-300">
+                        {/* Reference Document Pane */}
+                        <div className="h-[55vh] min-h-[300px] flex overflow-hidden border-b-2 border-gray-300">
                             {/* Reference Content */}
-                            <div className="flex-1 bg-white overflow-hidden flex flex-col">
+                            <div className="flex-1 bg-white overflow-hidden flex flex-col border border-gray-300 rounded-sm">
                                 <div className="bg-gray-100 px-4 py-2 border-b text-xs font-bold text-gray-600 uppercase tracking-wider flex justify-between items-center">
                                     <div className="flex items-center space-x-4">
                                         <span className="font-black text-[#1e3a8a]">{selectedTest?.title || 'No Test Selected'}</span>
@@ -638,48 +671,19 @@ ORAL ORDER
                                         )}
                                     </div>
                                 </div>
-                                {/* h-full on flex-1 gives a definite height so children with h-full / absolute inset resolve correctly */}
-                                    <div className="flex-1 bg-gray-200/50 relative h-full min-h-0">
-                                        {selectedTest && docViewMode === 'pdf' && selectedTest.pdf ? (
-                                            <iframe src={selectedTest.pdf} className="absolute inset-0 w-full h-full border-none" title="Reference PDF" />
-                                        ) : (
-                                            /* WORD VIEW — iframe srcdoc for pixel-perfect match with admin editor */
-                                            <iframe
-                                                className="absolute inset-0 w-full h-full border-none bg-white"
-                                                title="Reference Document"
-                                                sandbox="allow-same-origin"
-                                                srcDoc={`<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8"/>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    width: 100%;
-    height: auto;
-    background: white;
-  }
-  body {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 14px;
-    line-height: 1.625;
-    color: black;
-    padding: 20px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-  b, strong { font-weight: bold; }
-  i, em { font-style: italic; }
-  u { text-decoration: underline; }
-  center { display: block; text-align: center; }
-  div[style*="text-align"] { display: block; }
-</style>
-</head>
-<body>${displayHtml || ''}</body>
-</html>`}
-                                            />
-                                        )}
-                                    </div>
+                                {/* iframe fills remaining height */}
+                                <div className="flex-1 relative min-h-0">
+                                    {selectedTest && docViewMode === 'pdf' && selectedTest.pdf ? (
+                                        <iframe src={selectedTest.pdf} className="absolute inset-0 w-full h-full border-none" title="Reference PDF" />
+                                    ) : (
+                                        <iframe
+                                            ref={referenceIframeRef}
+                                            className="absolute inset-0 w-full h-full border-none bg-white"
+                                            title="Reference Document"
+                                            sandbox="allow-same-origin"
+                                        />
+                                    )}
+                                </div>
                             </div>
                         </div>
 
