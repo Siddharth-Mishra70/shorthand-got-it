@@ -1137,15 +1137,17 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                 </div>
 
                                 {/* Editor area */}
-                                <div
-                                    ref={hcEditorRef}
-                                    contentEditable
-                                    suppressContentEditableWarning
-                                    className="min-h-[200px] p-5 border border-t-0 border-gray-200 rounded-b-lg outline-none font-serif text-sm leading-relaxed bg-white whitespace-pre-wrap"
-                                    style={{ fontFamily: "'Courier New', Courier, monospace" }}
-                                    onInput={() => setHcFormattedHtml(hcEditorRef.current?.innerHTML || '')}
-                                    data-placeholder="Type the correctly formatted court text here. Apply bold, center, underline, etc. Students will only see unformatted plain text — this HTML is the answer key."
-                                />
+                                <div className="overflow-x-auto border border-t-0 border-gray-200 rounded-b-lg bg-white">
+                                    <div
+                                        ref={hcEditorRef}
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        className="min-h-[200px] w-max min-w-full p-5 outline-none font-serif text-sm leading-relaxed whitespace-pre"
+                                        style={{ fontFamily: "'Courier New', Courier, monospace" }}
+                                        onInput={() => setHcFormattedHtml(hcEditorRef.current?.innerHTML || '')}
+                                        data-placeholder="Type the correctly formatted court text here. Apply bold, center, underline, etc. Students will only see unformatted plain text — this HTML is the answer key."
+                                    />
+                                </div>
                                 <style>{`[contenteditable]:empty:before { content: attr(data-placeholder); color: #9ca3af; font-style: italic; }`}</style>
                                 <p className="mt-1.5 text-xs text-gray-400">Students see the <strong>plain text</strong> version. The formatting you apply here is used to score their submission.</p>
                             </div>
