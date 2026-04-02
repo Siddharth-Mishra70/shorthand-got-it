@@ -895,9 +895,22 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     };
 
     const handleSavePitmanData = async () => {
-        if (!pitmanTitle.trim() || !pitmanText.trim() || (!pitmanPdf && !rawPitmanFile)) { 
-            alert('Title, English Text Solution, and Shorthand Image are required.'); 
-            return; 
+        // More granular validation
+        if (!pitmanTitle.trim()) {
+            alert('Title is required.');
+            return;
+        }
+        if (!pitmanText.trim()) {
+            alert('English Text Solution (Transcription) is required.');
+            return;
+        }
+        
+        // For NEW exercises, image/pdf is required. 
+        // For EDITS, it's optional (we keep existing if not uploading)
+        const isEdit = !!editingPitmanId;
+        if (!isEdit && !pitmanPdf && !rawPitmanFile) {
+            alert('Shorthand Image or PDF solution is required.');
+            return;
         }
         
         setIsUploadingPitman(true);
