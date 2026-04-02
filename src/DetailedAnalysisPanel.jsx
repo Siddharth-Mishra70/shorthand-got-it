@@ -243,12 +243,26 @@ const DetailedAnalysisPanel = ({
     const renderTokenHtml = (token) => {
       const cfg = TOKEN_CONFIG[token.type];
       if (!cfg) return `<span>${token.word}</span>`;
+      
       const tipText = typeof cfg.tip === 'function' ? cfg.tip(token.orig || token.word) : cfg.tip;
       const safeWord = token.word.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      const safeTip = tipText.replace(/"/g, "&quot;");
+      const safeTip = tipText.replace(/"/g, "&quot;").replace(/'/g, "&apos;");
       
-      // Use standard title attribute to avoid any layout-breaking hidden elements
-      return `<span class="${cfg.base} cursor-help" title="${safeTip}">${safeWord}</span>`;
+      // We use INLINE STYLES for everything critical to ensure coloring 
+      // survives dangerouslySetInnerHTML and different CSS environments.
+      let inlineStyle = `color: ${cfg.color}; font-weight: 700; `;
+      
+      if (token.type === 'wrong') {
+        inlineStyle += `text-decoration: line-through; text-decoration-color: ${cfg.color}; background-color: rgba(239, 68, 68, 0.05); `;
+      } else if (token.type === 'capital') {
+        inlineStyle += `text-decoration: underline; text-decoration-color: ${cfg.color}; border-bottom: 2px solid ${cfg.color}; `;
+      } else if (token.type === 'missing') {
+        inlineStyle += `background-color: rgba(190, 18, 60, 0.1); padding: 0 2px; border: 1px solid rgba(190, 18, 60, 0.2); border-radius: 4px; font-style: italic; `;
+      } else if (token.type === 'extra') {
+        inlineStyle += `background-color: rgba(180, 83, 9, 0.1); padding: 0 2px; border: 1px solid rgba(180, 83, 9, 0.2); border-radius: 4px; `;
+      }
+
+      return `<span style="${inlineStyle}" class="cursor-help" title="${safeTip}">${safeWord}</span>`;
     };
 
     try {
