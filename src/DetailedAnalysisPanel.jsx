@@ -226,54 +226,36 @@ const DetailedAnalysisPanel = ({
     });
   }, [wordDiff, originalText]);
 
+  const renderTokenHtml = useCallback((token) => {
+    const cfg = TOKEN_CONFIG[token.type];
+    if (!cfg) return `<span>${token.word}</span>`;
+    
+    const tipText = typeof cfg.tip === 'function' ? cfg.tip(token.orig || token.word) : cfg.tip;
+    const safeWord = token.word.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const safeTip = tipText.replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+    
+    let inlineStyle = `color: ${cfg.color}; font-weight: 700; `;
+    if (token.type === 'wrong') {
+      inlineStyle += `text-decoration: line-through; text-decoration-color: ${cfg.color}; background-color: rgba(239, 68, 68, 0.05); `;
+    } else if (token.type === 'capital') {
+      inlineStyle += `text-decoration: underline; text-decoration-color: ${cfg.color}; border-bottom: 2px solid ${cfg.color}; `;
+    } else if (token.type === 'missing') {
+      inlineStyle += `background-color: rgba(190, 18, 60, 0.1); padding: 0 2px; border: 1px solid rgba(190, 18, 60, 0.2); border-radius: 4px; font-style: italic; `;
+    } else if (token.type === 'extra') {
+      inlineStyle += `background-color: rgba(180, 83, 9, 0.1); padding: 0 2px; border: 1px solid rgba(180, 83, 9, 0.2); border-radius: 4px; `;
+    }
+    return `<span style="${inlineStyle}" class="cursor-help" title="${safeTip}">${safeWord}</span>`;
+  }, []);
+
   // ── Inject Diff into HTML (for formatted Comparison View) ──
   const comparisonHtml = useMemo(() => {
     if (!originalHtml && !attemptedHtml) return null;
 
-    // We implement a fast, client-safe HTML string renderer replacing react-dom/server
-    // Which crashes standard Vite builds due to node environments missing.
-    const ICONS_SVG = {
-      correct: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m9 12 2 2 4-4"></path></svg>`,
-      wrong: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`,
-      capital: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>`,
-      missing: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>`,
-      extra: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>`
-    };
-
-    const renderTokenHtml = (token) => {
-      const cfg = TOKEN_CONFIG[token.type];
-      if (!cfg) return `<span>${token.word}</span>`;
-      
-      const tipText = typeof cfg.tip === 'function' ? cfg.tip(token.orig || token.word) : cfg.tip;
-      const safeWord = token.word.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      const safeTip = tipText.replace(/"/g, "&quot;").replace(/'/g, "&apos;");
-      
-      // We use INLINE STYLES for everything critical to ensure coloring 
-      // survives dangerouslySetInnerHTML and different CSS environments.
-      let inlineStyle = `color: ${cfg.color}; font-weight: 700; `;
-      
-      if (token.type === 'wrong') {
-        inlineStyle += `text-decoration: line-through; text-decoration-color: ${cfg.color}; background-color: rgba(239, 68, 68, 0.05); `;
-      } else if (token.type === 'capital') {
-        inlineStyle += `text-decoration: underline; text-decoration-color: ${cfg.color}; border-bottom: 2px solid ${cfg.color}; `;
-      } else if (token.type === 'missing') {
-        inlineStyle += `background-color: rgba(190, 18, 60, 0.1); padding: 0 2px; border: 1px solid rgba(190, 18, 60, 0.2); border-radius: 4px; font-style: italic; `;
-      } else if (token.type === 'extra') {
-        inlineStyle += `background-color: rgba(180, 83, 9, 0.1); padding: 0 2px; border: 1px solid rgba(180, 83, 9, 0.2); border-radius: 4px; `;
-      }
-
-      return `<span style="${inlineStyle}" class="cursor-help" title="${safeTip}">${safeWord}</span>`;
-    };
-
     try {
-      // PROPRIETARY LOGIC: If originalHtml exists (HighCourt), base the "Comparison" on the Correct Reference's structure
-      // This ensures both panels "look the same" (structure/alignment-wise)
-      const htmlToMap = originalHtml || attemptedHtml; 
-      const isAttempted = !originalHtml && !!attemptedHtml; // If we use originalHtml, we are NOT mapping on student structure
-      
+      const htmlToMap = originalHtml || attemptedHtml;
+      const isAttempted = !originalHtml && !!attemptedHtml;
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlToMap, 'text/html');
-      
       const walk = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null, false);
       const textNodes = [];
       let n;
@@ -289,33 +271,28 @@ const DetailedAnalysisPanel = ({
         for (const p of parts) {
           if (!p) continue;
           if (/^\s+$/.test(p)) {
-            // Preserve existing whitespace
             fragment.appendChild(doc.createTextNode(p));
           } else {
-            // It's a word
             if (isAttempted) {
-              // We are mapping on Student's HTML: inject 'missing' words
               while (tokenIdx < enrichedDiff.length && enrichedDiff[tokenIdx].type === 'missing') {
                 const tempWrap = doc.createElement('span');
                 tempWrap.innerHTML = renderTokenHtml(enrichedDiff[tokenIdx]) + ' ';
-                while(tempWrap.firstChild) fragment.appendChild(tempWrap.firstChild);
+                while (tempWrap.firstChild) fragment.appendChild(tempWrap.firstChild);
                 tokenIdx++;
               }
             } else {
-              // We are mapping on Admin HTML: inject 'extra' words
               while (tokenIdx < enrichedDiff.length && enrichedDiff[tokenIdx].type === 'extra') {
                 const tempWrap = doc.createElement('span');
                 tempWrap.innerHTML = renderTokenHtml(enrichedDiff[tokenIdx]) + ' ';
-                while(tempWrap.firstChild) fragment.appendChild(tempWrap.firstChild);
+                while (tempWrap.firstChild) fragment.appendChild(tempWrap.firstChild);
                 tokenIdx++;
               }
             }
 
-            // Now handle the actual word
             if (tokenIdx < enrichedDiff.length) {
               const tempWrap = doc.createElement('span');
               tempWrap.innerHTML = renderTokenHtml(enrichedDiff[tokenIdx]) + ' ';
-              while(tempWrap.firstChild) fragment.appendChild(tempWrap.firstChild);
+              while (tempWrap.firstChild) fragment.appendChild(tempWrap.firstChild);
               tokenIdx++;
             } else {
               fragment.appendChild(doc.createTextNode(p));
@@ -325,20 +302,20 @@ const DetailedAnalysisPanel = ({
         node.parentNode.replaceChild(fragment, node);
       }
 
-      // Handle trailing tokens
+      // Trailing tokens
       if (isAttempted) {
         while (tokenIdx < enrichedDiff.length && enrichedDiff[tokenIdx].type === 'missing') {
-           const tempWrap = doc.createElement('span');
-           tempWrap.innerHTML = renderTokenHtml(enrichedDiff[tokenIdx]) + ' ';
-           while(tempWrap.firstChild) doc.body.appendChild(tempWrap.firstChild);
-           tokenIdx++;
+          const tempWrap = doc.createElement('span');
+          tempWrap.innerHTML = renderTokenHtml(enrichedDiff[tokenIdx]) + ' ';
+          while (tempWrap.firstChild) doc.body.appendChild(tempWrap.firstChild);
+          tokenIdx++;
         }
       } else {
         while (tokenIdx < enrichedDiff.length && enrichedDiff[tokenIdx].type === 'extra') {
-           const tempWrap = doc.createElement('span');
-           tempWrap.innerHTML = renderTokenHtml(enrichedDiff[tokenIdx]) + ' ';
-           while(tempWrap.firstChild) doc.body.appendChild(tempWrap.firstChild);
-           tokenIdx++;
+          const tempWrap = doc.createElement('span');
+          tempWrap.innerHTML = renderTokenHtml(enrichedDiff[tokenIdx]) + ' ';
+          while (tempWrap.firstChild) doc.body.appendChild(tempWrap.firstChild);
+          tokenIdx++;
         }
       }
 
@@ -347,7 +324,14 @@ const DetailedAnalysisPanel = ({
       console.error("Error creating comparison HTML", e);
       return null;
     }
-  }, [originalHtml, attemptedHtml, enrichedDiff]);
+  }, [originalHtml, attemptedHtml, enrichedDiff, renderTokenHtml]);
+  
+  // Fallback: If no HTML structure is available (e.g. plain text Audio Dictation), 
+  // we build a simple colored token view.
+  const plainComparisonHtml = useMemo(() => {
+    if (comparisonHtml) return null;
+    return enrichedDiff.map(renderTokenHtml).join(' ');
+  }, [comparisonHtml, enrichedDiff]);
 
   // ── Sync scroll between panels ──────────────────────────────
   const origRef  = useRef(null);
@@ -477,7 +461,7 @@ const DetailedAnalysisPanel = ({
             <div 
               className="ql-editor font-mono text-[16px] leading-loose text-black whitespace-pre-wrap break-words not-italic" 
               style={{ padding: '30px', fontFamily: "'Courier New', Courier, monospace", minHeight: '100%' }}
-              dangerouslySetInnerHTML={{ __html: comparisonHtml || attemptedHtml || attemptedText }} 
+              dangerouslySetInnerHTML={{ __html: comparisonHtml || plainComparisonHtml || attemptedHtml || attemptedText }} 
             />
           </div>
         </div>
