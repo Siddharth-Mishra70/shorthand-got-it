@@ -48,24 +48,26 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
 );
 
 const CircularCourseCard = ({ title, type, isPremium, onTakeTest }) => (
-  <div className="flex flex-col items-center group">
-    <div className="relative w-48 h-48 rounded-full bg-white shadow-xl flex flex-col justify-center items-center text-center p-6 border-4 border-transparent group-hover:border-[#1e3a8a] transition-all duration-300">
-      <div className="absolute top-2 right-2">
+  <div className="flex flex-col items-center group w-full max-w-[280px]">
+    <div className="relative w-full aspect-square rounded-full bg-white shadow-xl flex flex-col justify-center items-center text-center p-6 border-4 border-transparent group-hover:border-[#1e3a8a] transition-all duration-300">
+      <div className="absolute top-2 right-2 sm:top-4 sm:right-4">
         <span
-          className={`px-3 py-1 text-xs font-bold rounded-full shadow-sm ${
+          className={`px-3 py-1 text-[10px] sm:text-xs font-black rounded-full shadow-sm ${
             isPremium ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
           }`}
         >
           {isPremium ? 'PAID' : 'FREE'}
         </span>
       </div>
-      <FileText className="w-8 h-8 text-[#1e3a8a] mb-2" />
-      <h3 className="font-bold text-gray-800 text-sm leading-tight mb-1">{title}</h3>
-      <p className="text-xs text-gray-500">{type}</p>
+      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
+        <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-[#1e3a8a]" />
+      </div>
+      <h3 className="font-extrabold text-gray-800 text-xs sm:text-sm leading-tight mb-1 px-2">{title}</h3>
+      <p className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest">{type}</p>
     </div>
     <button
       onClick={onTakeTest}
-      className="mt-6 bg-[#1e3a8a] hover:bg-blue-800 text-white px-6 py-2 rounded-full font-semibold shadow-md transition-transform transform hover:scale-105 flex items-center space-x-2"
+      className="mt-6 w-full sm:w-auto bg-[#1e3a8a] hover:bg-blue-800 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center justify-center space-x-2"
     >
       <PlayCircle className="w-4 h-4" />
       <span>Take Test</span>
@@ -571,7 +573,7 @@ function App() {
                   <p className="text-gray-600">Explore our premium shorthand courses and dictations.</p>
                 </div>
       
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12 justify-items-center p-6 lg:p-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10 w-full place-items-center p-6 lg:p-10">
                   {courses.map((course, idx) => (
                     <CircularCourseCard
                       key={idx}
