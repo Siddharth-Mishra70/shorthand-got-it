@@ -843,15 +843,14 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
     }
 
     return (
-        <div className="h-full flex-1 bg-gray-50 flex flex-col font-sans text-lg min-h-0 overflow-hidden relative">
+        <div className="min-h-[100dvh] flex-1 bg-gray-50 flex flex-col font-sans text-lg overflow-hidden relative">
             <div className="w-full h-full bg-white shadow-xl overflow-hidden border border-gray-100 flex flex-col relative transition-all duration-300">
 
                 {/* Top Bar */}
-                <div className="bg-[#1e3a8a] text-white px-6 py-4 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 shadow-md shrink-0">
-                    <div className="flex items-center space-x-3">
-                        <h2 className="text-xl font-bold tracking-wide">Exercise:</h2>
+                <div className="bg-[#1e3a8a] text-white px-4 py-2.5 flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 shadow-md shrink-0">
+                    <div className="flex items-center space-x-2">
                         <select
-                            className="bg-blue-800/50 text-white text-sm font-bold px-3 py-1.5 rounded-lg outline-none border border-blue-700 focus:border-blue-400"
+                            className="bg-blue-800/50 text-white text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-lg outline-none border border-blue-700/50 focus:border-blue-400 max-w-[140px] truncate"
                             value={courses ? (courses.find(c => c.id === initialCourse)?.view || '') : (selectedExercise?.id || '')}
                             onChange={(e) => {
                                 if (onNavigateCourse && courses) {
@@ -873,10 +872,9 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                 <option key={ex.id} value={ex.id} className="bg-white text-gray-900">{ex.title}</option>
                             ))}
                         </select>
-                        <div className="flex items-center space-x-3 ml-4 border-l border-blue-400 pl-4 hidden md:flex">
-                            <h2 className="text-sm font-bold tracking-wide">Time:</h2>
+                        <div className="flex items-center space-x-2 ml-2 border-l border-blue-400/30 pl-2 hidden lg:flex">
                             <select
-                                className="bg-blue-800/50 text-white text-sm font-bold px-3 py-1.5 rounded-lg outline-none border border-blue-700 focus:border-blue-400"
+                                className="bg-blue-800/50 text-white text-[11px] font-black px-2 py-1.5 rounded-lg outline-none border border-blue-700/50 focus:border-blue-400"
                                 value={selectedDuration}
                                 onChange={(e) => setSelectedDuration(Number(e.target.value))}
                                 disabled={isStarted}
@@ -885,9 +883,8 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     <option key={m} value={m} className="bg-white text-gray-900">{m} Min</option>
                                 ))}
                             </select>
-                            <h2 className="text-sm font-bold tracking-wide ml-2">WPM:</h2>
                             <select
-                                className="bg-blue-800/50 text-white text-sm font-bold px-3 py-1.5 rounded-lg outline-none border border-blue-700 focus:border-blue-400"
+                                className="bg-blue-800/50 text-white text-[11px] font-black px-2 py-1.5 rounded-lg outline-none border border-blue-700/50 focus:border-blue-400"
                                 value={targetWpm}
                                 onChange={(e) => setTargetWpm(Number(e.target.value))}
                                 disabled={isStarted}
@@ -899,73 +896,66 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-6 text-sm md:text-base font-semibold">
-                        <div className="flex items-center space-x-2 bg-blue-800/50 px-4 py-2 rounded-lg">
-                            <Clock className="w-5 h-5 text-blue-200" />
-                            <span className={`text-2xl font-black tracking-widest ${timeLeft <= 60 ? 'text-red-300 animate-pulse' : 'text-white'}`}>
+                    <div className="flex items-center space-x-3 text-sm font-bold">
+                        <div className="flex items-center space-x-1.5 bg-blue-900/40 px-3 py-1.5 rounded-xl border border-blue-700/30">
+                            <Clock className="w-4 h-4 text-blue-200" />
+                            <span className={`text-xl font-black tabular-nums tracking-widest ${timeLeft <= 60 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
                                 {formatTime(timeLeft)}
                             </span>
                         </div>
 
-                        <div className="flex items-center space-x-2 bg-blue-800/50 px-4 py-2 rounded-lg">
-                            <Activity className="w-5 h-5 text-blue-200" />
-                            <span>{Math.max(0, wpm)} WPM</span>
-                        </div>
-
-                        <div className="flex items-center space-x-2 bg-blue-800/50 px-4 py-2 rounded-lg">
-                            <CheckCircle2 className="w-5 h-5 text-blue-200" />
-                            <span>{accuracy}% Acc</span>
+                        <div className="flex items-center space-x-1.5 bg-blue-900/40 px-3 py-1.5 rounded-xl border border-blue-700/30 hidden sm:flex">
+                            <Activity className="w-4 h-4 text-blue-200" />
+                            <span className="text-xs uppercase tracking-tight">{Math.max(0, wpm)} WPM</span>
                         </div>
 
                         {/* Top Control Section for Audio Dictations */}
                         {selectedExercise.isAudioCourse && (
-                            <div className="flex items-center space-x-3 pl-4 border-l border-blue-400">
+                            <div className="flex items-center space-x-2 pl-2 border-l border-blue-400/30">
                                 {!isTestActive && countdown === null ? (
                                     <button
                                         onClick={() => setCountdown(5)}
-                                        className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)] active:scale-95 flex items-center space-x-2"
+                                        className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all shadow-lg active:scale-95 flex items-center space-x-1.5"
                                     >
-                                        <Play className="w-4 h-4 fill-current" />
-                                        <span>Start Test (5s)</span>
+                                        <Play className="w-3.5 h-3.5 fill-current" />
+                                        <span>START TEST</span>
                                     </button>
                                 ) : countdown !== null ? (
-                                    <div className="px-8 py-2 bg-red-600 text-white text-lg font-black uppercase tracking-widest rounded-xl animate-pulse flex items-center space-x-3 border-2 border-red-400">
-                                        <Clock className="w-6 h-6 animate-spin-slow" />
-                                        <span>Starts in: {countdown}s</span>
+                                    <div className="px-4 py-1.5 bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-lg animate-pulse flex items-center space-x-2 border border-red-400">
+                                        <Clock className="w-4 h-4" />
+                                        <span>{countdown}s</span>
                                     </div>
                                 ) : (
-                                    <div className="px-6 py-2 bg-white/20 border border-white/40 text-white text-xs font-black uppercase tracking-widest rounded-xl flex items-center space-x-2">
-                                        <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse" />
-                                        <span>ACTIVE</span>
+                                    <div className="px-4 py-1.5 bg-white/10 border border-white/20 text-white text-[10px] font-black uppercase tracking-widest rounded-lg flex items-center space-x-1.5">
+                                        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                                        <span>LIVE</span>
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {/* Moved Buttons from Bottom to Header */}
-                        <div className="flex items-center space-x-2 pl-4 border-l border-blue-400">
+                        <div className="flex items-center space-x-2 pl-2 border-l border-blue-400/30">
                             <button
                                 onClick={toggleFullscreen}
-                                className="w-9 h-9 flex items-center justify-center bg-white/10 hover:bg-white/20 border border-white/40 text-white rounded-xl transition-all active:scale-95 mr-2"
-                                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                                className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg transition-all active:scale-95"
                             >
-                                {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                                {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
                             </button>
                             <button
                                 onClick={handleReset}
-                                className="px-4 py-2 bg-white/10 hover:bg-red-500/20 border border-white/20 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                                className="px-3 py-1.5 bg-white/10 hover:bg-red-500/20 border border-white/20 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all active:scale-95"
                             >
                                 Reset
                             </button>
                             <button
                                 onClick={handleSubmit}
                                 disabled={!isStarted && inputText.length === 0}
-                                className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg flex items-center space-x-2 active:scale-95 ${(!isStarted && inputText.length === 0)
-                                    ? 'bg-blue-400/50 text-blue-200 cursor-not-allowed border border-blue-400'
+                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center space-x-1.5 active:scale-95 ${(!isStarted && inputText.length === 0)
+                                    ? 'bg-blue-400/50 text-blue-200 cursor-not-allowed border border-blue-400/50'
                                     : 'bg-green-500 hover:bg-green-600 text-white'
                                     }`}
                             >
-                                <CheckCircle2 className="w-4 h-4" />
+                                <CheckCircle2 className="w-3.5 h-3.5" />
                                 <span>Submit</span>
                             </button>
                         </div>
@@ -1027,9 +1017,9 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             </div>
                         )}
 
-                        <div className={`flex-1 p-4 md:p-6 ${selectedExercise?.isAudioCourse ? 'flex flex-col' : 'grid grid-cols-1 lg:grid-cols-2 gap-8'} min-h-0`}>
+                        <div className={`flex-1 p-2 md:p-6 ${selectedExercise?.isAudioCourse ? 'flex flex-col' : 'flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-8'} overflow-y-auto lg:overflow-hidden`}>
                             {selectedExercise?.isAudioCourse ? (
-                                <div className="flex flex-col space-y-4 h-full">
+                                <div className="flex flex-col space-y-4 h-full min-h-0">
                                     <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 flex flex-col items-center gap-4 md:gap-5 shadow-sm">
                                         
                                         <div className="flex items-center space-x-4 shrink-0 w-full mb-3">
@@ -1083,20 +1073,20 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     </div>
 
                                     {/* Massive Transcription Field */}
-                                    <div className="flex flex-col flex-1 min-h-[450px] bg-white border-2 border-gray-200 rounded-[2rem] p-8 shadow-xl shadow-blue-900/5">
+                                    <div className="flex flex-col h-[60vh] md:h-full md:flex-1 bg-white border-2 border-gray-200 rounded-[2rem] p-4 md:p-8 shadow-xl shadow-blue-900/5">
                                         
-                                        <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3 h-12 shrink-0">
+                                        <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3 h-10 md:h-12 shrink-0">
                                             <div className="flex items-center space-x-2">
                                                 <div className={`w-2 h-2 rounded-full ${isTestActive ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
-                                                <h3 className="text-sm font-bold text-gray-600 uppercase tracking-widest">
-                                                    {isTestActive ? 'Live Transcription Area (Active)' : 'Transcription Area (Locked)'}
+                                                <h3 className="text-xs font-bold text-gray-600 uppercase tracking-widest truncate max-w-[120px] md:max-w-none">
+                                                    {isTestActive ? 'Live Transcription' : 'Transcription Locked'}
                                                 </h3>
                                             </div>
-                                            <div className="text-[10px] bg-red-50 text-red-600 px-3 py-1.5 rounded-full font-black italic tracking-wider shadow-sm">
-                                                COPY-PASTE DISABLED
+                                            <div className="text-[10px] bg-red-50 text-red-600 px-3 py-1.5 rounded-full font-black italic tracking-wider shadow-sm hidden sm:block">
+                                                NO COPY-PASTE
                                             </div>
                                         </div>
-                                        <div className={`flex-1 border-2 rounded-xl p-4 shadow-sm flex flex-col min-h-[300px] transition-all duration-500 ${isTestActive ? 'bg-white border-gray-200' : 'bg-gray-100 border-gray-300 grayscale opacity-60'}`}>
+                                        <div className={`flex-1 border-2 rounded-xl p-2 md:p-4 shadow-sm flex flex-col min-h-0 transition-all duration-500 ${isTestActive ? 'bg-white border-gray-200' : 'bg-gray-100 border-gray-300 grayscale opacity-60'}`}>
                                             <textarea
                                                 ref={textareaRef}
                                                 className={`flex-1 w-full h-full bg-transparent text-xl leading-relaxed text-gray-900 outline-none resize-none placeholder-gray-400 font-bold scroll-custom p-8 ${!isTestActive ? 'cursor-not-allowed select-none' : ''}`}
@@ -1118,18 +1108,18 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             ) : (
                                 <>
                                     {/* Reference Text Area */}
-                                    <div className="flex flex-col flex-1 h-full min-h-0">
-                                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 shrink-0">Reference Text</h3>
+                                    <div className="flex flex-col h-[30vh] lg:h-full lg:flex-1 min-h-0">
+                                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 shrink-0">Reference Text</h3>
                                         <div 
                                             ref={referenceScrollRef}
-                                            className="flex-1 bg-white border border-gray-200 rounded-xl p-5 shadow-sm overflow-y-auto leading-relaxed text-lg scroll-smooth min-h-0"
+                                            className="flex-1 bg-white border border-gray-200 rounded-xl p-3 md:p-5 shadow-sm overflow-y-auto leading-relaxed text-base md:text-lg scroll-smooth min-h-0"
                                         >
                                             {renderHighlightedText()}
                                         </div>
                                     </div>
 
                                     {/* User Input Area */}
-                                    <div className="flex flex-col flex-1 h-full min-h-0">
+                                    <div className="flex flex-col h-[35vh] lg:h-full lg:flex-1 min-h-0">
                                         <div className="flex items-center justify-between mb-3 shrink-0">
                                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Your Translation</h3>
                                             <div className="flex items-center space-x-2">
