@@ -79,7 +79,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                         remoteTests = data.map(d => ({
                             ...d,
                             isDynamic: true,
-                            image: d.pdf, 
+                            image: d.image_url || d.pdf || d.image, // Fallback through potential column names
                             lines: (d.original_text || '').split('\n').filter(l => l.trim() !== '')
                         }));
                     }
