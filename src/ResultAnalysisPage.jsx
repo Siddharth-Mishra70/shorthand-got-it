@@ -515,15 +515,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
       {/* ── Sticky Action Bar ─────────────────────────────────── */}
       <div className="print:hidden sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="w-full px-4 md:px-6 py-3 flex items-center justify-between gap-3">
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="flex items-center space-x-2 text-gray-500 hover:text-[#1e3a8a] font-semibold text-sm transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back</span>
-            </button>
-          )}
+          <div className="w-4 h-4 flex-shrink-0 sm:hidden" /> {/* Placeholder for mobile alignment */}
 
           {/* Tabs */}
           <div className="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5 mx-auto">

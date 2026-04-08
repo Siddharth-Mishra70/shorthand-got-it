@@ -29,6 +29,9 @@ import ResultAnalysisPage from './ResultAnalysisPage';
 import AdminPanel from './AdminPanel';
 import StateExamModule from './StateExamModule';
 import StudentPerformanceDashboard from './StudentPerformanceDashboard';
+import MobilePracticeSection from './MobilePracticeSection';
+import FAQSection from './FAQSection';
+import ErrorBoundary from './ErrorBoundary';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dashboard Sub-components
@@ -190,10 +193,12 @@ function App() {
   // ── Auth Page ─────────────────────────────────────────────
   if (currentView === 'auth') {
     return (
-      <AuthPage
-        onAuthSuccess={handleAuthSuccess}
-        onBack={() => setCurrentView('landing')}
-      />
+      <ErrorBoundary>
+        <AuthPage
+          onAuthSuccess={handleAuthSuccess}
+          onBack={() => setCurrentView('landing')}
+        />
+      </ErrorBoundary>
     );
   }
 
@@ -420,7 +425,7 @@ function App() {
                             <div className="space-y-3 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500 font-bold">Student:</span>
-                                    <span className="text-gray-900 font-black">{user?.name}</span>
+                                    <span className="text-gray-900 font-black">{user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.name}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500 font-bold">Phone:</span>
@@ -447,28 +452,32 @@ function App() {
   // ── Landing Page ──────────────────────────────────────────
   if (currentView === 'landing') {
     return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Login Required Modal */}
-        {showAuthModal && (
-          <LoginRequiredModal
-            onLogin={() => openAuthFromModal('login')}
-            onRegister={() => openAuthFromModal('register')}
-            onClose={() => { setShowAuthModal(false); setPendingView(null); }}
-          />
-        )}
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 text-sans">
+          {/* Login Required Modal */}
+          {showAuthModal && (
+            <LoginRequiredModal
+              onLogin={() => openAuthFromModal('login')}
+              onRegister={() => openAuthFromModal('register')}
+              onClose={() => { setShowAuthModal(false); setPendingView(null); }}
+            />
+          )}
 
-        <Navbar
-          isLoggedIn={isLoggedIn}
-          user={user}
-          onLoginClick={() => setCurrentView('auth')}
-          onLogout={handleLogout}
-          onDashboard={() => navigate('dashboard')}
-        />
-        <HeroSection onJoinNow={() => navigate('dashboard')} />
-        <LiveDemoInteractive onRegister={() => setCurrentView('auth')} />
-        <OfferingsSection onNavigate={(view) => navigate(view)} />
-        <AboutContactSection />
-      </div>
+          <Navbar
+            isLoggedIn={isLoggedIn}
+            user={user}
+            onLoginClick={() => setCurrentView('auth')}
+            onLogout={handleLogout}
+            onDashboard={() => navigate('dashboard')}
+          />
+          <HeroSection onJoinNow={() => navigate('dashboard')} />
+          <LiveDemoInteractive onRegister={() => setCurrentView('auth')} />
+          <OfferingsSection onNavigate={(view) => navigate(view)} />
+          <MobilePracticeSection />
+          <AboutContactSection />
+          <FAQSection />
+        </div>
+      </ErrorBoundary>
     );
   }
 
@@ -477,130 +486,132 @@ function App() {
     return <AdminPanel user={user} onLogout={handleLogout} supabase={supabase} />;
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b z-10">
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-[#1e3a8a] rounded-lg flex justify-center items-center">
-              <span className="text-white font-bold text-xl">S</span>
-            </div>
-            <h1
-              className="text-2xl font-black text-[#1e3a8a] tracking-tight cursor-pointer hover:opacity-80 transition-opacity"
-              onClick={() => setCurrentView('landing')}
-            >
-              Shorthandians
-            </h1>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            {/* User badge */}
-            {user && (
-              <div className="hidden md:flex items-center space-x-2 bg-blue-50 border border-blue-100 px-4 py-2 rounded-full">
-                <div className="w-7 h-7 bg-[#1e3a8a] rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-white" />
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+          {/* Header */}
+          <header className="bg-white shadow-sm border-b z-10">
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-[#1e3a8a] rounded-lg flex justify-center items-center shadow-sm">
+                  <span className="text-white font-bold text-xl">S</span>
                 </div>
-                <span className="font-semibold text-[#1e3a8a] text-sm">{user.name}</span>
+                <h1
+                  className="text-2xl font-black text-[#1e3a8a] tracking-tight cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setCurrentView('landing')}
+                >
+                  Shorthandians
+                </h1>
               </div>
-            )}
 
-            <a
-              href="https://wa.me/917080811235"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-full font-medium transition-colors shadow-sm"
-            >
-              <MessageCircle className="w-5 h-5" />
-              <span className="hidden sm:inline">Support</span>
-            </a>
+              <div className="flex items-center space-x-4">
+                {/* User badge */}
+                {user && (
+                  <div className="hidden md:flex items-center space-x-2 bg-blue-50 border border-blue-100 px-4 py-2 rounded-full">
+                    <div className="w-7 h-7 bg-[#1e3a8a] rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="font-semibold text-[#1e3a8a] text-sm">{user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.name}</span>
+                  </div>
+                )}
 
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 border-2 border-gray-200 hover:border-red-300 text-gray-600 hover:text-red-600 px-4 py-2 rounded-full font-semibold transition-colors text-sm"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+                <a
+                  href="https://wa.me/917080811235"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-full font-medium transition-colors shadow-sm"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span className="hidden sm:inline">Support</span>
+                </a>
+
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2 border-2 border-gray-200 hover:border-red-300 text-gray-600 hover:text-red-600 px-4 py-2 rounded-full font-semibold transition-colors text-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <div className="flex-1 w-full flex flex-col md:flex-row overflow-hidden">
+            {/* Sidebar */}
+            <aside className="w-full md:w-64 bg-white md:border-r border-b md:border-b-0 py-6 px-4 flex flex-col md:min-h-[calc(100vh-80px)] shrink-0">
+              <nav className="space-y-2 flex-1 outline-none">
+                <SidebarItem
+                  icon={GraduationCap}
+                  label="Student Portal"
+                  active={currentView === 'dashboard'}
+                  onClick={() => setCurrentView('dashboard')}
+                />
+                <SidebarItem
+                  icon={BarChart2}
+                  label="My Performance"
+                  active={currentView === 'results'}
+                  onClick={() => setCurrentView('results')}
+                />
+                <SidebarItem 
+                   icon={CreditCard} 
+                   label="Subscription Detail" 
+                   active={currentView === 'subscription'}
+                   onClick={() => setCurrentView('subscription')}
+                />
+              </nav>
+
+              <div className="mt-8 pt-6 border-t border-gray-100 hidden md:block">
+                <div className="bg-blue-50 p-4 rounded-xl text-center shadow-inner">
+                  <h4 className="font-bold text-[#1e3a8a] mb-2">Need More Tests?</h4>
+                  <p className="text-xs text-gray-600 mb-3">Upgrade for unlimited access to premium dictations.</p>
+                  <button className="text-sm font-black text-white bg-[#1e3a8a] w-full py-2 rounded-lg hover:bg-blue-800 transition-all hover:scale-105 active:scale-95 shadow-lg">
+                    View Plans
+                  </button>
+                </div>
+              </div>
+            </aside>
+
+  // Dashboard Content
+            <main className={`flex-1 overflow-y-auto bg-gray-50 bg-dot-pattern ${currentView === 'dashboard' ? 'p-6 lg:p-10' : 'p-0'}`}>
+              {currentView === 'dashboard' ? (
+                  <>
+                    <div className="mb-8 p-6 lg:p-10 pb-0">
+                      <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
+                        Welcome back, {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.name || 'Student'}! 👋
+                      </h2>
+                      <p className="text-gray-600">Explore our premium shorthand courses and dictations.</p>
+                    </div>
+          
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10 w-full place-items-center p-6 lg:p-10">
+                      {courses.map((course, idx) => (
+                        <CircularCourseCard
+                          key={idx}
+                          title={course.title}
+                          type={course.type}
+                          isPremium={course.isPremium}
+                          onTakeTest={() => setCurrentView(course.view)}
+                        />
+                      ))}
+                    </div>
+                  </>
+              ) : currentView === 'results' ? (
+                  <StudentPerformanceDashboard 
+                      user={user} 
+                      onBack={() => setCurrentView('dashboard')}
+                      onViewResult={(id) => setCurrentView(`results:${id}`)}
+                      onTakeTest={(view) => setCurrentView(view)}
+                  />
+              ) : (
+                    <div className="p-6 lg:p-10">
+                        <p className="text-gray-500 italic">Select a module from the dashboard to proceed.</p>
+                    </div>
+              )}
+            </main>
           </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex-1 w-full flex flex-col md:flex-row overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-full md:w-64 bg-white md:border-r border-b md:border-b-0 py-6 px-4 flex flex-col md:min-h-[calc(100vh-80px)]">
-          <nav className="space-y-2 flex-1">
-            <SidebarItem
-              icon={GraduationCap}
-              label="Student Portal"
-              active={currentView === 'dashboard'}
-              onClick={() => setCurrentView('dashboard')}
-            />
-            <SidebarItem
-              icon={BarChart2}
-              label="My Performance"
-              active={currentView === 'results'}
-              onClick={() => setCurrentView('results')}
-            />
-            <SidebarItem 
-               icon={CreditCard} 
-               label="Subscription Detail" 
-               active={currentView === 'subscription'}
-               onClick={() => setCurrentView('subscription')}
-            />
-          </nav>
-
-          <div className="mt-8 pt-6 border-t border-gray-100 hidden md:block">
-            <div className="bg-blue-50 p-4 rounded-xl text-center">
-              <h4 className="font-bold text-[#1e3a8a] mb-2">Need More Tests?</h4>
-              <p className="text-xs text-gray-600 mb-3">Upgrade for unlimited access.</p>
-              <button className="text-sm font-semibold text-white bg-[#1e3a8a] w-full py-2 rounded-lg hover:bg-blue-800 transition-colors">
-                View Plans
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        {/* Dashboard Content */}
-        <main className={`flex-1 overflow-y-auto bg-gray-50 bg-dot-pattern ${currentView === 'dashboard' ? 'p-6 lg:p-10' : 'p-0'}`}>
-          {currentView === 'dashboard' ? (
-              <>
-                <div className="mb-8 p-6 lg:p-10 pb-0">
-                  <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
-                    Welcome back, {user?.name || 'Student'}! 👋
-                  </h2>
-                  <p className="text-gray-600">Explore our premium shorthand courses and dictations.</p>
-                </div>
-      
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10 w-full place-items-center p-6 lg:p-10">
-                  {courses.map((course, idx) => (
-                    <CircularCourseCard
-                      key={idx}
-                      title={course.title}
-                      type={course.type}
-                      isPremium={course.isPremium}
-                      onTakeTest={() => setCurrentView(course.view)}
-                    />
-                  ))}
-                </div>
-              </>
-          ) : currentView === 'results' ? (
-              <StudentPerformanceDashboard 
-                  user={user} 
-                  onBack={() => setCurrentView('dashboard')}
-                  onViewResult={(id) => setCurrentView(`results:${id}`)}
-                  onTakeTest={(view) => setCurrentView(view)}
-              />
-          ) : (
-                <div className="p-6 lg:p-10">
-                    <p className="text-gray-500 italic">Select a module to proceed.</p>
-                </div>
-          )}
-        </main>
-      </div>
-    </div>
-  );
+      </ErrorBoundary>
+    );
 }
 
 export default App;

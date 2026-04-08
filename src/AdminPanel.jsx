@@ -4,8 +4,9 @@ import {
     Settings, LogOut, Search, Plus, Trash2, Keyboard, CheckCircle, Save, Loader2, FileUp,
     BookOpen, Edit2, Edit3, Map, ArrowLeft, ChevronRight, Globe, Upload, X, Zap, ChevronDown,
     Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, RefreshCw, History,
-    MessageSquare, Mail
+    MessageSquare, Mail, ShieldCheck
 } from 'lucide-react';
+import AdminUserManagement from './AdminUserManagement';
 
 const STATE_EXAMS = [
     'Uttar Pradesh', 'Bihar', 'Madhya Pradesh', 'Rajasthan', 'Maharashtra',
@@ -267,6 +268,13 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [loadingResults, setLoadingResults] = useState(true);
     const [selectedResultDate, setSelectedResultDate] = useState('All');
     const [resultSearchTerm, setResultSearchTerm] = useState('');
+    const [resultCurrentPage, setResultCurrentPage] = useState(1);
+    const [resultItemsPerPage] = useState(10);
+
+    // Reset pagination to page 1 when search or date filters change 
+    useEffect(() => {
+        setResultCurrentPage(1);
+    }, [resultSearchTerm, selectedResultDate]);
 
     // State Exam uploads (stored per state+type)
     const [stateExams, setStateExams] = useState(() => {
@@ -1714,12 +1722,17 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     />
                 </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <table className="w-full text-left">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+                <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Name</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Phone</th>
+                            <th className="px-6 py-4 text-sm font-bold text-gray-600">First Name</th>
+                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Last Name</th>
+                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Phone Number</th>
+                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Gmail Id</th>
+                            <th className="px-6 py-4 text-sm font-bold text-gray-600">State</th>
+                            <th className="px-6 py-4 text-sm font-bold text-gray-600">City</th>
+                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Gender</th>
                             <th className="px-6 py-4 text-sm font-bold text-gray-600">Joined</th>
                             <th className="px-6 py-4 text-sm font-bold text-gray-600">Status</th>
                             <th className="px-6 py-4 text-sm font-bold text-gray-600 text-right">Actions</th>
@@ -1732,7 +1745,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             const term = studentSearchTerm.toLowerCase();
                             return nameLower.includes(term) || phoneLower.includes(term);
                         }).length === 0 ? (
-                            <tr><td colSpan="5" className="text-center py-10 text-gray-400">No students found matching your search.</td></tr>
+                            <tr><td colSpan="10" className="text-center py-10 text-gray-400">No students found matching your search.</td></tr>
                         ) : users.filter(u => {
                             const nameLower = (u.name || '').toLowerCase();
                             const phoneLower = (u.phone || '').toLowerCase();
@@ -1740,9 +1753,14 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             return nameLower.includes(term) || phoneLower.includes(term);
                         }).map(u => (
                             <tr key={u.phone} className="border-b border-gray-100 hover:bg-red-50 transition-colors">
-                                <td className="px-6 py-4 text-sm font-semibold text-gray-800">{u.name}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{u.phone}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{u.joinedDate}</td>
+                                <td className="px-6 py-4 text-sm font-semibold text-gray-800">{u.first_name || (u.name ? u.name.split(' ')[0] : '-')}</td>
+                                <td className="px-6 py-4 text-sm font-semibold text-gray-800">{u.last_name || (u.name ? u.name.split(' ').slice(1).join(' ') : '-')}</td>
+                                <td className="px-6 py-4 text-sm text-gray-600">{u.phone || '-'}</td>
+                                <td className="px-6 py-4 text-sm text-gray-600">{u.email || '-'}</td>
+                                <td className="px-6 py-4 text-sm text-gray-600">{u.state || '-'}</td>
+                                <td className="px-6 py-4 text-sm text-gray-600">{u.city || '-'}</td>
+                                <td className="px-6 py-4 text-sm text-gray-600">{u.gender || '-'}</td>
+                                <td className="px-6 py-4 text-sm text-gray-600">{u.joinedDate || '-'}</td>
                                 <td className="px-6 py-4 text-sm">
                                     <div className="flex items-center space-x-3">
                                         <button
@@ -1792,125 +1810,203 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             return matchesDate && matchesSearch;
         });
 
+        // --- PAGINATION LOGIC ---
+        const indexOfLastResult = resultCurrentPage * resultItemsPerPage;
+        const indexOfFirstResult = indexOfLastResult - resultItemsPerPage;
+        const currentResults = filteredResults.slice(indexOfFirstResult, indexOfLastResult);
+        const totalPages = Math.ceil(filteredResults.length / resultItemsPerPage);
+
         return (
             <div className="space-y-6">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-1">
                     <div className="flex items-center gap-3">
+                        <div className="p-3 bg-red-50 rounded-2xl border border-red-100 shadow-sm">
+                            <BarChart2 className="w-6 h-6 text-red-700" />
+                        </div>
                         <div>
-                            <h2 className="text-2xl font-black text-gray-800 tracking-tight">Result Analysis</h2>
-                            <p className="text-gray-500 text-sm font-medium">Monitor student performance and exam metrics</p>
+                            <h2 className="text-2xl font-black text-gray-800 tracking-tight leading-none">Result Analysis</h2>
+                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1.5 flex items-center">
+                                <div className="w-1 h-1 rounded-full bg-red-400 mr-2" />
+                                {filteredResults.length} TOTAL RECORDS FOUND
+                            </p>
                         </div>
                         <button 
-                            onClick={() => window.location.reload()} 
-                            className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-xl transition-all"
-                            title="Refresh Data"
+                            onClick={async () => {
+                                setLoadingResults(true);
+                                window.location.reload();
+                            }} 
+                            className="ml-2 p-2.5 bg-white border border-gray-100 hover:bg-gray-50 text-gray-400 hover:text-red-700 rounded-xl transition-all shadow-sm active:scale-95"
+                            title="Sync fresh results from server"
                         >
-                            <RefreshCw className="w-5 h-5" />
+                            <RefreshCw className="w-4 h-4" />
                         </button>
                     </div>
-                    <div className="flex bg-white border border-gray-200 rounded-xl px-4 py-2.5 items-center shadow-sm w-full md:w-72 focus-within:ring-2 focus-within:ring-red-500/20 transition-all">
-                        <Search className="w-4 h-4 text-gray-400 mr-2" />
+                    <div className="flex bg-white border border-gray-200 rounded-2xl px-4 py-3 items-center shadow-sm w-full md:w-80 focus-within:ring-4 focus-within:ring-red-100 focus-within:border-red-400 transition-all group">
+                        <Search className="w-4 h-4 text-gray-400 mr-2 group-focus-within:text-red-500 transition-colors" />
                         <input 
                             type="text" 
-                            placeholder="Search by student or test..." 
+                            placeholder="Student name or test title..." 
                             value={resultSearchTerm || ''}
                             onChange={(e) => setResultSearchTerm(e.target.value)}
-                            className="outline-none text-sm bg-transparent w-full font-medium" 
+                            className="outline-none text-sm bg-transparent w-full font-bold text-gray-700 placeholder:text-gray-300" 
                         />
                     </div>
                 </div>
 
-                {/* Date Tabs */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
+                {/* Date Selection Tabs */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-4 no-scrollbar px-1">
                     {dateGroups.map(date => (
                         <button
                             key={date}
                             onClick={() => setSelectedResultDate(date)}
-                            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap border ${
+                            className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap border-2 ${
                                 selectedResultDate === date 
-                                    ? 'bg-red-700 text-white border-red-700 shadow-lg shadow-red-200 scale-105' 
-                                    : 'bg-white text-gray-500 border-gray-200 hover:border-red-200 hover:text-red-700'
+                                    ? 'bg-red-700 text-white border-red-700 shadow-xl shadow-red-200 scale-105 z-10' 
+                                    : 'bg-white text-gray-400 border-gray-50 hover:border-red-100 hover:text-red-700'
                             }`}
                         >
-                            {date}
+                            {date === 'All' ? '📅 View All History' : date}
                         </button>
                     ))}
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50/50 border-b border-gray-100">
-                            <tr>
-                                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Student</th>
-                                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Test Name</th>
-                                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">WPM / Accuracy</th>
-                                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Timestamp</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {loadingResults ? (
+                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden min-h-[600px] flex flex-col">
+                    <div className="flex-1">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50/40 border-b border-gray-50">
                                 <tr>
-                                    <td colSpan="4" className="px-6 py-24 text-center">
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-12 h-12 border-4 border-red-100 border-t-red-700 rounded-full animate-spin mb-4"></div>
-                                            <span className="font-black text-gray-400 text-xs uppercase tracking-widest">Fetching records...</span>
-                                        </div>
-                                    </td>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.25em]">Student Identity</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.25em]">Practice Session</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.25em]">Score & Stats</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.25em]">Completion Date</th>
                                 </tr>
-                            ) : filteredResults.length === 0 ? (
-                                <tr>
-                                    <td colSpan="4" className="px-6 py-24 text-center">
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                                                <BarChart2 className="w-8 h-8 text-gray-200" />
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {loadingResults ? (
+                                    <tr>
+                                        <td colSpan="4" className="px-6 py-32 text-center">
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-14 h-14 border-4 border-red-50 border-t-red-700 rounded-full animate-spin mb-6"></div>
+                                                <span className="font-black text-gray-400 text-xs uppercase tracking-[0.2em] animate-pulse">Syncing Cloud Database...</span>
                                             </div>
-                                            <p className="text-gray-400 font-bold italic">No test results found for this selection.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filteredResults.map(res => (
-                                <tr key={res.id} className="group hover:bg-red-50/30 transition-all duration-200">
-                                    <td className="px-6 py-5 whitespace-nowrap">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-50 to-red-100 text-red-700 flex items-center justify-center font-black text-xs border border-red-200 shadow-sm">
-                                                {res.studentAuthName.charAt(0).toUpperCase()}
+                                        </td>
+                                    </tr>
+                                ) : currentResults.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="4" className="px-6 py-32 text-center">
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6 scale-110 shadow-inner">
+                                                    <BarChart2 className="w-10 h-10 text-gray-200" />
+                                                </div>
+                                                <p className="text-gray-400 font-black text-xs uppercase tracking-widest">No matching records found for this period</p>
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[13px] font-black text-gray-900 leading-tight">{res.studentAuthName}</span>
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                                                    ID: {res.user_id?.slice(0, 8) || 'No-ID'}
+                                        </td>
+                                    </tr>
+                                ) : currentResults.map(res => (
+                                    <tr key={res.id} className="group hover:bg-red-50/20 transition-all duration-300">
+                                        <td className="px-8 py-6 whitespace-nowrap">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-white to-gray-50 text-red-700 flex items-center justify-center font-black text-base border border-gray-100 shadow-sm group-hover:bg-red-700 group-hover:text-white group-hover:border-red-700 transition-all duration-300 overflow-hidden">
+                                                    {res.studentAuthName.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="flex flex-col space-y-0.5">
+                                                    <span className="text-sm font-black text-gray-900 leading-none group-hover:text-red-700 transition-colors">{res.studentAuthName}</span>
+                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
+                                                        UID: {res.user_id?.slice(0, 12) || 'GUEST_ENTRY'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-col max-w-[280px]">
+                                                <p className="text-sm text-gray-700 font-bold truncate group-hover:text-red-900" title={res.exercise_title}>
+                                                    {res.exercise_title}
+                                                </p>
+                                                <span className="text-[9px] font-black text-gray-300 uppercase mt-1 tracking-tighter">
+                                                    {res.exercise_category || 'N/A'} MODE
                                                 </span>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <p className="text-sm text-gray-600 font-medium truncate max-w-[240px]" title={res.exercise_title}>
-                                            {res.exercise_title}
-                                        </p>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-black text-red-700">{res.wpm}</span>
-                                            <span className="text-[10px] font-black text-red-700/50 uppercase tracking-tighter mr-2">WPM</span>
-                                            <div className="w-px h-4 bg-gray-100 mx-1"></div>
-                                            <span className="text-sm font-black text-green-600">{res.accuracy}%</span>
-                                            <span className="text-[10px] font-black text-green-600/50 uppercase tracking-tighter">Acc</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5 whitespace-nowrap">
-                                        <div className="flex flex-col">
-                                            <span className="text-[11px] font-black text-gray-800 uppercase tracking-wider">
-                                                {new Date(res.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                            <span className="text-[9px] font-bold text-gray-400">
-                                                {new Date(res.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-2xl w-fit group-hover:bg-white border border-transparent group-hover:border-red-100 transition-all shadow-sm">
+                                                <div className="flex flex-col items-center px-1">
+                                                    <span className="text-sm font-black text-red-700 leading-none">{res.wpm}</span>
+                                                    <span className="text-[8px] font-black text-red-700/40 uppercase tracking-tighter">WPM</span>
+                                                </div>
+                                                <div className="w-px h-6 bg-gray-200"></div>
+                                                <div className="flex flex-col items-center px-1">
+                                                    <span className="text-sm font-black text-green-600 leading-none">{res.accuracy}%</span>
+                                                    <span className="text-[8px] font-black text-green-600/40 uppercase tracking-tighter">ACC</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 whitespace-nowrap">
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[11px] font-black text-gray-900 uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded-md group-hover:bg-red-700 group-hover:text-white transition-colors leading-relaxed">
+                                                    {new Date(res.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                                <span className="text-[10px] font-black text-gray-400 mt-1 uppercase tracking-tight">
+                                                    {new Date(res.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Unified Pagination Section at the Bottom */}
+                    <div className="px-8 py-6 bg-gray-50/30 border-t border-gray-50 flex items-center justify-between">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.1em]">Page Analysis</span>
+                            <p className="text-xs font-bold text-gray-600">Showing {indexOfFirstResult + 1}-{Math.min(indexOfLastResult, filteredResults.length)} of {filteredResults.length} records</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={() => setResultCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={resultCurrentPage === 1}
+                                className="flex items-center space-x-1 px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-black text-gray-500 hover:text-red-700 hover:border-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                            >
+                                <ArrowLeft className="w-3 h-3" />
+                                <span>PREVIOUS</span>
+                            </button>
+
+                            <div className="flex gap-1.5">
+                                {[...Array(totalPages)].map((_, i) => {
+                                    const pageNum = i + 1;
+                                    const isCurrent = resultCurrentPage === pageNum;
+                                    if (totalPages > 5) {
+                                        if (pageNum !== 1 && pageNum !== totalPages && Math.abs(pageNum - resultCurrentPage) > 1) {
+                                            if (pageNum === 2 || pageNum === totalPages - 1) return <span key={pageNum} className="text-gray-300">...</span>;
+                                            return null;
+                                        }
+                                    }
+                                    return (
+                                        <button 
+                                            key={pageNum}
+                                            onClick={() => setResultCurrentPage(pageNum)}
+                                            className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${
+                                                isCurrent ? 'bg-red-700 text-white shadow-lg' : 'bg-white text-gray-400 hover:text-red-700 border border-gray-100'
+                                            }`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <button 
+                                onClick={() => setResultCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                disabled={resultCurrentPage === totalPages || totalPages === 0}
+                                className="flex items-center space-x-1 px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-black text-gray-500 hover:text-red-700 hover:border-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                            >
+                                <span>NEXT</span>
+                                <ChevronRight className="w-3 h-3" />
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -2004,6 +2100,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
 
     const renderContent = () => {
         if (currentTab === 'students') return renderStudents();
+        if (currentTab === 'approvals') return <AdminUserManagement />;
         if (currentTab === 'results') return renderResults();
         if (currentTab === 'content') return renderModuleContent();
         if (currentTab === 'inquiries') return renderInquiries();
@@ -2349,6 +2446,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     <div className="px-4 mb-3 text-xs font-black text-gray-400 uppercase tracking-wider">Management</div>
                     <nav className="space-y-1 flex-1">
                         <SidebarItem icon={Users} label="Student Management" tabId="students" currentTab={currentTab} onClick={() => { setCurrentTab('students'); setActiveModule('home'); setSelectedState(null); setStateSubModule(null); }} />
+                        <SidebarItem icon={ShieldCheck} label="OTP Approvals" tabId="approvals" currentTab={currentTab} onClick={() => { setCurrentTab('approvals'); setActiveModule('home'); setSelectedState(null); setStateSubModule(null); }} />
                         <SidebarItem icon={BarChart2} label="Result Analysis" tabId="results" currentTab={currentTab} onClick={() => { setCurrentTab('results'); setActiveModule('home'); setSelectedState(null); setStateSubModule(null); }} />
                         <div className="my-3 border-t border-gray-100" />
                         <div

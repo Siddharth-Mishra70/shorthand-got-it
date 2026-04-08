@@ -1,13 +1,15 @@
-import React from 'react';
 import { 
-    Smartphone, 
     Monitor, 
     Zap, 
     Clock, 
     CheckCircle2, 
     Globe, 
-    Cpu 
+    Cpu,
+    Map,
+    MessageSquare, 
+    Mail
 } from 'lucide-react';
+import mobileVideo from './assets/mobile-demo.mp4.mp4';
 
 const FeatureItem = ({ icon: Icon, title, description }) => (
     <div className="flex items-start space-x-4 group p-4 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
@@ -50,15 +52,18 @@ const MobilePracticeSection = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                     {/* Left Side (Visual Placeholder) */}
                     <div className="relative group">
-                        <div className="absolute -inset-4 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-[2.5rem] blur opacity-20 group-hover:opacity-30 transition duration-1000 group-hover:duration-200"></div>
-                        <div className="relative h-[450px] lg:h-[550px] bg-white border border-gray-100 rounded-[2rem] shadow-2xl overflow-hidden flex items-center justify-center">
-                            {/* Inner Visual Mockup Placeholder */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-12">
-                                <div className="w-full h-full border-4 border-dashed border-blue-200 rounded-3xl flex flex-col items-center justify-center text-center opacity-60">
-                                    <Smartphone className="w-20 h-20 text-blue-300 mb-4 animate-bounce" />
-                                    <p className="text-blue-400 font-black uppercase tracking-[0.2em] text-sm">Mobile Preview Frame</p>
-                                    <p className="text-gray-300 text-xs mt-2 italic font-serif">Insert mobile screen mockup here</p>
-                                </div>
+                        {/* Outer Glow Frame */}
+                        <div className="bg-white rounded-[40px] shadow-[0_0_50px_rgba(200,210,255,0.6)] p-6 h-[450px] lg:h-[550px] flex items-center justify-center transition-all duration-500 hover:shadow-[0_0_60px_rgba(200,210,255,0.8)]">
+                            {/* Inner Dashed Container */}
+                            <div className="w-full h-full border-2 border-dashed border-blue-200 rounded-[30px] flex flex-col items-center justify-center text-center bg-blue-50/30 overflow-hidden relative">
+                                <video 
+                                    src={mobileVideo} 
+                                    autoPlay 
+                                    loop 
+                                    muted 
+                                    playsInline 
+                                    className="w-full h-full object-cover rounded-[30px]"
+                                />
                             </div>
                         </div>
                     </div>
@@ -126,4 +131,3 @@ const MobilePracticeSection = () => {
 };
 
 export default MobilePracticeSection;
-import { Map } from 'lucide-react';

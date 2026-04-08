@@ -39,7 +39,6 @@ export async function saveTestResult(supabase, params) {
   const row = {
     user_id:        userId,
     exercise_id:    params.exerciseId || null,
-    exercise_category: params.exerciseCategory || null,
     wpm:            Math.round(params.wpm || 0),
     accuracy:       parseFloat((params.accuracy || 0).toFixed(2)),
     total_mistakes: params.totalMistakes ?? params.mistakesCount ?? 0,
@@ -47,6 +46,7 @@ export async function saveTestResult(supabase, params) {
       attempted_text: attemptedText ?? '',
       original_text: params.originalText ?? '',
       student_name: studentName,
+      category: params.exerciseCategory || 'General', // Store category here for safely
       ...(params.extraMistakesData || {})
     }
   };

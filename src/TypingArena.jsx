@@ -827,16 +827,18 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
 
     if (viewMode === 'practice' && !selectedExercise) {
         return (
-            <div className="h-full flex-1 bg-gray-50 flex flex-col items-center justify-center p-8">
-                <div className="text-center">
-                    <Activity className="w-16 h-16 text-[#1e3a8a] mx-auto mb-4 opacity-20" />
-                    <p className="text-[#1e3a8a] font-bold text-lg">No exercise selected</p>
-                    <button 
-                        onClick={() => setViewMode('selection')}
-                        className="mt-4 px-6 py-2 bg-[#1e3a8a] text-white rounded-xl font-bold shadow-lg"
-                    >
-                        Back to Selection
-                    </button>
+            <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
+                <div className="flex-1 flex flex-col items-center justify-center p-8">
+                    <div className="text-center">
+                        <Activity className="w-16 h-16 text-[#1e3a8a] mx-auto mb-4 opacity-20" />
+                        <p className="text-[#1e3a8a] font-bold text-lg">No exercise selected</p>
+                        <button 
+                            onClick={() => setViewMode('selection')}
+                            className="mt-4 px-6 py-2 bg-[#1e3a8a] text-white rounded-xl font-bold shadow-lg"
+                        >
+                            Back to Selection
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -942,23 +944,6 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg transition-all active:scale-95"
                                 >
                                     {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
-                                </button>
-                                <button
-                                    onClick={handleReset}
-                                    className="px-3 py-1.5 bg-white/10 hover:bg-red-500/20 border border-white/20 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all active:scale-95"
-                                >
-                                    Reset
-                                </button>
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={!isStarted && inputText.length === 0}
-                                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center space-x-1.5 active:scale-95 ${(!isStarted && inputText.length === 0)
-                                        ? 'bg-blue-400/50 text-blue-200 cursor-not-allowed border border-blue-400/50'
-                                        : 'bg-green-500 hover:bg-green-600 text-white'
-                                        }`}
-                                >
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                    <span>Submit</span>
                                 </button>
                             </div>
                         </div>
@@ -1108,51 +1093,56 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             ) : (
                                 <>
                                     {/* Reference Text Area */}
-                                    <div className="flex flex-col h-[40vh] lg:h-[45vh] shrink-0 min-h-0">
+                                    <div className="flex flex-col h-auto shrink-0 min-h-0">
                                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 shrink-0 px-1">Reference Text</h3>
                                         <div 
                                             ref={referenceScrollRef}
-                                            className="flex-1 bg-white border border-gray-200 rounded-xl p-3 md:p-5 shadow-sm overflow-y-auto leading-relaxed text-base md:text-lg scroll-smooth min-h-0"
+                                            className="flex-1 bg-white border border-gray-200 rounded-xl p-3 md:p-5 shadow-sm h-auto overflow-visible leading-relaxed text-base md:text-lg"
                                         >
                                             {renderHighlightedText()}
                                         </div>
                                     </div>
-
-                                    {/* User Input Area */}
-                                    <div className="flex flex-col flex-1 min-h-0 mt-2">
-                                        <div className="flex items-center justify-between mb-3 shrink-0">
-                                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Your Translation</h3>
+                                    <div className="flex flex-col flex-1 min-h-[350px] mt-8 overflow-visible">
+                                        <div className="mb-4 px-2 flex items-center justify-between border-b pb-3">
+                                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#1e3a8a] mr-2" />
+                                                Live Translation Area
+                                            </h3>
+                                            
                                             <div className="flex items-center space-x-2">
-                                                <button
+                                                <button 
                                                     onClick={handleReset}
-                                                    className="px-4 py-1.5 bg-white hover:bg-red-50 border border-red-100 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all active:scale-95"
+                                                    className="px-4 py-1.5 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 font-bold rounded-lg text-[10px] uppercase tracking-widest border border-gray-100 transition-all active:scale-95"
                                                 >
                                                     Reset
                                                 </button>
-                                                <button
-                                                    onClick={handleSubmit}
-                                                    disabled={!isStarted && inputText.length === 0}
-                                                    className={`px-5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-md flex items-center space-x-2 active:scale-95 ${(!isStarted && inputText.length === 0)
+                                                <button 
+                                                    onClick={handleSubmit} 
+                                                    disabled={(timeLeft === 0 && isStarted) || (!isStarted && inputText.length === 0)}
+                                                    className={`px-5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-md flex items-center space-x-2 active:scale-95 ${((timeLeft === 0 && isStarted) || (!isStarted && inputText.length === 0))
                                                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                                                         : 'bg-green-600 hover:bg-green-700 text-white shadow-green-200/50'
-                                                        }`}
+                                                    }`}
                                                 >
                                                     <CheckCircle2 className="w-3 h-3" />
                                                     <span>Submit</span>
                                                 </button>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Native HTML5 Audio Player conditionally displayed for Standard Texts that have Audio attached */}
                                         {selectedExercise?.audio && (
-                                            <div className="mb-4 w-full bg-blue-50/60 p-3 rounded-2xl border border-blue-100 shadow-sm flex flex-col">
-                                                <span className="text-xs text-[#1e3a8a] font-bold uppercase tracking-widest pl-2 flex items-center mb-2"><Headphones className="w-4 h-4 mr-2" /> Dictation Source Audio</span>
+                                            <div className="mb-6 w-full bg-blue-50/60 p-4 rounded-3xl border border-blue-100 shadow-sm flex flex-col">
+                                                <span className="text-[10px] text-[#1e3a8a] font-black uppercase tracking-[0.1em] pl-2 flex items-center mb-3">
+                                                    <Headphones className="w-3.5 h-3.5 mr-2" /> 
+                                                    Dictation Source Audio
+                                                </span>
                                                 <audio 
                                                     ref={audioRef}
                                                     controls 
                                                     controlsList="nodownload"
                                                     src={selectedExercise?.audio} 
-                                                    className="w-full h-[46px] outline-none rounded-xl"
+                                                    className="w-full h-11 outline-none rounded-xl"
                                                     onTimeUpdate={(e) => {
                                                         const progress = (e.currentTarget.currentTime / e.currentTarget.duration) * 100;
                                                         setAudioProgress(progress || 0);
@@ -1165,26 +1155,67 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                             </div>
                                         )}
 
-                                        <textarea
-                                            className="flex-1 w-full bg-white border-4 border-gray-100 focus:border-[#1e3a8a] rounded-2xl p-6 shadow-xl shadow-gray-200/50 text-2xl font-bold text-gray-900 outline-none resize-none transition-all duration-300"
-                                            placeholder="Start typing your response here. The timer will automatically begin on your first keystroke..."
-                                            value={inputText}
-                                            onChange={handleInputChange}
-                                            onCopy={(e) => { e.preventDefault(); alert("Copying is disabled!"); }}
-                                            onPaste={(e) => { e.preventDefault(); alert("Pasting is disabled!"); }}
-                                            onContextMenu={(e) => { e.preventDefault(); }}
-                                            disabled={timeLeft === 0}
-                                            autoComplete="off"
-                                            autoCorrect="off"
-                                            autoCapitalize="off"
-                                            spellCheck="false"
-                                        />
+                                        <div className="relative flex-1 min-h-[300px]">
+                                            <textarea
+                                                id="transcription-area"
+                                                value={inputText}
+                                                onChange={handleInputChange}
+                                                disabled={(timeLeft === 0 && isStarted) || (selectedExercise.isAudioCourse && !isStarted)}
+                                                className="w-full h-full min-h-[300px] p-8 text-xl font-serif text-gray-800 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm focus:ring-4 focus:ring-blue-50 focus:border-[#1e3a8a] transition-all resize-none leading-relaxed"
+                                                placeholder={isStarted || !selectedExercise.isAudioCourse ? "Click here and start typing your analysis..." : "Please start the test first to enable typing..."}
+                                                onCopy={(e) => { e.preventDefault(); }}
+                                                onPaste={(e) => { e.preventDefault(); }}
+                                                onContextMenu={(e) => { e.preventDefault(); }}
+                                                spellCheck="false"
+                                                autoFocus
+                                            />
+                                        </div>
                                     </div>
                                 </>
                             )}
                         </div>
                     </div>
                 </div>
+
+                {/* Compact Static Bottom Action Bar (Saves real estate) - Only visible when needed */}
+                {selectedExercise.isAudioCourse && (
+                    <div className="bg-white border-t border-gray-100 p-2 shadow-inner flex justify-center items-center z-[100] shrink-0">
+                        <div className="flex flex-wrap items-center justify-center gap-2 max-w-4xl w-full">
+                            
+                            {/* Start Test Button (Audio Mode Only) */}
+                            {!isStarted && countdown === null && (
+                                <button
+                                    onClick={() => setCountdown(5)}
+                                    className="px-6 py-2.5 bg-[#1e3a8a] hover:bg-blue-800 text-white font-black rounded-xl shadow-md transition-all hover:scale-105 active:scale-95 flex items-center space-x-2 text-[10px] tracking-widest uppercase"
+                                >
+                                    <Play className="w-4 h-4 fill-current" />
+                                    <span>Start Dictation</span>
+                                </button>
+                            )}
+
+                            {/* Reset Button */}
+                            <button
+                                onClick={handleReset}
+                                className="px-6 py-2.5 bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-600 border border-gray-100 font-bold rounded-xl transition-all hover:scale-105 active:scale-95 text-[10px] uppercase tracking-widest"
+                            >
+                                Reset
+                            </button>
+
+                            {/* Submit Button */}
+                            <button
+                                onClick={handleSubmit}
+                                disabled={!isStarted && inputText.length === 0}
+                                className={`px-8 py-2.5 rounded-xl font-black text-white shadow-md transition-all flex items-center space-x-2 text-[10px] tracking-widest uppercase hover:scale-105 active:scale-95 ${(!isStarted && inputText.length === 0)
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-green-600 hover:bg-green-700 shadow-green-100'
+                                    }`}
+                            >
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Submit Record</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Results Modal */}

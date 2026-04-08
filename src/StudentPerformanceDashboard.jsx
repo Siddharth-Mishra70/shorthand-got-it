@@ -45,7 +45,8 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
     };
 
     const modulesWithData = results.reduce((acc, r) => {
-        let cat = r.exercise_category;
+        // Prioritize category from the mistakes_data JSON we now use, then fallback
+        let cat = r.mistakes_data?.category || r.category || r.exercise_category;
         
         // --- Normalization Map (Sync labels between Admin and Dashboard) ---
         const normMap = {
@@ -53,8 +54,10 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
             'formatting':        'formatting',
             'dictation':         'audio',
             'audio dictation':   'audio',
+            'audio section':     'audio',
             'audio':             'audio',
             'pitman':            'pitman',
+            'pitman aps':        'pitman',
             'pitman shorthand':  'pitman',
             'pitman exercise':   'pitman',
             'kailash':           'kailash',
@@ -64,43 +67,27 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
             'state exam':        'state',
             'comprehension':     'comprehension'
         };
-        if (cat && normMap[cat.toLowerCase()]) cat = normMap[cat.toLowerCase()];
+        if (cat && typeof cat === 'string' && normMap[cat.toLowerCase().trim()]) {
+            cat = normMap[cat.toLowerCase().trim()];
+        }
 
         // --- Fallback Inference for legacy results or missing category ---
-        if (!cat) {
+        if (!cat || !moduleInfo[cat]) {
             const exId = String(r.exercise_id || '').toLowerCase();
             const rawText = (String(r.mistakes_data?.original_text || '') + ' ' + String(r.mistakes_data?.attempted_text || '')).toLowerCase();
+            const exTitle = (r.mistakes_data?.exercise_title || '').toLowerCase();
             
-            // 1. High Court / Formatting Inference
-            if (exId.includes('formatting') || exId.includes('highcourt') || exId.includes('hc-') || 
-                rawText.includes('__hc') || rawText.includes('court') || rawText.includes('justice') || 
-                rawText.includes('petition') || rawText.includes('writ') || rawText.includes('order')) {
+            if (exId.includes('formatting') || exId.includes('highcourt') || exId.includes('hc-') || exTitle.includes('formatting')) {
                 cat = 'formatting';
-            }
-            // 2. Pitman Shorthand Inference
-            else if (exId.includes('pitman') || exId.includes('shorthand') || exId.includes('aps') || 
-                     rawText.includes('pitman') || rawText.includes('stroke') || rawText.includes('chapter') || 
-                     rawText.includes('exercise')) {
+            } else if (exId.includes('pitman') || exId.includes('shorthand') || exId.includes('aps') || exTitle.includes('pitman') || exTitle.includes('aps')) {
                 cat = 'pitman';
-            }
-            // 3. Kailash Chandra Inference
-            else if (exId.includes('kc-') || exId.includes('kailash') || exId.includes('vol') || 
-                     rawText.includes('kailash') || rawText.includes('parliament') || rawText.includes('deputy') || 
-                     rawText.includes('speaker') || rawText.includes('finance') || rawText.includes('chandra')) {
+            } else if (exId.includes('kc-') || exId.includes('kailash') || exId.includes('vol') || exTitle.includes('kailash')) {
                 cat = 'kailash';
-            }
-            // 4. Comprehension Inference
-            else if (exId.includes('comp-') || exId.includes('comprehension') || rawText.includes('comprehen') || 
-                     rawText.includes('question') || rawText.includes('theory')) {
+            } else if (exId.includes('comp-') || exId.includes('comprehension') || exTitle.includes('theory')) {
                 cat = 'comprehension';
-            }
-            // 5. State Exams Inference
-            else if (exId.includes('state-') || exId.includes('exam') || exId.includes('preparation') || 
-                     exId.includes('upssc') || exId.includes('hssc') || exId.includes('raj-')) {
+            } else if (exId.includes('state-') || exId.includes('exam') || exTitle.includes('state')) {
                 cat = 'state';
-            }
-            // 6. Default fallback
-            else {
+            } else {
                 cat = 'audio'; 
             }
         }
