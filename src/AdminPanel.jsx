@@ -4,9 +4,10 @@ import {
     Settings, LogOut, Search, Plus, Trash2, Keyboard, CheckCircle, Save, Loader2, FileUp,
     BookOpen, Edit2, Edit3, Map, ArrowLeft, ChevronRight, Globe, Upload, X, Zap, ChevronDown,
     Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, RefreshCw, History,
-    MessageSquare, Mail, ShieldCheck
+    MessageSquare, Mail, ShieldCheck, UserPlus
 } from 'lucide-react';
 import AdminUserManagement from './AdminUserManagement';
+import { adminAuthClient } from './supabaseClient';
 
 const STATE_EXAMS = [
     'Uttar Pradesh', 'Bihar', 'Madhya Pradesh', 'Rajasthan', 'Maharashtra',
@@ -18,18 +19,13 @@ const STATE_EXAMS = [
 const MODULE_TYPES = [
     { key: 'highcourt', label: 'High Court Formatting', icon: Scale, color: 'from-blue-600 to-blue-800', bg: 'bg-blue-50', text: 'text-blue-700' },
     { key: 'pitman', label: 'Pitman Exercise', icon: Edit2, color: 'from-purple-600 to-purple-800', bg: 'bg-purple-50', text: 'text-purple-700' },
-    { key: 'audio', label: 'Audio Dictation', icon: Headphones, color: 'from-green-600 to-green-800', bg: 'bg-green-50', text: 'text-green-700' },
-    { key: 'kailash', label: 'Kailash Chandra', icon: BookOpen, color: 'from-amber-500 to-amber-700', bg: 'bg-amber-50', text: 'text-amber-700' },
-    { key: 'comprehension', label: 'Comprehension', icon: FileText, color: 'from-cyan-600 to-cyan-800', bg: 'bg-cyan-50', text: 'text-cyan-700' },
-    { key: 'state', label: 'State Exam', icon: Globe, color: 'from-rose-600 to-rose-800', bg: 'bg-rose-50', text: 'text-rose-700' },
+    // { key: 'audio', label: 'Audio Dictation', icon: Headphones, color: 'from-green-600 to-green-800', bg: 'bg-green-50', text: 'text-green-700' },
 ];
 
 const QUICK_MODULES = [
     { key: 'highcourt', label: 'High Court Formatting', icon: '⚖️', accept: '.pdf,image/*', textLabel: 'Formatting Reference Text' },
     { key: 'pitman',    label: 'Pitman Exercise',       icon: '✏️', accept: '.pdf,image/*', textLabel: 'English Transcription Text' },
-    { key: 'audio',     label: 'Audio Dictation',       icon: '🎙️', accept: 'audio/*',      textLabel: 'Dictation Transcription Text' },
-    { key: 'kailash',   label: 'Kailash Chandra',         icon: '📖', accept: '.pdf',         textLabel: 'Passage Text' },
-    { key: 'comprehension', label: 'Comprehension',         icon: '📝', accept: '.pdf',         textLabel: 'Passage Text' },
+    // { key: 'audio',     label: 'Audio Dictation',       icon: '🎙️', accept: 'audio/*',      textLabel: 'Dictation Transcription Text' },
 ];
 
 // ── PURE SUB-COMPONENTS (defined at module scope to prevent remount on re-render) ──
@@ -263,6 +259,15 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     // Dynamic User Data
     const [users, setUsers] = useState(() => JSON.parse(localStorage.getItem('auth_users') || '[]'));
     const [studentSearchTerm, setStudentSearchTerm] = useState('');
+    
+    // Add User State
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [isAddingUser, setIsAddingUser] = useState(false);
+    const [addFormData, setAddFormData] = useState({
+        firstName: '', lastName: '', email: '', phone: '',
+        password: '', state: '', city: '', gender: ''
+    });
+
     const [resetRequests, setResetRequests] = useState(() => JSON.parse(localStorage.getItem('auth_reset_requests') || '[]'));
     const [allResults, setAllResults] = useState([]);
     const [loadingResults, setLoadingResults] = useState(true);
@@ -699,6 +704,64 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 console.error('Delete student operation failed:', err);
                 alert('Operation failed. Please check your connection.');
             }
+        }
+    };
+
+    const handleAddStudent = async (e) => {
+        e.preventDefault();
+        setIsAddingUser(true);
+        try {
+            const email = addFormData.email.trim().toLowerCase();
+            const { data: authData, error: signUpErr } = await adminAuthClient.auth.signUp({
+                email,
+                password: addFormData.password,
+            });
+            if (signUpErr) throw signUpErr;
+            
+            const uid = authData.user?.id || crypto.randomUUID();
+
+            const dbUser = {
+                first_name: (addFormData.firstName.trim() || 'Student') + (addFormData.lastName ? ` ${addFormData.lastName.trim()}` : ''),
+                email,
+                phone: addFormData.phone.trim() || null,
+                status: 'active',
+                role: 'student',
+                joinedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                created_at: new Date().toISOString()
+            };
+
+            if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
+                const { error: insertErr } = await supabase.from('users').insert([dbUser]);
+                if (insertErr) throw insertErr;
+            }
+            
+            const newUser = {
+                id: uid,
+                ...dbUser,
+                first_name: addFormData.firstName.trim(),
+                last_name: addFormData.lastName.trim(),
+                name: `${addFormData.firstName.trim()} ${addFormData.lastName.trim()}`.trim(),
+                state: addFormData.state.trim(),
+                city: addFormData.city.trim(),
+                gender: addFormData.gender,
+            };
+            
+            const updatedUsers = [newUser, ...users];
+            setUsers(updatedUsers);
+            localStorage.setItem('auth_users', JSON.stringify(updatedUsers));
+            
+            alert('Student added successfully!');
+            setShowAddModal(false);
+            setAddFormData({ firstName: '', lastName: '', email: '', phone: '', password: '', state: '', city: '', gender: '' });
+        } catch (err) {
+            console.error("Signup Error Object:", err);
+            if (err.message.includes('User already registered') || err.message.includes('already exists')) {
+                 alert(`Failed to add student: The email '${addFormData.email}' is already registered in the backend.\n\nNOTE: If you used this email earlier during the app crash, it successfully registered in the Auth server but failed in the Database. Thus, it's permanently 'taken'.\n\nPlease enter a completely new email (e.g., student99@shorthand.com) to test.`);
+            } else {
+                 alert(`Failed to add student: ${err.message}`);
+            }
+        } finally {
+            setIsAddingUser(false);
         }
     };
 
@@ -1717,19 +1780,92 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     // ── STUDENT MANAGEMENT TAB ─────────────────────────────────
     const renderStudents = () => (
         <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h2 className="text-2xl font-bold text-gray-800">Student Management</h2>
-                <div className="flex bg-white border border-gray-300 rounded-lg px-3 py-2 items-center shadow-sm">
-                    <Search className="w-4 h-4 text-gray-400 mr-2" />
-                    <input 
-                        type="text" 
-                        placeholder="Search students..." 
-                        value={studentSearchTerm || ''}
-                        onChange={(e) => setStudentSearchTerm(e.target.value)}
-                        className="outline-none text-sm bg-transparent" 
-                    />
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-sm font-bold transition-all shadow-md active:scale-95 whitespace-nowrap"
+                    >
+                        <UserPlus className="w-4 h-4" />
+                        Add Student
+                    </button>
+                    <div className="flex bg-white border border-gray-300 rounded-lg px-3 py-2 items-center shadow-sm w-full sm:w-auto">
+                        <Search className="w-4 h-4 text-gray-400 mr-2" />
+                        <input 
+                            type="text" 
+                            placeholder="Search students..." 
+                            value={studentSearchTerm || ''}
+                            onChange={(e) => setStudentSearchTerm(e.target.value)}
+                            className="outline-none text-sm bg-transparent w-full" 
+                        />
+                    </div>
                 </div>
             </div>
+
+            {showAddModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-top-4">
+                        <div className="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur z-10">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Add New Student</h3>
+                            </div>
+                            <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleAddStudent} className="p-5 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
+                                    <input required type="email" value={addFormData.email} onChange={e => setAddFormData({...addFormData, email: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" placeholder="student@example.com" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Password <span className="text-red-500">*</span></label>
+                                    <input required type="text" minLength="6" value={addFormData.password} onChange={e => setAddFormData({...addFormData, password: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" placeholder="Min 6 chars" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">First Name</label>
+                                    <input value={addFormData.firstName} onChange={e => setAddFormData({...addFormData, firstName: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Last Name</label>
+                                    <input value={addFormData.lastName} onChange={e => setAddFormData({...addFormData, lastName: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Phone Number</label>
+                                    <input type="tel" value={addFormData.phone} onChange={e => setAddFormData({...addFormData, phone: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Gender</label>
+                                    <select value={addFormData.gender} onChange={e => setAddFormData({...addFormData, gender: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500">
+                                        <option value="">Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">State</label>
+                                    <input value={addFormData.state} onChange={e => setAddFormData({...addFormData, state: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">City</label>
+                                    <input value={addFormData.city} onChange={e => setAddFormData({...addFormData, city: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-bold hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={isAddingUser} className="flex-1 py-2.5 rounded-lg bg-red-700 text-white font-bold hover:bg-red-800 disabled:opacity-50 flex items-center justify-center gap-2">
+                                    {isAddingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                                    Create Student
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
                 <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-gray-50 border-b border-gray-200">
@@ -1771,18 +1907,6 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                 <td className="px-6 py-4 text-sm text-gray-600">{u.joinedDate || '-'}</td>
                                 <td className="px-6 py-4 text-sm">
                                     <div className="flex items-center space-x-3">
-                                        <button
-                                            onClick={() => handleStatusChange(u.id, u.phone, (u.status || 'Active') === 'Active' ? 'Inactive' : 'Active')}
-                                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                                (u.status || 'Active') === 'Active' ? 'bg-green-500' : 'bg-gray-300'
-                                            }`}
-                                        >
-                                            <span
-                                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                                    (u.status || 'Active') === 'Active' ? 'translate-x-4' : 'translate-x-0'
-                                                }`}
-                                            />
-                                        </button>
                                         <span className={`text-[10px] font-black uppercase tracking-widest ${
                                             (u.status || 'Active') === 'Active' ? 'text-green-600' : 'text-gray-400'
                                         }`}>

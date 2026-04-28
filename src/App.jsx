@@ -133,11 +133,7 @@ function App() {
 
   const courses = [
     { id: 'hc-formatting', title: 'Allahabad High Court', type: 'Formatting Test', isPremium: true, view: 'formatting', category: 'formatting' },
-    { id: 'pitman-ex', title: 'Pitman Shorthand', type: 'Exercise Practice', isPremium: false, view: 'pitman', category: 'pitman' },
-    { id: 'audio-dict', title: 'Audio Dictations', type: '80/100/120 WPM', isPremium: false, view: 'arena-audio', category: 'audio' },
-    { id: 'kailash-chandra', title: 'Kailash Chandra', type: 'Standard Dictations', isPremium: false, view: 'arena-kc', category: 'kailash' },
-    { id: 'comprehension', title: 'Comprehension', type: 'Theory & Test', isPremium: false, view: 'arena-comp', category: 'comprehension' },
-    { id: 'state-exam', title: 'State Exams', type: 'Selection Focused', isPremium: true, view: 'arena-state', category: 'state' },
+    { id: 'pitman-ex', title: 'Pitman Shorthand', type: 'Exercise Practice', isPremium: true, view: 'pitman', category: 'pitman' },
   ];
 
   const currentViewData = courses.find((c) => c.view === currentView);
@@ -458,7 +454,7 @@ function App() {
           {showAuthModal && (
             <LoginRequiredModal
               onLogin={() => openAuthFromModal('login')}
-              onRegister={() => openAuthFromModal('register')}
+              onRegister={() => openAuthFromModal('login')}
               onClose={() => { setShowAuthModal(false); setPendingView(null); }}
             />
           )}

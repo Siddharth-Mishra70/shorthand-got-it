@@ -109,7 +109,7 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
               >
                 <span className="relative z-10 flex items-center space-x-2">
                   <BookOpen className="w-4 h-4" />
-                  <span>Login / Register</span>
+                  <span>Login</span>
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-[#1e3a8a] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
@@ -170,7 +170,7 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
                 className="w-full bg-[#1e3a8a] text-white font-bold py-3 rounded-xl hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2"
               >
                 <BookOpen className="w-4 h-4" />
-                <span>Login / Register</span>
+                <span>Login</span>
               </button>
             )}
           </div>
