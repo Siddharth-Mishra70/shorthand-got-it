@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  Mail, Lock, User, Phone, CheckCircle2, AlertCircle, 
+  Mail, Lock, User, Phone, AlertCircle, 
   ArrowRight, ShieldCheck, Clock, Loader2, Sparkles, 
-  BookOpen, ArrowLeft, KeyRound, Eye, EyeOff
+  BookOpen, ArrowLeft, KeyRound, Eye, EyeOff, RefreshCw
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
@@ -47,47 +47,99 @@ const Alert = ({ type, message }) => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const AuthFlow = ({ onAuthSuccess, onBack }) => {
-  const [tab, setTab] = useState('login'); // 'login' | 'register' | 'otp' | 'pending'
+  // tabs: 'login' | 'register' | 'otp' | 'pending'
+  const [tab, setTab] = useState('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Form State
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     password: '',
-    loginIdentifier: '', // Email
+    loginEmail: '',
+    loginPassword: '',
   });
-  
+
   const [otpToken, setOtpToken] = useState('');
 
   const clearMessages = () => setError('');
 
-  // 1. REGISTRATION logic
+  // ── 1. LOGIN — Email + Password ─────────────────────────────────────────────
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    clearMessages();
+
+    try {
+      const email = formData.loginEmail.trim().toLowerCase();
+
+      const { error: authErr } = await supabase.auth.signInWithPassword({
+        email,
+        password: formData.loginPassword,
+      });
+
+      if (authErr) throw authErr;
+
+      // --- ADMIN GUARD: Fetch status from custom 'users' table ---
+      const { data: userRecord, error: fetchErr } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (fetchErr || !userRecord) {
+        await supabase.auth.signOut();
+        throw new Error('Account record not found. Please contact support.');
+      }
+
+      if (userRecord.status === 'pending') {
+        await supabase.auth.signOut();
+        setError('Your account is still pending Admin approval.');
+        return;
+      }
+
+      if (userRecord.status === 'inactive') {
+        await supabase.auth.signOut();
+        setError('Your account has been blocked. Please contact support.');
+        return;
+      }
+
+      // Active — grant access
+      const finalUser = { ...userRecord, role: userRecord.role || 'student' };
+      localStorage.setItem('currentUser', JSON.stringify(finalUser));
+      onAuthSuccess?.(finalUser);
+
+    } catch (err) {
+      setError(err.message || 'Invalid email or password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── 2. REGISTRATION — Collect details + send OTP via signUp ────────────────
   const handleSignUp = async (e) => {
     e.preventDefault();
     setLoading(true);
     clearMessages();
 
     try {
-      // Step A: Supabase Auth Sign Up
-      // This sends the OTP/Confirmation email
-      const { data, error: signUpErr } = await supabase.auth.signUp({
+      const { error: signUpErr } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          data: { 
+          data: {
             full_name: formData.name,
-            phone: formData.phone 
-          }
-        }
+            phone: formData.phone,
+          },
+        },
       });
 
       if (signUpErr) throw signUpErr;
 
       // Move to OTP screen
+      setOtpToken('');
       setTab('otp');
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -96,7 +148,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
     }
   };
 
-  // 2. OTP VERIFICATION logic
+  // ── 3. VERIFY SIGNUP OTP ────────────────────────────────────────────────────
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -111,7 +163,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
 
       if (verifyErr) throw verifyErr;
 
-      // Success: OTP Verified. Now sync with our custom 'users' table
+      // Sync with custom 'users' table
       const { error: dbErr } = await supabase.from('users').insert([{
         first_name: formData.name,
         email: formData.email,
@@ -119,13 +171,12 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
         status: 'pending',
         role: 'student',
         joinedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       }]);
 
       if (dbErr) throw dbErr;
 
-      // Verify successful - DO NOT LOG IN. Show pending approval screen.
-      // We force sign out just in case verifyOtp auto-sessions
+      // Force sign out — user must wait for Admin approval
       await supabase.auth.signOut();
       setTab('pending');
     } catch (err) {
@@ -135,75 +186,41 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
     }
   };
 
-  // 3. LOGIN logic with ADMIN GUARD
-  const handleSignIn = async (e) => {
-    e.preventDefault();
+  // ── 4. RESEND Signup OTP ────────────────────────────────────────────────────
+  const handleResendOtp = async () => {
     setLoading(true);
     clearMessages();
-
     try {
-      const authParams = { email: formData.loginIdentifier.trim().toLowerCase(), password: formData.password };
-
-      const { data: authData, error: authErr } = await supabase.auth.signInWithPassword(authParams);
-      if (authErr) throw authErr;
-
-      // --- ADMIN GUARD: Fetch status from custom table ---
-      const emailToLookup = formData.loginIdentifier.trim().toLowerCase();
-      
-      const { data: userRecord, error: fetchErr } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', emailToLookup)
-        .maybeSingle();
-
-      if (fetchErr || !userRecord) {
-        await supabase.auth.signOut();
-        throw new Error('Account record missing. Please contact support.');
-      }
-
-      // Check Status
-      if (userRecord.status === 'pending') {
-        await supabase.auth.signOut();
-        setError('Your account is still pending Admin approval.');
-        return;
-      }
-
-      if (userRecord.status === 'inactive') {
-        await supabase.auth.signOut();
-        setError('Your account has been blocked. Please contact support.');
-        return;
-      }
-
-      // If 'active', handle success
-      const finalUser = {
-        ...userRecord,
-        role: userRecord.role || 'student'
-      };
-      
-      localStorage.setItem('currentUser', JSON.stringify(finalUser));
-      onAuthSuccess?.(finalUser);
-
+      const { error: signUpErr } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+      if (signUpErr) throw signUpErr;
+      setOtpToken('');
     } catch (err) {
-      setError(err.message || 'Invalid login credentials.');
+      setError(err.message || 'Could not resend OTP. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ─── Rendering Helper ──────────────────────────────────────────────────────
+  // ─── Rendering ──────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-[#fcfdff] font-sans flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-50/50 via-white to-indigo-50/30">
-      
+
       {/* Decorative Blur Orbs */}
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-blue-100/40 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
       <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-amber-100/30 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2 pointer-events-none" />
 
       <div className="w-full max-w-[480px] relative z-10">
-        
+
         {/* Logo & Branding */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#0f2167] to-[#1e3a8a] rounded-3xl shadow-2xl shadow-blue-900/20 mb-6 group hover:scale-105 transition-transform duration-500 cursor-pointer" onClick={onBack}>
+          <div
+            className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#0f2167] to-[#1e3a8a] rounded-3xl shadow-2xl shadow-blue-900/20 mb-6 group hover:scale-105 transition-transform duration-500 cursor-pointer"
+            onClick={onBack}
+          >
             <BookOpen className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2 italic">Shorthandians</h1>
@@ -211,7 +228,8 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
         </div>
 
         <div className="bg-white/80 backdrop-blur-2xl rounded-[3rem] border border-white shadow-[0_32px_64px_-16px_rgba(30,58,138,0.1)] p-8 md:p-10">
-          
+
+          {/* ── PENDING APPROVAL SCREEN ── */}
           {tab === 'pending' ? (
             <div className="text-center py-6 animate-in zoom-in-95 duration-500">
               <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner border-2 border-green-100">
@@ -226,22 +244,23 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
                   Your account is currently pending Admin approval. You will be able to login once an administrator activates your workspace.
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setTab('login')}
                 className="w-full py-4 bg-[#1e3a8a] text-white font-black rounded-2xl hover:bg-black transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
               >
                 Return to Login <ArrowRight className="w-5 h-5" />
               </button>
             </div>
+
           ) : (
             <>
-              {/* Tab Switcher */}
+              {/* Tab Switcher — hide on OTP screen */}
               {tab !== 'otp' && (
                 <div className="flex bg-gray-100/50 p-1.5 rounded-2xl mb-8">
                   {['login', 'register'].map((t) => (
                     <button
                       key={t}
-                      onClick={() => { setTab(t); clearMessages(); }}
+                      onClick={() => { setTab(t); clearMessages(); setOtpToken(''); }}
                       className={`flex-1 py-3 text-sm font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
                         tab === t ? 'bg-white text-[#1e3a8a] shadow-xl' : 'text-gray-400 hover:text-gray-600'
                       }`}
@@ -254,28 +273,32 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
 
               {error && <div className="mb-6"><Alert type="error" message={error} /></div>}
 
-              {/* LOGIN FORM */}
+              {/* ── LOGIN FORM ── */}
               {tab === 'login' && (
                 <form onSubmit={handleSignIn} className="space-y-6">
-                  <Input 
-                    label="Email Address" 
-                    icon={Mail} 
+                  <Input
+                    label="Email Address"
+                    icon={Mail}
                     type="email"
-                    placeholder="name@gmail.com" 
-                    value={formData.loginIdentifier}
-                    onChange={(e) => setFormData({...formData, loginIdentifier: e.target.value})}
+                    placeholder="name@gmail.com"
+                    value={formData.loginEmail}
+                    onChange={(e) => setFormData({ ...formData, loginEmail: e.target.value })}
                     required
                   />
-                  <Input 
-                    label="Password" 
-                    icon={Lock} 
-                    type={showPassword ? 'text' : 'password'} 
-                    placeholder="••••••••" 
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  <Input
+                    label="Password"
+                    icon={Lock}
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={formData.loginPassword}
+                    onChange={(e) => setFormData({ ...formData, loginPassword: e.target.value })}
                     required
                     rightElement={
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-400 hover:text-blue-600 transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                      >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     }
@@ -295,14 +318,45 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
                 </form>
               )}
 
-              {/* REGISTER FORM */}
+              {/* ── REGISTER FORM ── */}
               {tab === 'register' && (
                 <form onSubmit={handleSignUp} className="space-y-5">
                   <div className="grid grid-cols-1 gap-5">
-                    <Input label="Full Name" icon={User} placeholder="Raju Mishra" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
-                    <Input label="Email Address" icon={Mail} type="email" placeholder="you@domain.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required />
-                    <Input label="Phone Number" icon={Phone} type="tel" placeholder="9876543210" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} required />
-                    <Input label="Create Password" icon={Lock} type="password" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} required />
+                    <Input
+                      label="Full Name"
+                      icon={User}
+                      placeholder="Raju Mishra"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                    <Input
+                      label="Email Address"
+                      icon={Mail}
+                      type="email"
+                      placeholder="you@domain.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      required
+                    />
+                    <Input
+                      label="Phone Number"
+                      icon={Phone}
+                      type="tel"
+                      placeholder="9876543210"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      required
+                    />
+                    <Input
+                      label="Create Password"
+                      icon={Lock}
+                      type="password"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                    />
                   </div>
                   <button
                     type="submit"
@@ -319,7 +373,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
                 </form>
               )}
 
-              {/* OTP FLOW */}
+              {/* ── SIGNUP OTP VERIFICATION ── */}
               {tab === 'otp' && (
                 <form onSubmit={handleVerifyOtp} className="space-y-8 animate-in slide-in-from-right-4 duration-500">
                   <div className="text-center">
@@ -328,33 +382,47 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
                     </div>
                     <h3 className="text-2xl font-black text-gray-900 mb-2">Check Your Email</h3>
                     <p className="text-sm text-gray-500 leading-relaxed px-4">
-                      We've sent a numeric OTP to <strong className="text-gray-900 font-black">{formData.email}</strong>. Enter it below to register.
+                      We've sent a 6-digit OTP to{' '}
+                      <strong className="text-gray-900 font-black">{formData.email}</strong>.
+                      {' '}Enter it below to verify your account.
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <input 
-                      type="text" 
-                      placeholder="• • • • • •" 
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      placeholder="• • • • • •"
                       value={otpToken}
                       onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       maxLength={6}
                       className="w-full text-center text-4xl font-black tracking-[0.4em] py-5 bg-gray-50 border-2 border-gray-100 rounded-3xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#1e3a8a] transition-all"
                     />
-                    <p className="text-center text-xs font-bold text-gray-400 capitalize">Enter 6-digit Verification Token</p>
+                    <p className="text-center text-xs font-bold text-gray-400 capitalize">Enter 6-digit Verification Code</p>
                   </div>
 
                   <div className="space-y-3">
                     <button
                       type="submit"
                       disabled={loading || otpToken.length < 6}
-                      className="w-full py-4 bg-[#1e3a8a] text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-2 group active:scale-95 disabled:bg-blue-200"
+                      className="w-full py-4 bg-[#1e3a8a] text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-2 active:scale-95 disabled:bg-blue-200 transition-all"
                     >
                       {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Complete Registration'}
                     </button>
-                    <button 
+
+                    <button
                       type="button"
-                      onClick={() => setTab('register')}
+                      onClick={handleResendOtp}
+                      disabled={loading}
+                      className="w-full py-3 text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center justify-center gap-2 disabled:text-gray-300"
+                    >
+                      <RefreshCw className="w-4 h-4" /> Resend OTP
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setTab('register'); clearMessages(); setOtpToken(''); }}
                       className="w-full py-3 text-sm font-bold text-gray-400 hover:text-[#1e3a8a] transition-colors flex items-center justify-center gap-2"
                     >
                       <ArrowLeft className="w-4 h-4" /> Use different email
@@ -366,7 +434,10 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
           )}
 
           <div className="mt-10 pt-8 border-t border-gray-50 flex items-center justify-between">
-            <button onClick={onBack} className="text-xs font-black text-gray-400 hover:text-gray-900 transition-colors uppercase tracking-widest flex items-center gap-1.5">
+            <button
+              onClick={onBack}
+              className="text-xs font-black text-gray-400 hover:text-gray-900 transition-colors uppercase tracking-widest flex items-center gap-1.5"
+            >
               <ArrowLeft className="w-4 h-4" /> Home
             </button>
             <p className="text-xs font-bold text-blue-900/30">SECURE TRANSACTION</p>

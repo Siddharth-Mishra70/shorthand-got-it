@@ -292,11 +292,11 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
     try {
       const trimmedEmail = regData.email.toLowerCase().trim();
 
-      // Verify OTP — type 'email' for numeric tokens sent by signUp
+      // Verify OTP — type 'signup' matches the token sent by supabase.auth.signUp()
       const { error: verifyErr } = await supabase.auth.verifyOtp({
         email: trimmedEmail,
         token: otpCode.trim(),
-        type: 'email',
+        type: 'signup',
       });
       if (verifyErr) throw verifyErr;
 
