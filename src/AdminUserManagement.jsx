@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users, Search, RefreshCw, CheckCircle2, Clock, XCircle,
   ChevronDown, Loader2, AlertCircle, UserCheck, ShieldAlert,
-  SlidersHorizontal, CalendarDays, Mail
+  SlidersHorizontal, CalendarDays, Mail, Plus, UserPlus
 } from 'lucide-react';
-import { supabase } from './supabaseClient';
+import { supabase, adminAuthClient } from './supabaseClient';
 
 // ─── Status badge config ───────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -27,7 +27,7 @@ const StatusBadge = ({ status }) => {
 // ─── Status Dropdown for each row ─────────────────────────────────────────
 const StatusDropdown = ({ userId, currentStatus, onUpdate, isUpdating }) => {
   const [open, setOpen] = useState(false);
-  const statuses = ['active', 'pending', 'inactive'];
+  const statuses = ['active', 'inactive'];
 
   const handleSelect = (s) => {
     if (s === currentStatus) { setOpen(false); return; }
@@ -92,6 +92,14 @@ const AdminUserManagement = () => {
   const [updatingId,  setUpdatingId]  = useState(null);
   const [toast,       setToast]       = useState(null);
 
+  // ─── Add Student State ───────────────────────────────────────────────────
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [addFormData, setAddFormData] = useState({
+    firstName: '', lastName: '', email: '', phone: '',
+    password: '', state: '', city: '', gender: ''
+  });
+
   // ─── Fetch all students ──────────────────────────────────────────────────
   const fetchUsers = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -147,6 +155,49 @@ const AdminUserManagement = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // ─── Add Student ─────────────────────────────────────────────────────────
+  const handleAddStudent = async (e) => {
+    e.preventDefault();
+    setIsAdding(true);
+    
+    try {
+      const email = addFormData.email.trim().toLowerCase();
+      
+      const { data: authData, error: signUpErr } = await adminAuthClient.auth.signUp({
+        email: email,
+        password: addFormData.password,
+      });
+
+      if (signUpErr) throw signUpErr;
+
+      const { error: insertErr } = await supabase.from('users').insert([{
+        first_name: addFormData.firstName.trim(),
+        last_name: addFormData.lastName.trim(),
+        name: `${addFormData.firstName.trim()} ${addFormData.lastName.trim()}`.trim(),
+        email: email,
+        phone: addFormData.phone.trim(),
+        state: addFormData.state.trim(),
+        city: addFormData.city.trim(),
+        gender: addFormData.gender,
+        status: 'active',
+        role: 'student',
+        joinedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        created_at: new Date().toISOString(),
+      }]);
+
+      if (insertErr) throw insertErr;
+
+      showToast('Student account created successfully!', 'success');
+      setShowAddModal(false);
+      setAddFormData({ firstName: '', lastName: '', email: '', phone: '', password: '', state: '', city: '', gender: '' });
+      fetchUsers(true);
+    } catch (err) {
+      showToast(err.message || 'Failed to create student.', 'error');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   // ─── Filter logic ────────────────────────────────────────────────────────
   const filteredUsers = users.filter((u) => {
     const fullName = u.first_name ? `${u.first_name} ${u.last_name || ''}` : (u.name || '');
@@ -193,6 +244,71 @@ const AdminUserManagement = () => {
         </div>
       )}
 
+      {/* ── Add User Modal ───────────────────────────────────────────────── */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur z-10 rounded-t-3xl">
+              <div>
+                <h3 className="text-xl font-black text-gray-900">Add New Student</h3>
+                <p className="text-xs text-gray-500 font-medium">Create a new student account instantly</p>
+              </div>
+              <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={handleAddStudent} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">First Name <span className="text-red-500">*</span></label>
+                  <input required value={addFormData.firstName} onChange={e => setAddFormData({...addFormData, firstName: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] outline-none transition-all text-sm font-medium" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Last Name <span className="text-red-500">*</span></label>
+                  <input required value={addFormData.lastName} onChange={e => setAddFormData({...addFormData, lastName: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] outline-none transition-all text-sm font-medium" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
+                  <input required type="email" value={addFormData.email} onChange={e => setAddFormData({...addFormData, email: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] outline-none transition-all text-sm font-medium" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
+                  <input required type="tel" value={addFormData.phone} onChange={e => setAddFormData({...addFormData, phone: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] outline-none transition-all text-sm font-medium" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Temporary Password <span className="text-red-500">*</span></label>
+                  <input required type="text" minLength="6" value={addFormData.password} onChange={e => setAddFormData({...addFormData, password: e.target.value})} placeholder="Min 6 chars" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] outline-none transition-all text-sm font-medium" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Gender <span className="text-red-500">*</span></label>
+                  <select required value={addFormData.gender} onChange={e => setAddFormData({...addFormData, gender: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] outline-none transition-all text-sm font-medium bg-white">
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">State <span className="text-red-500">*</span></label>
+                  <input required value={addFormData.state} onChange={e => setAddFormData({...addFormData, state: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] outline-none transition-all text-sm font-medium" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">City <span className="text-red-500">*</span></label>
+                  <input required value={addFormData.city} onChange={e => setAddFormData({...addFormData, city: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] outline-none transition-all text-sm font-medium" />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4 border-t border-gray-100">
+                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 px-4 rounded-xl border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition-colors">Cancel</button>
+                <button type="submit" disabled={isAdding} className="flex-1 py-3 px-4 rounded-xl bg-[#1e3a8a] text-white font-bold hover:bg-blue-800 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                  {isAdding ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
+                  Create Student
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -202,18 +318,27 @@ const AdminUserManagement = () => {
           <div>
             <h2 className="text-2xl font-black text-gray-900 leading-none">Student Management</h2>
             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mt-1">
-              OTP Approval Dashboard
+              Active/Disabled Management
             </p>
           </div>
         </div>
-        <button
-          onClick={() => fetchUsers(true)}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-[#1e3a8a] rounded-xl text-sm font-black text-gray-500 hover:text-[#1e3a8a] transition-all shadow-sm disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#1e3a8a] hover:bg-blue-800 text-white rounded-xl text-sm font-black transition-all shadow-md hover:shadow-lg active:scale-95"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Student
+          </button>
+          <button
+            onClick={() => fetchUsers(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-[#1e3a8a] rounded-xl text-sm font-black text-gray-500 hover:text-[#1e3a8a] transition-all shadow-sm disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* ── Stats Row ────────────────────────────────────────────────────── */}
@@ -221,7 +346,6 @@ const AdminUserManagement = () => {
         {[
           { label: 'Total Students', value: stats.total,    color: 'text-[#1e3a8a]', bg: 'bg-blue-50',   border: 'border-blue-100', icon: Users       },
           { label: 'Active',         value: stats.active,   color: 'text-green-700', bg: 'bg-green-50',  border: 'border-green-100',icon: UserCheck    },
-          { label: 'Pending',        value: stats.pending,  color: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-100',icon: Clock        },
           { label: 'Blocked',        value: stats.inactive, color: 'text-red-700',   bg: 'bg-red-50',    border: 'border-red-100',  icon: ShieldAlert  },
         ].map(({ label, value, color, bg, border, icon: Icon }) => (
           <div key={label} className={`${bg} border ${border} rounded-2xl p-4 flex items-center gap-3`}>
@@ -251,7 +375,7 @@ const AdminUserManagement = () => {
         </div>
         {/* Status filter pills */}
         <div className="flex items-center gap-2 flex-wrap">
-          {['all', 'active', 'pending', 'inactive'].map((s) => (
+          {['all', 'active', 'inactive'].map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
@@ -387,14 +511,6 @@ const AdminUserManagement = () => {
             <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
               Showing {filteredUsers.length} of {users.length} students
             </p>
-            {stats.pending > 0 && (
-              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5">
-                <Clock className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-xs font-black text-amber-700">
-                  {stats.pending} student{stats.pending !== 1 ? 's' : ''} awaiting approval
-                </span>
-              </div>
-            )}
           </div>
         )}
       </div>

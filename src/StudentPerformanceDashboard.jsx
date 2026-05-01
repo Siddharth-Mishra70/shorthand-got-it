@@ -37,11 +37,11 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
     // Grouping by category - EXACT NAMES FROM APP.JSX
     const moduleInfo = {
         'formatting': { title: 'Allahabad High Court', icon: TargetIcon, color: 'indigo', view: 'formatting' },
-        'kailash': { title: 'Kailash Chandra', icon: BookOpen, color: 'rose', view: 'arena-kc' },
-        'audio': { title: 'Audio Dictations', icon: Zap, color: 'amber', view: 'arena-audio' },
+        // 'kailash': { title: 'Kailash Chandra', icon: BookOpen, color: 'rose', view: 'arena-kc' },
+        // 'audio': { title: 'Audio Dictations', icon: Zap, color: 'amber', view: 'arena-audio' },
         'pitman': { title: 'Pitman Shorthand', icon: Star, color: 'blue', view: 'pitman' },
-        'comprehension': { title: 'Comprehension', icon: CheckCircle2, color: 'green', view: 'arena-comp' },
-        'state': { title: 'State Exams', icon: BarChart2, color: 'purple', view: 'arena-state' },
+        // 'comprehension': { title: 'Comprehension', icon: CheckCircle2, color: 'green', view: 'arena-comp' },
+        // 'state': { title: 'State Exams', icon: BarChart2, color: 'purple', view: 'arena-state' },
     };
 
     const modulesWithData = results.reduce((acc, r) => {

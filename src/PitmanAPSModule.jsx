@@ -97,6 +97,26 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
     const [showKey, setShowKey] = useState(false);
     const utteranceRef = useRef(null);
 
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    };
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
+
     useEffect(() => {
         let timer;
         if (isStarted && timeLeft > 0) {
@@ -185,10 +205,10 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                     <h2 className="text-xl font-bold tracking-wide">Pitman Shorthand Module</h2>
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 md:p-10">
-                    <div className="max-w-7xl mx-auto space-y-10">
+                    <div className="w-full mx-auto space-y-10">
                          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div>
-                                <h3 className="text-4xl font-black text-[#1e3a8a] tracking-tight">Portal Dashboard</h3>
+                                <h3 className="text-4xl font-black text-[#1e3a8a] tracking-tight">Pitman Dashboard</h3>
                                 <p className="text-gray-500 font-bold mt-1 uppercase text-xs tracking-widest italic text-blue-600">Select an exercise to begin your shorthand practice</p>
                             </div>
                             <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
@@ -226,29 +246,48 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
     return (
         <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden">
             <div className="bg-[#1e3a8a] text-white px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-lg z-20">
-                <div className="flex items-center space-x-4 mb-4 md:mb-0">
+                <div className="flex items-center space-x-4 mb-4 md:mb-0 w-full md:w-1/3">
                     <button onClick={() => setViewMode('selection')} className="hover:bg-blue-800 p-2 rounded-full transition-colors"><ArrowLeft className="w-5 h-5" /></button>
-                    <div><h2 className="text-lg font-black tracking-tight">{selectedExercise?.title}</h2><span className="text-[10px] text-blue-200 uppercase font-black">Pitman Shorthand Practice</span></div>
+                    <div><h2 className="text-lg font-black tracking-tight line-clamp-1">{selectedExercise?.title}</h2><span className="text-[10px] text-blue-200 uppercase font-black">Pitman Shorthand Practice</span></div>
                 </div>
-                <div className="flex items-center space-x-4">
+                
+                <div className="flex items-center justify-center w-full md:w-1/3 mb-4 md:mb-0">
+                    {/* Centered space previously holding submit button */}
+                </div>
+
+                <div className="flex items-center justify-end space-x-4 w-full md:w-1/3">
                     <div className="flex items-center space-x-2 bg-blue-800 p-2 rounded-lg text-sm"><Activity className="w-4 h-4 text-blue-300" /><span className="font-bold">{wpm} WPM</span></div>
                     <div className="flex items-center space-x-2 bg-blue-800 p-2 rounded-lg text-sm"><CheckCircle2 className="w-4 h-4 text-green-400" /><span className="font-bold">{accuracy}%</span></div>
+                    <div className="h-6 w-px bg-blue-800 hidden md:block"></div>
+                    <button 
+                        onClick={toggleFullscreen} 
+                        className="p-2 hover:bg-blue-800 rounded-full transition-colors border border-blue-400/30 flex items-center justify-center text-blue-200 hover:text-white" 
+                        title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                    >
+                        {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                    </button>
                 </div>
             </div>
 
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden">
                 {/* Outlines Side */}
                 <div className="border-r border-gray-100 flex flex-col bg-[#fcfdfe]">
-                    <div className="bg-gray-50 border-b px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Shorthand Reference</div>
-                    <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-auto relative">
+                    <div className="bg-gray-50 border-b px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex justify-between items-center">
+                        <span>Shorthand Reference</span>
+                    </div>
+                    <div className="flex-1 bg-white overflow-hidden relative">
                         {selectedExercise?.image && !selectedExercise.image.includes('card') ? (
                             selectedExercise.image.startsWith('data:application/pdf') ? 
-                            <iframe src={selectedExercise.image} className="w-full h-full min-h-[500px]" title="PDF Outline" /> :
-                            <img src={selectedExercise.image} alt="Outline" className="max-w-full h-auto shadow-2xl rounded-lg contrast-125" />
+                            <iframe src={selectedExercise.image} className="absolute inset-0 w-full h-full border-none" title="PDF Outline" /> :
+                            <div className="absolute inset-0 overflow-auto p-6 flex justify-center items-start">
+                                <img src={selectedExercise.image} alt="Outline" className="max-w-full h-auto shadow-2xl rounded-lg contrast-125" />
+                            </div>
                         ) : (
-                            <div className="text-center p-12 bg-white rounded-3xl shadow-sm border border-gray-100 border-dashed">
-                                <Eye className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Awaiting Admin Media...</p>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="text-center p-12 bg-white rounded-3xl shadow-sm border border-gray-100 border-dashed">
+                                    <Eye className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+                                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Awaiting Admin Media...</p>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -262,8 +301,18 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                     </div>
                     <textarea value={inputText} onChange={handleInputChange} disabled={hasSubmitted} className="flex-1 w-full p-8 text-lg font-serif outline-none resize-none leading-relaxed" placeholder="Click here and start typing to begin..." spellCheck="false" />
                     <div className="bg-white border-t border-gray-100 p-2 flex justify-center items-center space-x-3 shrink-0">
-                        <button onClick={handleReset} className="px-5 py-2 bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-600 border border-gray-100 font-bold rounded-lg transition-all hover:scale-105 active:scale-95 text-[10px] uppercase tracking-widest">Reset</button>
-                        <button onClick={handleSubmit} disabled={hasSubmitted || inputText.length === 0} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-black rounded-lg shadow-sm transition-all hover:scale-105 active:scale-95 disabled:opacity-50 uppercase tracking-widest text-[10px]">Submit Recording</button>
+                        <button onClick={handleReset} className="px-5 py-2.5 bg-gray-50 hover:bg-amber-50 text-gray-500 hover:text-amber-600 border border-gray-200 font-bold rounded-lg transition-all hover:scale-105 active:scale-95 text-[10px] uppercase tracking-widest flex items-center space-x-2">
+                            <X className="w-4 h-4" />
+                            <span>Restart Practice</span>
+                        </button>
+                        <button 
+                            onClick={handleSubmit} 
+                            disabled={hasSubmitted || inputText.length === 0} 
+                            className="px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white font-black rounded-lg shadow-sm transition-all transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none uppercase tracking-widest text-[10px] flex items-center space-x-2"
+                        >
+                            <FileCheck className="w-4 h-4" />
+                            <span>Submit Recording</span>
+                        </button>
                     </div>
                 </div>
             </div>

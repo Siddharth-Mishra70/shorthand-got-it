@@ -242,7 +242,7 @@ const LiveDemoInteractive = ({ onRegister }) => {
                     className="group bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-black px-10 py-5 rounded-2xl transition-all duration-300 shadow-[0_10px_30px_rgba(22,163,74,0.3)] hover:shadow-[0_15px_40px_rgba(22,163,74,0.4)] flex items-center space-x-3 transform hover:scale-105"
                   >
                     <Zap className="w-5 h-5 fill-current" />
-                    <span>Unlock Full Detailed Analysis - Register Now</span>
+                    <span>Unlock Full Detailed Analysis - Sign In Now</span>
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>

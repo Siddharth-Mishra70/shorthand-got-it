@@ -71,7 +71,6 @@ const LoginRequiredModal = ({ onLogin, onRegister, onClose }) => {
             </ul>
           </div>
 
-          {/* CTA Buttons */}
           <div className="space-y-3">
             <button
               id="modal-login-btn"
@@ -81,19 +80,7 @@ const LoginRequiredModal = ({ onLogin, onRegister, onClose }) => {
               <LogIn className="w-5 h-5" />
               <span>Sign In</span>
             </button>
-            <button
-              id="modal-register-btn"
-              onClick={onRegister}
-              className="w-full flex items-center justify-center space-x-3 bg-amber-400 hover:bg-amber-300 text-blue-900 font-black py-3.5 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-400/30 hover:-translate-y-0.5 active:translate-y-0"
-            >
-              <UserPlus className="w-5 h-5" />
-              <span>Create Free Account</span>
-            </button>
           </div>
-
-          <p className="text-center text-xs text-gray-400 mt-5">
-            Registration is <span className="font-bold text-green-600">100% free</span> — no credit card required.
-          </p>
         </div>
       </div>
     </div>
