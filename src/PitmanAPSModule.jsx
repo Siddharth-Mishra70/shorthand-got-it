@@ -199,7 +199,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
     if (viewMode === 'selection') {
         const activeList = groupedTests[activeDateTab] || [];
         return (
-            <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
+            <div className="h-full flex-1 bg-[#f8fafc] flex flex-col font-sans">
                 <div className="bg-[#1e3a8a] text-white px-6 py-4 flex items-center space-x-4 shadow-md">
                     <button onClick={onBack} className="hover:bg-blue-800 p-2 rounded-full transition-colors"><ArrowLeft className="w-6 h-6" /></button>
                     <h2 className="text-xl font-bold tracking-wide">Pitman Shorthand Module</h2>
@@ -244,7 +244,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
 
     // ── Practice Mode ─────────────────────────────────────
     return (
-        <div className="min-h-screen bg-white flex flex-col font-sans overflow-hidden">
+        <div className="h-full flex-1 bg-white flex flex-col font-sans overflow-hidden">
             <div className="bg-[#1e3a8a] text-white px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-lg z-20">
                 <div className="flex items-center space-x-4 mb-4 md:mb-0 w-full md:w-1/3">
                     <button onClick={() => setViewMode('selection')} className="hover:bg-blue-800 p-2 rounded-full transition-colors"><ArrowLeft className="w-5 h-5" /></button>
@@ -252,7 +252,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                 </div>
                 
                 <div className="flex items-center justify-center w-full md:w-1/3 mb-4 md:mb-0">
-                    {/* Centered space previously holding submit button */}
+                    {/* Centered space */}
                 </div>
 
                 <div className="flex items-center justify-end space-x-4 w-full md:w-1/3">
@@ -269,21 +269,22 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                 </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden">
+            {/* Two-column body: use inline styles to bypass Tailwind flex propagation bugs */}
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
                 {/* Outlines Side */}
-                <div className="border-r border-gray-100 flex flex-col bg-[#fcfdfe]">
-                    <div className="bg-gray-50 border-b px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex justify-between items-center">
+                <div style={{ width: '50%', display: 'flex', flexDirection: 'column', borderRight: '1px solid #f3f4f6', background: '#fcfdfe', overflow: 'hidden' }}>
+                    <div style={{ flexShrink: 0 }} className="bg-gray-50 border-b px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center">
                         <span>Shorthand Reference</span>
                     </div>
-                    <div className="flex-1 bg-white overflow-hidden relative">
+                    <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                         {selectedExercise?.image && !selectedExercise.image.includes('card') ? (
-                            selectedExercise.image.startsWith('data:application/pdf') ? 
-                            <iframe src={selectedExercise.image} className="absolute inset-0 w-full h-full border-none" title="PDF Outline" /> :
-                            <div className="absolute inset-0 overflow-auto p-6 flex justify-center items-start">
+                            selectedExercise.image.startsWith('data:application/pdf') ?
+                            <iframe src={selectedExercise.image} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} title="PDF Outline" /> :
+                            <div style={{ position: 'absolute', inset: 0, overflow: 'auto', padding: '24px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
                                 <img src={selectedExercise.image} alt="Outline" className="max-w-full h-auto shadow-2xl rounded-lg contrast-125" />
                             </div>
                         ) : (
-                            <div className="absolute inset-0 flex items-center justify-center">
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className="text-center p-12 bg-white rounded-3xl shadow-sm border border-gray-100 border-dashed">
                                     <Eye className="w-12 h-12 text-gray-200 mx-auto mb-4" />
                                     <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Awaiting Admin Media...</p>
@@ -294,20 +295,32 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                 </div>
 
                 {/* Typing Side */}
-                <div className="flex flex-col bg-white">
-                    <div className="bg-gray-50 border-b px-6 py-3 flex justify-between items-center">
-                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Live Transcription Area</span>
-                         <div className="flex items-center space-x-2"><Clock className="w-4 h-4 text-gray-400" /><span className={`font-mono font-black text-xl ${timeLeft < 60 ? 'text-red-600' : 'text-[#1e3a8a]'}`}>{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</span></div>
+                <div style={{ width: '50%', display: 'flex', flexDirection: 'column', background: 'white', overflow: 'hidden' }}>
+                    <div style={{ flexShrink: 0 }} className="bg-gray-50 border-b px-6 py-3 flex justify-between items-center">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Live Transcription Area</span>
+                        <div className="flex items-center space-x-2">
+                            <Clock className="w-4 h-4 text-gray-400" />
+                            <span className={`font-mono font-black text-xl ${timeLeft < 60 ? 'text-red-600' : 'text-[#1e3a8a]'}`}>
+                                {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}
+                            </span>
+                        </div>
                     </div>
-                    <textarea value={inputText} onChange={handleInputChange} disabled={hasSubmitted} className="flex-1 w-full p-8 text-lg font-serif outline-none resize-none leading-relaxed" placeholder="Click here and start typing to begin..." spellCheck="false" />
-                    <div className="bg-white border-t border-gray-100 p-2 flex justify-center items-center space-x-3 shrink-0">
+                    <textarea
+                        value={inputText}
+                        onChange={handleInputChange}
+                        disabled={hasSubmitted}
+                        style={{ flex: 1, minHeight: 0, width: '100%', padding: '32px', fontSize: '1.125rem', fontFamily: 'Georgia, serif', outline: 'none', resize: 'none', lineHeight: 1.75 }}
+                        placeholder="Click here and start typing to begin..."
+                        spellCheck="false"
+                    />
+                    <div style={{ flexShrink: 0 }} className="bg-white border-t border-gray-100 p-2 flex justify-center items-center space-x-3">
                         <button onClick={handleReset} className="px-5 py-2.5 bg-gray-50 hover:bg-amber-50 text-gray-500 hover:text-amber-600 border border-gray-200 font-bold rounded-lg transition-all hover:scale-105 active:scale-95 text-[10px] uppercase tracking-widest flex items-center space-x-2">
                             <X className="w-4 h-4" />
                             <span>Restart Practice</span>
                         </button>
-                        <button 
-                            onClick={handleSubmit} 
-                            disabled={hasSubmitted || inputText.length === 0} 
+                        <button
+                            onClick={handleSubmit}
+                            disabled={hasSubmitted || inputText.length === 0}
                             className="px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white font-black rounded-lg shadow-sm transition-all transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none uppercase tracking-widest text-[10px] flex items-center space-x-2"
                         >
                             <FileCheck className="w-4 h-4" />

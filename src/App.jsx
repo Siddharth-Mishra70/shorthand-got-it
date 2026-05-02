@@ -293,7 +293,7 @@ function App() {
 
   if (currentView === 'pitman') {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
         <div className="bg-white border-b shadow-sm sticky top-0 z-50">
           <div className="w-full px-4 md:px-6 h-16 flex items-center justify-between">
             <button
@@ -334,7 +334,7 @@ function App() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 flex flex-col min-h-0">
           {arenaTab === 'transcribe' ? (
             <PitmanAPSModule
               onBack={() => setCurrentView('dashboard')}
