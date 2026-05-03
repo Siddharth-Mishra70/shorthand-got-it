@@ -736,12 +736,12 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                           Send the screenshot on{' '}
                           <span className="font-black text-green-700">WhatsApp</span> to{' '}
                           <a
-                            href="https://wa.me/918299341310"
+                            href="https://wa.me/917080811235"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="font-black text-green-600 hover:text-green-700 underline underline-offset-2 transition-colors"
                           >
-                            +91 82993 41310
+                            +91 70808 11235
                           </a>
                         </p>
                       </li>
@@ -758,7 +758,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
                   {/* WhatsApp CTA Button */}
                   <a
-                    href="https://wa.me/918299341310"
+                    href="https://wa.me/917080811235"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-green-500/25 hover:-translate-y-0.5 active:translate-y-0"
