@@ -738,7 +738,6 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             const dbUser = {
                 first_name: addFormData.firstName.trim() || 'Student',
                 last_name: addFormData.lastName.trim() || '',
-                name: `${addFormData.firstName.trim()} ${addFormData.lastName.trim()}`.trim(),
                 email,
                 phone: addFormData.phone.trim() || null,
                 state: addFormData.state.trim() || null,
