@@ -708,7 +708,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             city: u.city || '',
             gender: u.gender || '',
             status: u.status || 'active',
-            enrolledCourses: u.enrolled_courses || ['hc-formatting', 'pitman-ex'],
+            enrolledCourses: Array.isArray(u.enrolled_courses) ? u.enrolled_courses : [],
         });
         setShowEditModal(true);
     };
