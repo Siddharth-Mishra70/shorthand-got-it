@@ -131,10 +131,13 @@ function App() {
     setCurrentView(`results:${attemptId}`);
   };
 
-  const courses = [
+  const allCourses = [
     { id: 'hc-formatting', title: 'Allahabad High Court', type: 'Formatting Test', isPremium: true, view: 'formatting', category: 'formatting' },
     { id: 'pitman-ex', title: 'Pitman Shorthand', type: 'Exercise Practice', isPremium: true, view: 'pitman', category: 'pitman' },
   ];
+
+  const enrolled = user?.enrolled_courses || [];
+  const courses = user?.role === 'admin' ? allCourses : allCourses.filter(c => enrolled.includes(c.id));
 
   const currentViewData = courses.find((c) => c.view === currentView);
 

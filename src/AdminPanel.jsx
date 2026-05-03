@@ -265,7 +265,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [isAddingUser, setIsAddingUser] = useState(false);
     const [addFormData, setAddFormData] = useState({
         firstName: '', lastName: '', email: '', phone: '',
-        password: '', state: '', city: '', gender: ''
+        password: '', state: '', city: '', gender: '',
+        enrolledCourses: ['hc-formatting', 'pitman-ex']
     });
 
     const [resetRequests, setResetRequests] = useState(() => JSON.parse(localStorage.getItem('auth_reset_requests') || '[]'));
@@ -712,54 +713,67 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         setIsAddingUser(true);
         try {
             const email = addFormData.email.trim().toLowerCase();
+
+            // Try to create Auth user — if already registered, continue gracefully
+            let uid = crypto.randomUUID();
             const { data: authData, error: signUpErr } = await adminAuthClient.auth.signUp({
                 email,
                 password: addFormData.password,
             });
-            if (signUpErr) throw signUpErr;
-            
-            const uid = authData.user?.id || crypto.randomUUID();
+
+            const alreadyExists =
+                signUpErr &&
+                (signUpErr.message?.includes('already registered') ||
+                    signUpErr.message?.includes('already exists') ||
+                    signUpErr.message?.includes('already been registered') ||
+                    signUpErr.status === 422);
+
+            if (signUpErr && !alreadyExists) {
+                // Real unexpected error — throw it
+                throw signUpErr;
+            }
+
+            if (authData?.user?.id) uid = authData.user.id;
 
             const dbUser = {
-                first_name: (addFormData.firstName.trim() || 'Student') + (addFormData.lastName ? ` ${addFormData.lastName.trim()}` : ''),
+                first_name: addFormData.firstName.trim() || 'Student',
+                last_name: addFormData.lastName.trim() || '',
+                name: `${addFormData.firstName.trim()} ${addFormData.lastName.trim()}`.trim(),
                 email,
                 phone: addFormData.phone.trim() || null,
+                state: addFormData.state.trim() || null,
+                city: addFormData.city.trim() || null,
+                gender: addFormData.gender || null,
                 status: 'active',
                 role: 'student',
+                enrolled_courses: addFormData.enrolledCourses,
                 joinedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-                created_at: new Date().toISOString()
+                created_at: new Date().toISOString(),
             };
 
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
-                const { error: insertErr } = await supabase.from('users').insert([dbUser]);
-                if (insertErr) throw insertErr;
+                // Use upsert so re-adding an existing email just updates the record
+                const { error: upsertErr } = await supabase
+                    .from('users')
+                    .upsert([dbUser], { onConflict: 'email' });
+                if (upsertErr) throw upsertErr;
             }
-            
-            const newUser = {
-                id: uid,
-                ...dbUser,
-                first_name: addFormData.firstName.trim(),
-                last_name: addFormData.lastName.trim(),
-                name: `${addFormData.firstName.trim()} ${addFormData.lastName.trim()}`.trim(),
-                state: addFormData.state.trim(),
-                city: addFormData.city.trim(),
-                gender: addFormData.gender,
-            };
-            
-            const updatedUsers = [newUser, ...users];
+
+            const newUser = { id: uid, ...dbUser };
+            const updatedUsers = [newUser, ...users.filter(u => u.email !== email)];
             setUsers(updatedUsers);
             localStorage.setItem('auth_users', JSON.stringify(updatedUsers));
-            
+
             alert('Student added successfully!');
             setShowAddModal(false);
-            setAddFormData({ firstName: '', lastName: '', email: '', phone: '', password: '', state: '', city: '', gender: '' });
+            setAddFormData({
+                firstName: '', lastName: '', email: '', phone: '',
+                password: '', state: '', city: '', gender: '',
+                enrolledCourses: ['hc-formatting', 'pitman-ex'],
+            });
         } catch (err) {
-            console.error("Signup Error Object:", err);
-            if (err.message.includes('User already registered') || err.message.includes('already exists')) {
-                 alert(`Failed to add student: The email '${addFormData.email}' is already registered in the backend.\n\nNOTE: If you used this email earlier during the app crash, it successfully registered in the Auth server but failed in the Database. Thus, it's permanently 'taken'.\n\nPlease enter a completely new email (e.g., student99@shorthand.com) to test.`);
-            } else {
-                 alert(`Failed to add student: ${err.message}`);
-            }
+            console.error('Add Student Error:', err);
+            alert(`Failed to add student: ${err.message}`);
         } finally {
             setIsAddingUser(false);
         }
@@ -1854,6 +1868,49 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                     <input value={addFormData.city} onChange={e => setAddFormData({...addFormData, city: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
                                 </div>
                             </div>
+
+                            {/* Course Enrollment */}
+                            <div className="pt-4 border-t border-gray-100">
+                                <label className="block text-sm font-bold text-gray-800 mb-3">Course Enrollment</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {[
+                                        { id: 'hc-formatting', label: 'Allahabad High Court Formatting' },
+                                        { id: 'pitman-ex', label: 'Pitman Shorthand Exercise' }
+                                    ].map(course => (
+                                        <label key={course.id} className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                                            addFormData.enrolledCourses.includes(course.id)
+                                                ? 'border-red-700 bg-red-50'
+                                                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                                        }`}>
+                                            <input
+                                                type="checkbox"
+                                                className="hidden"
+                                                checked={addFormData.enrolledCourses.includes(course.id)}
+                                                onChange={(e) => {
+                                                    const current = addFormData.enrolledCourses;
+                                                    setAddFormData({
+                                                        ...addFormData,
+                                                        enrolledCourses: e.target.checked
+                                                            ? [...current, course.id]
+                                                            : current.filter(id => id !== course.id)
+                                                    });
+                                                }}
+                                            />
+                                            <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center flex-shrink-0 transition-all ${
+                                                addFormData.enrolledCourses.includes(course.id) ? 'bg-red-700 border-red-700' : 'border-gray-300 bg-white'
+                                            }`}>
+                                                {addFormData.enrolledCourses.includes(course.id) && (
+                                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <span className="text-sm font-semibold text-gray-700">{course.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
                             <div className="flex gap-3 pt-4 border-t border-gray-100">
                                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-bold hover:bg-gray-50">Cancel</button>
                                 <button type="submit" disabled={isAddingUser} className="flex-1 py-2.5 rounded-lg bg-red-700 text-white font-bold hover:bg-red-800 disabled:opacity-50 flex items-center justify-center gap-2">

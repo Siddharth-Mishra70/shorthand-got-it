@@ -82,6 +82,78 @@ const StatusDropdown = ({ userId, currentStatus, onUpdate, isUpdating }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // AdminUserManagement — Student table with status management
 // ─────────────────────────────────────────────────────────────────────────────
+// ─── Enrollment Toggle Dropdown ───────────────────────────────────────────
+const EnrollmentToggle = ({ user, onUpdate }) => {
+  const [open, setOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const enrolled = user.enrolled_courses || [];
+
+  const toggleCourse = async (courseId) => {
+    setUpdating(true);
+    try {
+      const newEnrolled = enrolled.includes(courseId)
+        ? enrolled.filter(id => id !== courseId)
+        : [...enrolled, courseId];
+
+      const { error } = await supabase
+        .from('users')
+        .update({ enrolled_courses: newEnrolled })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      onUpdate(newEnrolled);
+    } catch (err) {
+      console.error('Failed to update enrollment:', err);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        disabled={updating}
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:border-[#1e3a8a] rounded-xl text-xs font-black text-gray-600 hover:text-[#1e3a8a] transition-all shadow-sm disabled:opacity-50"
+      >
+        {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+        Enrollment
+        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-100 rounded-2xl shadow-2xl shadow-gray-200/60 overflow-hidden w-64 p-2 space-y-1">
+            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-3 py-2 border-b border-gray-50 mb-1">Select Access</p>
+            {[
+              { id: 'hc-formatting', label: 'Allahabad High Court' },
+              { id: 'pitman-ex', label: 'Pitman Shorthand' }
+            ].map(course => (
+              <button
+                key={course.id}
+                onClick={() => toggleCourse(course.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left ${
+                  enrolled.includes(course.id)
+                    ? 'bg-blue-50 text-[#1e3a8a]'
+                    : 'hover:bg-gray-50 text-gray-600'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                  enrolled.includes(course.id) ? 'bg-[#1e3a8a] border-[#1e3a8a]' : 'border-gray-300 bg-white'
+                }`}>
+                  {enrolled.includes(course.id) && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                </div>
+                {course.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 const AdminUserManagement = () => {
   const [users,       setUsers]       = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -97,7 +169,8 @@ const AdminUserManagement = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [addFormData, setAddFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
-    password: '', state: '', city: '', gender: ''
+    password: '', state: '', city: '', gender: '',
+    enrolledCourses: ['hc-formatting', 'pitman-ex'] // Default to both for convenience
   });
 
   // ─── Fetch all students ──────────────────────────────────────────────────
@@ -109,7 +182,7 @@ const AdminUserManagement = () => {
     try {
       const { data, error: fetchErr } = await supabase
         .from('users')
-        .select('id, first_name, last_name, name, email, phone, status, role, joinedDate, created_at, gender, state, city')
+        .select('id, first_name, last_name, name, email, phone, status, role, joinedDate, created_at, gender, state, city, enrolled_courses')
         .eq('role', 'student')
         .order('created_at', { ascending: false });
 
@@ -181,6 +254,7 @@ const AdminUserManagement = () => {
         gender: addFormData.gender,
         status: 'active',
         role: 'student',
+        enrolled_courses: addFormData.enrolledCourses,
         joinedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         created_at: new Date().toISOString(),
       }]);
@@ -189,7 +263,7 @@ const AdminUserManagement = () => {
 
       showToast('Student account created successfully!', 'success');
       setShowAddModal(false);
-      setAddFormData({ firstName: '', lastName: '', email: '', phone: '', password: '', state: '', city: '', gender: '' });
+      setAddFormData({ firstName: '', lastName: '', email: '', phone: '', password: '', state: '', city: '', gender: '', enrolledCourses: ['hc-formatting', 'pitman-ex'] });
       fetchUsers(true);
     } catch (err) {
       showToast(err.message || 'Failed to create student.', 'error');
@@ -295,6 +369,44 @@ const AdminUserManagement = () => {
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">City <span className="text-red-500">*</span></label>
                   <input required value={addFormData.city} onChange={e => setAddFormData({...addFormData, city: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] outline-none transition-all text-sm font-medium" />
+                </div>
+              </div>
+
+              {/* Enrollment Selection */}
+              <div className="pt-4 border-t border-gray-100">
+                <label className="block text-sm font-black text-gray-800 mb-3">Course Enrollment</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { id: 'hc-formatting', label: 'Allahabad High Court Formatting' },
+                    { id: 'pitman-ex', label: 'Pitman Shorthand Exercise' }
+                  ].map(course => (
+                    <label key={course.id} className={`flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all ${
+                      addFormData.enrolledCourses.includes(course.id) 
+                        ? 'border-[#1e3a8a] bg-blue-50' 
+                        : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+                    }`}>
+                      <input 
+                        type="checkbox" 
+                        className="hidden" 
+                        checked={addFormData.enrolledCourses.includes(course.id)}
+                        onChange={(e) => {
+                          const current = addFormData.enrolledCourses;
+                          setAddFormData({
+                            ...addFormData,
+                            enrolledCourses: e.target.checked 
+                              ? [...current, course.id]
+                              : current.filter(id => id !== course.id)
+                          });
+                        }}
+                      />
+                      <div className={`w-5 h-5 rounded-md border-2 mr-3 flex items-center justify-center transition-all ${
+                        addFormData.enrolledCourses.includes(course.id) ? 'bg-[#1e3a8a] border-[#1e3a8a]' : 'border-gray-300 bg-white'
+                      }`}>
+                        {addFormData.enrolledCourses.includes(course.id) && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <span className="text-sm font-bold text-gray-700">{course.label}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
               <div className="flex gap-3 pt-4 border-t border-gray-100">
@@ -491,12 +603,18 @@ const AdminUserManagement = () => {
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 flex items-center gap-2">
                     <StatusDropdown
                       userId={u.id}
                       currentStatus={u.status || 'pending'}
                       onUpdate={handleStatusUpdate}
                       isUpdating={updatingId === u.id}
+                    />
+                    <EnrollmentToggle 
+                      user={u} 
+                      onUpdate={(courses) => {
+                        setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, enrolled_courses: courses } : usr));
+                      }}
                     />
                   </td>
                 </tr>

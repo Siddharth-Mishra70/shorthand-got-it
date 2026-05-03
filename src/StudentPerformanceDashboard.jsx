@@ -97,10 +97,26 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
         return acc;
     }, {});
 
-    const filteredModules = useMemo(() => {
-        if (activeFilter === 'all') return Object.entries(moduleInfo);
-        return Object.entries(moduleInfo).filter(([key]) => key === activeFilter);
-    }, [activeFilter]);
+    const filteredModuleInfo = useMemo(() => {
+        const enrolled = user?.enrolled_courses || [];
+        if (user?.role === 'admin') return moduleInfo;
+
+        const filtered = {};
+        const mapping = { 'hc-formatting': 'formatting', 'pitman-ex': 'pitman' };
+        
+        Object.entries(moduleInfo).forEach(([key, info]) => {
+            const courseId = Object.keys(mapping).find(id => mapping[id] === key);
+            if (enrolled.includes(courseId)) {
+                filtered[key] = info;
+            }
+        });
+        return filtered;
+    }, [user?.enrolled_courses, user?.role]);
+
+    const filteredModulesList = useMemo(() => {
+        if (activeFilter === 'all') return Object.entries(filteredModuleInfo);
+        return Object.entries(filteredModuleInfo).filter(([key]) => key === activeFilter);
+    }, [activeFilter, filteredModuleInfo]);
 
     const PerformanceGauge = ({ current, previous }) => {
         if (!current) return (
@@ -194,7 +210,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                         >
                             All Modules
                         </button>
-                        {Object.entries(moduleInfo).map(([key, info]) => (
+                        {Object.entries(filteredModuleInfo).map(([key, info]) => (
                             <button 
                                 key={key}
                                 onClick={() => setActiveFilter(key)}
@@ -307,7 +323,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-                            {filteredModules.map(([modKey, modMeta]) => {
+                            {filteredModulesList.map(([modKey, modMeta]) => {
                                 const modResults = modulesWithData[modKey] || [];
                                 const currentTest = modResults[0]; 
                                 const previousTest = modResults[1] || null;
