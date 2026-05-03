@@ -711,7 +711,7 @@ ORAL ORDER
                                                 e.preventDefault();
                                             }
                                         }}
-                                        className="flex-1 p-10 md:p-16 outline-none font-mono text-[16px] md:text-[18px] leading-loose text-justify text-black overflow-y-auto"
+                                        className="flex-1 min-h-0 p-10 md:p-16 outline-none font-mono text-[16px] md:text-[18px] leading-loose text-justify text-black overflow-y-auto"
                                         spellCheck={false}
                                     >
                                         <p><br /></p>
