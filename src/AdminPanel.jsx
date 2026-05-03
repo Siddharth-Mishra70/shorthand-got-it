@@ -144,11 +144,11 @@ const TestList = ({ tests, onDelete, emptyMsg, onEdit }) => {
                     </div>
                     <div className="flex items-center space-x-2 shrink-0 opacity-0 group-hover:opacity-100 transition-all">
                         {onEdit && (
-                            <button onClick={() => onEdit(t.id)} className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="Edit">
+                            <button onClick={() => onEdit(t.id)} className="p-2 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all" title="Edit">
                                 <Edit2 className="w-4 h-4" />
                             </button>
                         )}
-                        <button onClick={() => onDelete(t.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Delete">
+                        <button onClick={() => onDelete(t.id)} className="p-2 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all" title="Delete">
                             <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
@@ -1915,7 +1915,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-sm text-right">
-                                    <button onClick={() => handleDeleteUser(u.phone)} className="text-red-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                    <button onClick={() => handleDeleteUser(u.phone)} className="text-red-700 hover:text-red-800 transition-colors"><Trash2 className="w-4 h-4" /></button>
                                 </td>
                             </tr>
                         ))}
@@ -2216,7 +2216,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                             setInquiries(updated);
                                             localStorage.setItem('contact_inquiries', JSON.stringify(updated));
                                         }}
-                                        className="p-2 text-gray-300 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all"
+                                        className="p-2 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-xl transition-all"
                                         title="Delete Inquiry"
                                     >
                                         <Trash2 className="w-5 h-5" />
