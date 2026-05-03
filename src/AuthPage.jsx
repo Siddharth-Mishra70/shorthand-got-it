@@ -468,7 +468,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                       ? 'Welcome Back!'
                       : regStep === 'otp'
                       ? 'Verify Your Email'
-                      : 'Join for Free'}
+                      : '✨ Premium Access'}
                   </span>
                 </div>
                 <h1 className="text-3xl font-black text-gray-900 mb-1">
@@ -478,7 +478,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                     ? 'Sign In to Your Account'
                     : regStep === 'otp'
                     ? 'Check Your Inbox'
-                    : 'Create Your Account'}
+                    : 'Join Shorthandians Premium'}
                 </h1>
                 <p className="text-gray-500 text-sm">
                   {tab === 'forgot'
@@ -489,7 +489,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                     ? 'Enter your email and password to continue.'
                     : regStep === 'otp'
                     ? `A 6-digit OTP was sent to ${regData.email}`
-                    : 'Fill in your details. Email OTP required to verify your account.'}
+                    : 'Pay the one-time registration fee via UPI and send your payment screenshot to receive your login credentials.'}
                 </p>
               </div>
 
@@ -690,89 +690,90 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
               )}
 
               {/* ══════════════════════════════════════════════════════════
-                  REGISTER — STEP 1: Fill form + Send OTP
+                  REGISTER — PAYMENT & VERIFICATION UI
               ════════════════════════════════════════════════════════════ */}
               {!success && tab === 'register' && regStep === 'form' && (
-                <form onSubmit={handleSendOtp} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <InputField id="reg-first-name" label="First Name" icon={User} placeholder="First name"
-                      value={regData.firstName} onChange={(e) => setRegData({ ...regData, firstName: e.target.value })} required />
-                    <InputField id="reg-last-name" label="Last Name" icon={User} placeholder="Last name"
-                      value={regData.lastName} onChange={(e) => setRegData({ ...regData, lastName: e.target.value })} required />
+                <div className="space-y-6">
+
+                  {/* QR Code Section */}
+                  <div className="flex flex-col items-center">
+                    <div className="relative group">
+                      <div className="absolute -inset-1 bg-gradient-to-br from-[#1e3a8a]/30 to-indigo-400/30 rounded-2xl blur-md opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
+                      <div className="relative bg-white border-2 border-[#1e3a8a]/20 rounded-2xl p-3 shadow-xl">
+                        <img
+                          src="/QRImage.jpeg"
+                          alt="PhonePe Payment QR Code"
+                          className="w-52 h-52 object-contain rounded-xl"
+                        />
+                      </div>
+                    </div>
+                    <p className="mt-4 text-sm font-black text-gray-800 tracking-widest uppercase">MR. AYUSH PANDEY</p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">Scan via PhonePe / Any UPI App</p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <InputField id="reg-state" label="State" icon={MapPin} placeholder="Your state"
-                      value={regData.state} onChange={(e) => setRegData({ ...regData, state: e.target.value })} required />
-                    <InputField id="reg-city" label="City" icon={Building} placeholder="Your city"
-                      value={regData.city} onChange={(e) => setRegData({ ...regData, city: e.target.value })} required />
+                  {/* Step-by-step Instructions */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 space-y-4">
+                    <p className="text-xs font-black text-[#1e3a8a] uppercase tracking-widest flex items-center gap-1.5">
+                      <span>📋</span> Next Steps
+                    </p>
+
+                    <ol className="space-y-3">
+                      <li className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center text-xs font-black">1</span>
+                        <p className="text-sm text-gray-700 font-medium leading-snug">
+                          Complete the payment via <span className="font-black text-[#5f259f]">PhonePe / UPI</span> by scanning the QR code above.
+                        </p>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center text-xs font-black">2</span>
+                        <p className="text-sm text-gray-700 font-medium leading-snug">
+                          Take a <span className="font-black text-gray-900">screenshot</span> of the successful transaction.
+                        </p>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center text-xs font-black">3</span>
+                        <p className="text-sm text-gray-700 font-medium leading-snug">
+                          Send the screenshot on{' '}
+                          <span className="font-black text-green-700">WhatsApp</span> to{' '}
+                          <a
+                            href="https://wa.me/918299341310"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-black text-green-600 hover:text-green-700 underline underline-offset-2 transition-colors"
+                          >
+                            +91 82993 41310
+                          </a>
+                        </p>
+                      </li>
+                    </ol>
+
+                    {/* Note */}
+                    <div className="flex items-center gap-2 bg-white/70 border border-blue-100 rounded-xl px-3 py-2.5 mt-1">
+                      <span className="text-base">⏱️</span>
+                      <p className="text-xs font-bold text-blue-800">
+                        Your account will be activated within <span className="text-[#1e3a8a]">15 minutes!</span>
+                      </p>
+                    </div>
                   </div>
 
-                  <SelectField id="reg-gender" label="Gender" icon={Users}
-                    value={regData.gender} onChange={(e) => setRegData({ ...regData, gender: e.target.value })} required
-                    options={[
-                      { value: 'Male', label: 'Male' },
-                      { value: 'Female', label: 'Female' },
-                      { value: 'Other', label: 'Other' },
-                    ]}
-                  />
-
-                  <InputField id="reg-phone" label="Phone Number" icon={Phone} type="tel"
-                    placeholder="e.g. 9876543210"
-                    value={regData.phone} onChange={(e) => setRegData({ ...regData, phone: e.target.value })} required />
-
-                  <InputField id="reg-email" label="Email Address" icon={Mail} type="email"
-                    placeholder="you@gmail.com"
-                    value={regData.email} onChange={(e) => setRegData({ ...regData, email: e.target.value })} required />
-
-                  <InputField
-                    id="reg-password"
-                    label="Create Password"
-                    icon={Lock}
-                    type={showRegPassword ? 'text' : 'password'}
-                    placeholder="Min. 6 characters"
-                    value={regData.password}
-                    onChange={(e) => setRegData({ ...regData, password: e.target.value })}
-                    required
-                    rightElement={
-                      <button
-                        type="button"
-                        onClick={() => setShowRegPassword((v) => !v)}
-                        className="text-gray-400 hover:text-[#1e3a8a] transition-colors p-1"
-                        tabIndex={-1}
-                      >
-                        {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    }
-                  />
-
-                  {/* OTP notice */}
-                  <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700 font-medium">
-                    <Mail className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
-                    <span>A 6-digit OTP will be sent to your email to verify your identity. After verification, your account will need admin approval before you can log in.</span>
-                  </div>
-
-                  <p className="text-xs text-gray-400">
-                    By registering, you agree to our{' '}
-                    <span className="text-[#1e3a8a] font-semibold cursor-pointer hover:underline">Terms of Service</span>.
-                  </p>
-
-                  <button
-                    id="reg-send-otp-btn"
-                    type="submit"
-                    disabled={loading}
-                    className="w-full flex items-center justify-center space-x-3 bg-[#1e3a8a] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
+                  {/* WhatsApp CTA Button */}
+                  <a
+                    href="https://wa.me/918299341310"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-green-500/25 hover:-translate-y-0.5 active:translate-y-0"
                   >
-                    {loading
-                      ? <><Spinner /><span>Creating Account…</span></>
-                      : <><Mail className="w-5 h-5" /><span>Create Account & Send OTP</span></>}
-                  </button>
+                    <svg className="w-5 h-5" viewBox="0 0 32 32" fill="currentColor">
+                      <path d="M16 0C7.163 0 0 7.163 0 16c0 2.837.74 5.5 2.035 7.817L0 32l8.385-2.002A15.94 15.94 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm0 29.333a13.28 13.28 0 01-6.771-1.854l-.487-.29-4.979 1.188 1.243-4.854-.318-.5A13.261 13.261 0 012.667 16C2.667 8.636 8.636 2.667 16 2.667S29.333 8.636 29.333 16 23.364 29.333 16 29.333zm7.27-9.87c-.397-.199-2.348-1.158-2.712-1.29-.364-.133-.63-.199-.895.199-.265.398-.897 1.03-.979 1.042-.131.015-.266-.051-.398-.116-1.725-.863-3.056-2.272-3.844-3.944-.131-.265-.002-.406.097-.538.19-.256.396-.538.595-.811.2-.273.266-.463.398-.729.133-.265.066-.497-.033-.696-.1-.199-.895-2.16-1.226-2.956-.322-.775-.65-.672-.895-.685-.23-.013-.497-.015-.762-.015-.266 0-.696.1-.1.06 1.524-.795 3.39-.795 4.914 0 1.125.597 1.855 1.756 1.855 3.012 0 1.653-.996 3.283-2.61 4.19z"/>
+                    </svg>
+                    <span>Send Screenshot on WhatsApp</span>
+                  </a>
 
                   <p className="text-center text-sm text-gray-500">
                     Already have an account?{' '}
                     <button type="button" onClick={() => switchTab('login')} className="text-[#1e3a8a] font-bold hover:underline">Sign in</button>
                   </p>
-                </form>
+                </div>
               )}
 
               {/* ══════════════════════════════════════════════════════════
