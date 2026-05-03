@@ -7,7 +7,7 @@ import {
     MessageSquare, Mail, ShieldCheck, UserPlus
 } from 'lucide-react';
 import AdminUserManagement from './AdminUserManagement';
-import { adminAuthClient } from './supabaseClient';
+import { adminAuthClient, serviceRoleClient } from './supabaseClient';
 
 const STATE_EXAMS = [
     'Uttar Pradesh', 'Bihar', 'Madhya Pradesh', 'Rajasthan', 'Maharashtra',
@@ -690,6 +690,9 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const handleDeleteUser = async (phone) => {
         if (window.confirm('Delete this student?')) {
             try {
+                // First get the user's email so we can delete from Auth too
+                const userToDelete = users.find(u => u.phone === phone);
+
                 if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
                     const { error } = await supabase.from('users').delete().eq('phone', phone);
                     if (error) {
@@ -697,7 +700,22 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         alert('Failed to delete: ' + error.message);
                         return;
                     }
+
+                    // Also delete from Supabase Auth so the email can be re-used cleanly
+                    if (serviceRoleClient && userToDelete?.email) {
+                        try {
+                            // Find auth user by email
+                            const { data: authList } = await serviceRoleClient.auth.admin.listUsers();
+                            const authUser = authList?.users?.find(u => u.email === userToDelete.email);
+                            if (authUser?.id) {
+                                await serviceRoleClient.auth.admin.deleteUser(authUser.id);
+                            }
+                        } catch (authErr) {
+                            console.warn('Auth delete skipped (non-critical):', authErr.message);
+                        }
+                    }
                 }
+
                 const updatedUsers = users.filter(u => u.phone !== phone);
                 setUsers(updatedUsers);
                 localStorage.setItem('auth_users', JSON.stringify(updatedUsers));
@@ -734,6 +752,22 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             }
 
             if (authData?.user?.id) uid = authData.user.id;
+
+            // If user already existed in Auth, update their password via service role
+            if (alreadyExists && serviceRoleClient) {
+                try {
+                    const { data: authList } = await serviceRoleClient.auth.admin.listUsers();
+                    const existingAuthUser = authList?.users?.find(u => u.email === email);
+                    if (existingAuthUser?.id) {
+                        uid = existingAuthUser.id;
+                        await serviceRoleClient.auth.admin.updateUserById(existingAuthUser.id, {
+                            password: addFormData.password,
+                        });
+                    }
+                } catch (authUpdateErr) {
+                    console.warn('Could not update Auth password (non-critical):', authUpdateErr.message);
+                }
+            }
 
             const dbUser = {
                 first_name: addFormData.firstName.trim() || 'Student',
