@@ -269,6 +269,16 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         enrolledCourses: ['hc-formatting', 'pitman-ex']
     });
 
+    // Edit User State
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [isEditingUser, setIsEditingUser] = useState(false);
+    const [editingUserId, setEditingUserId] = useState(null);
+    const [editFormData, setEditFormData] = useState({
+        firstName: '', lastName: '', email: '', phone: '',
+        state: '', city: '', gender: '', status: 'active',
+        enrolledCourses: ['hc-formatting', 'pitman-ex']
+    });
+
     const [resetRequests, setResetRequests] = useState(() => JSON.parse(localStorage.getItem('auth_reset_requests') || '[]'));
     const [allResults, setAllResults] = useState([]);
     const [loadingResults, setLoadingResults] = useState(true);
@@ -684,6 +694,62 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             console.error('Failed to update student status:', err);
             alert('Error updating status: ' + (err.message || 'Check connection'));
             setUsers(originalUsers);
+        }
+    };
+
+    const openEditModal = (u) => {
+        setEditingUserId(u.id || u.email);
+        setEditFormData({
+            firstName: u.first_name || (u.name ? u.name.split(' ')[0] : ''),
+            lastName: u.last_name || (u.name ? u.name.split(' ').slice(1).join(' ') : ''),
+            email: u.email || '',
+            phone: u.phone || '',
+            state: u.state || '',
+            city: u.city || '',
+            gender: u.gender || '',
+            status: u.status || 'active',
+            enrolledCourses: u.enrolled_courses || ['hc-formatting', 'pitman-ex'],
+        });
+        setShowEditModal(true);
+    };
+
+    const handleEditStudent = async (e) => {
+        e.preventDefault();
+        setIsEditingUser(true);
+        try {
+            const updatePayload = {
+                first_name: editFormData.firstName.trim(),
+                last_name: editFormData.lastName.trim(),
+                phone: editFormData.phone.trim() || null,
+                state: editFormData.state.trim() || null,
+                city: editFormData.city.trim() || null,
+                gender: editFormData.gender || null,
+                status: editFormData.status,
+                enrolled_courses: editFormData.enrolledCourses,
+            };
+
+            if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
+                const { error } = await supabase
+                    .from('users')
+                    .update(updatePayload)
+                    .eq('email', editFormData.email);
+                if (error) throw error;
+            }
+
+            // Update local state
+            const updatedUsers = users.map(u =>
+                u.email === editFormData.email ? { ...u, ...updatePayload } : u
+            );
+            setUsers(updatedUsers);
+            localStorage.setItem('auth_users', JSON.stringify(updatedUsers));
+
+            alert('Student updated successfully!');
+            setShowEditModal(false);
+        } catch (err) {
+            console.error('Edit Student Error:', err);
+            alert(`Failed to update student: ${err.message}`);
+        } finally {
+            setIsEditingUser(false);
         }
     };
 
@@ -1956,6 +2022,114 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 </div>
             )}
 
+            {/* ── Edit Student Modal ─────────────────────────────────────── */}
+            {showEditModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-top-4">
+                        <div className="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur z-10">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Edit Student</h3>
+                                <p className="text-xs text-gray-400 font-medium">{editFormData.email}</p>
+                            </div>
+                            <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleEditStudent} className="p-5 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">First Name</label>
+                                    <input value={editFormData.firstName} onChange={e => setEditFormData({...editFormData, firstName: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Last Name</label>
+                                    <input value={editFormData.lastName} onChange={e => setEditFormData({...editFormData, lastName: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Phone Number</label>
+                                    <input type="tel" value={editFormData.phone} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Gender</label>
+                                    <select value={editFormData.gender} onChange={e => setEditFormData({...editFormData, gender: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500">
+                                        <option value="">Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">State</label>
+                                    <input value={editFormData.state} onChange={e => setEditFormData({...editFormData, state: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">City</label>
+                                    <input value={editFormData.city} onChange={e => setEditFormData({...editFormData, city: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Account Status</label>
+                                    <select value={editFormData.status} onChange={e => setEditFormData({...editFormData, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500">
+                                        <option value="active">Active</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="inactive">Blocked</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Course Enrollment */}
+                            <div className="pt-4 border-t border-gray-100">
+                                <label className="block text-sm font-bold text-gray-800 mb-3">Course Enrollment</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {[
+                                        { id: 'hc-formatting', label: 'Allahabad High Court Formatting' },
+                                        { id: 'pitman-ex', label: 'Pitman Shorthand Exercise' }
+                                    ].map(course => (
+                                        <label key={course.id} className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                                            editFormData.enrolledCourses.includes(course.id)
+                                                ? 'border-red-700 bg-red-50'
+                                                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                                        }`}>
+                                            <input
+                                                type="checkbox"
+                                                className="hidden"
+                                                checked={editFormData.enrolledCourses.includes(course.id)}
+                                                onChange={(e) => {
+                                                    const current = editFormData.enrolledCourses;
+                                                    setEditFormData({
+                                                        ...editFormData,
+                                                        enrolledCourses: e.target.checked
+                                                            ? [...current, course.id]
+                                                            : current.filter(id => id !== course.id)
+                                                    });
+                                                }}
+                                            />
+                                            <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center flex-shrink-0 transition-all ${
+                                                editFormData.enrolledCourses.includes(course.id) ? 'bg-red-700 border-red-700' : 'border-gray-300 bg-white'
+                                            }`}>
+                                                {editFormData.enrolledCourses.includes(course.id) && (
+                                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <span className="text-sm font-semibold text-gray-700">{course.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-bold hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={isEditingUser} className="flex-1 py-2.5 rounded-lg bg-red-700 text-white font-bold hover:bg-red-800 disabled:opacity-50 flex items-center justify-center gap-2">
+                                    {isEditingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit2 className="w-4 h-4" />}
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
                 <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-gray-50 border-b border-gray-200">
@@ -1973,19 +2147,18 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {users.filter(u => {
-                            const nameLower = (u.name || '').toLowerCase();
-                            const phoneLower = (u.phone || '').toLowerCase();
+                        {(() => {
                             const term = studentSearchTerm.toLowerCase();
-                            return nameLower.includes(term) || phoneLower.includes(term);
-                        }).length === 0 ? (
-                            <tr><td colSpan="10" className="text-center py-10 text-gray-400">No students found matching your search.</td></tr>
-                        ) : users.filter(u => {
-                            const nameLower = (u.name || '').toLowerCase();
-                            const phoneLower = (u.phone || '').toLowerCase();
-                            const term = studentSearchTerm.toLowerCase();
-                            return nameLower.includes(term) || phoneLower.includes(term);
-                        }).map(u => (
+                            const filtered = users.filter(u => {
+                                const fullName = `${u.first_name || ''} ${u.last_name || ''} ${u.name || ''}`.toLowerCase();
+                                const phone = (u.phone || '').toLowerCase();
+                                const email = (u.email || '').toLowerCase();
+                                return fullName.includes(term) || phone.includes(term) || email.includes(term);
+                            });
+                            if (filtered.length === 0) return (
+                                <tr><td colSpan="10" className="text-center py-10 text-gray-400">No students found matching your search.</td></tr>
+                            );
+                            return filtered.map(u => (
                             <tr key={u.phone} className="border-b border-gray-100 hover:bg-red-50 transition-colors">
                                 <td className="px-6 py-4 text-sm font-semibold text-gray-800">{u.first_name || (u.name ? u.name.split(' ')[0] : '-')}</td>
                                 <td className="px-6 py-4 text-sm font-semibold text-gray-800">{u.last_name || (u.name ? u.name.split(' ').slice(1).join(' ') : '-')}</td>
@@ -2005,10 +2178,26 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-sm text-right">
-                                    <button onClick={() => handleDeleteUser(u.phone)} className="text-red-700 hover:text-red-800 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                    <div className="flex items-center justify-end gap-2">
+                                        <button
+                                            onClick={() => openEditModal(u)}
+                                            className="p-1.5 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all"
+                                            title="Edit student"
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteUser(u.phone)}
+                                            className="p-1.5 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all"
+                                            title="Delete student"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
-                        ))}
+                        ));
+                        })()}
                     </tbody>
                 </table>
             </div>
