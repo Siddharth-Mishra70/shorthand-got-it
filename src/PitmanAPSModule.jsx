@@ -312,6 +312,9 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                         style={{ flex: 1, minHeight: 0, width: '100%', padding: '32px', fontSize: '1.125rem', fontFamily: 'Georgia, serif', outline: 'none', resize: 'none', lineHeight: 1.75 }}
                         placeholder="Click here and start typing to begin..."
                         spellCheck="false"
+                        onCopy={(e) => e.preventDefault()}
+                        onPaste={(e) => e.preventDefault()}
+                        onCut={(e) => e.preventDefault()}
                     />
                     <div style={{ flexShrink: 0 }} className="bg-white border-t border-gray-100 p-2 flex justify-center items-center space-x-3">
                         <button onClick={handleReset} className="px-5 py-2.5 bg-gray-50 hover:bg-amber-50 text-gray-500 hover:text-amber-600 border border-gray-200 font-bold rounded-lg transition-all hover:scale-105 active:scale-95 text-[10px] uppercase tracking-widest flex items-center space-x-2">

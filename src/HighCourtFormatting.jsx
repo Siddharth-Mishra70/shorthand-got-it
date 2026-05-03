@@ -607,7 +607,7 @@ ORAL ORDER
                 {!submitted || !finalText ? (
                     <div className="flex-1 flex flex-col gap-0 overflow-hidden bg-gray-300">
                         {/* Reference Document Pane */}
-                        <div className="h-[55vh] min-h-[300px] flex overflow-hidden border-b-2 border-gray-300">
+                        <div className="h-[40vh] min-h-[220px] flex overflow-hidden border-b-2 border-gray-300">
                             {/* Reference Content */}
                             <div className="flex-1 bg-white overflow-hidden flex flex-col border border-gray-300 rounded-sm">
                                 <div className="bg-gray-100 px-4 py-2 border-b text-xs font-bold text-gray-600 uppercase tracking-wider flex justify-between items-center">
