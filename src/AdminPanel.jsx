@@ -888,6 +888,33 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         }
     };
 
+    const handleToggleStudentStatus = async (email, currentStatus) => {
+        if (!email) {
+            alert('Cannot toggle status: This user does not have a valid email.');
+            return;
+        }
+        const newStatus = (currentStatus || 'active').toLowerCase() === 'active' ? 'inactive' : 'active';
+        
+        try {
+            if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
+                const { error } = await supabase
+                    .from('users')
+                    .update({ status: newStatus })
+                    .eq('email', email);
+                if (error) throw error;
+            }
+
+            const updatedUsers = users.map(u => 
+                u.email === email ? { ...u, status: newStatus } : u
+            );
+            setUsers(updatedUsers);
+            localStorage.setItem('auth_users', JSON.stringify(updatedUsers));
+        } catch (err) {
+            console.error('Toggle status failed:', err);
+            alert('Failed to update student status: ' + err.message);
+        }
+    };
+
     const handleAddStudent = async (e) => {
         e.preventDefault();
         setIsAddingUser(true);
@@ -2265,13 +2292,17 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                 <td className="px-6 py-4 text-sm text-gray-600">{u.gender || '-'}</td>
                                 <td className="px-6 py-4 text-sm text-gray-600">{u.joinedDate || '-'}</td>
                                 <td className="px-6 py-4 text-sm">
-                                    <div className="flex items-center space-x-3">
-                                        <span className={`text-[10px] font-black uppercase tracking-widest ${
-                                            (u.status || 'Active') === 'Active' ? 'text-green-600' : 'text-gray-400'
-                                        }`}>
-                                            {u.status || 'Active'}
-                                        </span>
-                                    </div>
+                                    <button 
+                                        onClick={() => handleToggleStudentStatus(u.email, u.status)}
+                                        className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${
+                                            (u.status || 'active').toLowerCase() === 'active' 
+                                                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                                : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                        }`}
+                                        title={`Click to ${ (u.status || 'active').toLowerCase() === 'active' ? 'Block' : 'Activate' } student`}
+                                    >
+                                        {(u.status || 'active').toLowerCase() === 'active' ? 'Active' : 'Inactive'}
+                                    </button>
                                 </td>
                                 <td className="px-6 py-4 text-sm text-right">
                                     <div className="flex items-center justify-end gap-2">
