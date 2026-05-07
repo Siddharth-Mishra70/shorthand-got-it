@@ -713,7 +713,29 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                       </div>
                     </div>
                     <p className="mt-4 text-sm font-black text-gray-800 tracking-widest uppercase">MR. AYUSH PANDEY</p>
-                    <p className="text-xs text-gray-400 font-medium mt-0.5">Scan via PhonePe / Any UPI App</p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5 mb-2">Scan via PhonePe / Any UPI App</p>
+                  </div>
+
+                  {/* Pricing Info */}
+                  <div className="bg-white border-2 border-green-100 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-bl-full pointer-events-none"></div>
+                    <p className="text-xs font-black text-green-700 uppercase tracking-widest mb-3 relative z-10 flex items-center gap-1.5">
+                      <span>🏷️</span> Pricing Details
+                    </p>
+                    <ul className="space-y-2 text-sm font-bold text-gray-700 relative z-10">
+                      <li className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                        <span>Allahabad High Court Formatting</span>
+                        <span className="text-green-700 font-black">₹ 600</span>
+                      </li>
+                      <li className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                        <span>Pitman Shorthand</span>
+                        <span className="text-green-700 font-black">₹ 600</span>
+                      </li>
+                      <li className="flex justify-between items-center bg-green-50 border border-green-200 px-3 py-2.5 rounded-lg mt-1 shadow-sm">
+                        <span className="text-green-900">Both Modules (Combo)</span>
+                        <span className="text-green-800 font-black text-base">₹ 1100</span>
+                      </li>
+                    </ul>
                   </div>
 
                   {/* Step-by-step Instructions */}
