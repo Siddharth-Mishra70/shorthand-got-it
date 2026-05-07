@@ -85,9 +85,37 @@ const HighCourtFormatting = ({ onBack, user }) => {
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const editorRef = useRef(null);
 
+    // ── Toolbar active-state tracking ──
+    const [activeFormats, setActiveFormats] = useState({
+        bold: false, italic: false, underline: false,
+        justifyLeft: false, justifyCenter: false, justifyRight: false, justifyFull: false
+    });
+
+    const updateActiveFormats = () => {
+        try {
+            setActiveFormats({
+                bold:          document.queryCommandState('bold'),
+                italic:        document.queryCommandState('italic'),
+                underline:     document.queryCommandState('underline'),
+                justifyLeft:   document.queryCommandState('justifyLeft'),
+                justifyCenter: document.queryCommandState('justifyCenter'),
+                justifyRight:  document.queryCommandState('justifyRight'),
+                justifyFull:   document.queryCommandState('justifyFull'),
+            });
+        } catch (_) {}
+    };
+
+    // Listen to selection changes so toolbar stays in sync when cursor moves
+    useEffect(() => {
+        document.addEventListener('selectionchange', updateActiveFormats);
+        return () => document.removeEventListener('selectionchange', updateActiveFormats);
+    }, []);
+
     const [hcTests, setHcTests] = useState([]);
     const [selectedTestId, setSelectedTestId] = useState(null); // Initialize as null, will be set in useEffect
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -360,6 +388,8 @@ ORAL ORDER
     const execCmd = (command, value = null) => {
         document.execCommand(command, false, value);
         if (editorRef.current) editorRef.current.focus();
+        // Update toolbar highlights after applying formatting
+        setTimeout(updateActiveFormats, 0);
     };
 
     const handleSubmit = async () => {
@@ -432,21 +462,31 @@ ORAL ORDER
         }
     };
 
-    const ToolbarButton = ({ icon: Icon, command, title }) => (
-        <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => execCmd(command)}
-            className="p-2 text-gray-800 hover:text-blue-700 hover:bg-blue-50/50 rounded-lg transition-all duration-200 border border-transparent hover:border-blue-100 flex items-center justify-center active:scale-90"
-            title={title}
-        >
-            <Icon className="w-4.5 h-4.5" />
-        </button>
-    );
+    const ToolbarButton = ({ icon: Icon, command, title }) => {
+        const isActive = activeFormats[command] || false;
+        return (
+            <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => execCmd(command)}
+                title={title}
+                className={`p-2 rounded-lg transition-all duration-150 border flex items-center justify-center active:scale-90 ${
+                    isActive
+                        ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-inner'
+                        : 'text-gray-700 hover:text-blue-700 hover:bg-blue-50/60 border-transparent hover:border-blue-200'
+                }`}
+            >
+                <Icon className="w-4 h-4" />
+            </button>
+        );
+    };
 
     // ── Conditional Rendering for Selection Grid ───────────
     if (viewMode === 'selection') {
         const activeList = groupedTests[activeDateTab] || [];
+        const totalPages = Math.ceil(activeList.length / ITEMS_PER_PAGE);
+        const paginatedList = activeList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+        const handleTabChange = (tab) => { setActiveDateTab(tab); setCurrentPage(1); };
         
         return (
             <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
@@ -467,19 +507,22 @@ ORAL ORDER
                                 <p className="text-gray-500 font-bold mt-1">Select a case draft to start your formatting practice.</p>
                             </div>
                             <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
-                                {['Today', 'Yesterday', 'All Practice'].map( tab => (
+                                {['Today', 'Yesterday', 'All Practice'].map(tab => (
                                     <button
                                         key={tab}
-                                        onClick={() => setActiveDateTab(tab)}
-                                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeDateTab === tab ? 'bg-[#1e3a8a] text-white shadow-lg' : 'text-gray-400 hover:text-[#1e3a8a]'}`}
+                                        onClick={() => handleTabChange(tab)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${activeDateTab === tab ? 'bg-[#1e3a8a] text-white shadow-lg' : 'text-gray-400 hover:text-[#1e3a8a]'}`}
                                     >
                                         {tab}
+                                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeDateTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                            {groupedTests[tab]?.length ?? 0}
+                                        </span>
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        {/* Grid */}
+                        {/* List */}
                         {activeList.length === 0 ? (
                             <div className="bg-white rounded-[2rem] border-2 border-dashed border-gray-200 p-20 text-center">
                                 <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -489,33 +532,69 @@ ORAL ORDER
                                 <p className="text-gray-400 max-w-xs mx-auto mt-2 font-bold">Check the 'All Practice' tab for earlier published drafting tests.</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 pb-10">
-                                {activeList.map((test, idx) => (
-                                    <div 
-                                        key={test.id}
-                                        onClick={() => {
-                                            setSelectedTestId(test.id);
-                                            setViewMode('writing');
-                                        }}
-                                        className="group bg-white rounded-[2rem] p-6 shadow-xl shadow-gray-200/50 border border-gray-100 hover:border-[#1e3a8a] hover:translate-y-[-8px] transition-all cursor-pointer relative overflow-hidden"
-                                    >
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#1e3a8a]/5 rounded-bl-[4rem] group-hover:bg-[#1e3a8a]/10 transition-colors" />
-                                        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-6 shadow-sm">
-                                            <FileText className="w-7 h-7 text-blue-600" />
-                                        </div>
-                                        <h3 className="text-lg font-black text-gray-900 mb-2 leading-tight group-hover:text-[#1e3a8a] h-12 overflow-hidden">
-                                            {test.title}
-                                        </h3>
-                                        <div className="flex items-center gap-3 text-xs font-bold text-gray-400 mb-6 uppercase tracking-wider">
-                                            <span>Drafting</span>
-                                            <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                                            <span>{test.created_at ? new Date(test.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'Set 1'}</span>
-                                        </div>
-                                        <button className="w-full py-3 bg-gray-50 group-hover:bg-[#1e3a8a] group-hover:text-white rounded-xl text-gray-600 text-xs font-black uppercase tracking-widest transition-all">
-                                            Start Drafting
-                                        </button>
+                            <div className="space-y-6 pb-10">
+                                {/* List Header */}
+                                <div className="hidden md:grid grid-cols-[3rem_1fr_auto_auto] items-center gap-4 px-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    <span>#</span>
+                                    <span>Case Draft Title</span>
+                                    <span className="text-center w-28">Published</span>
+                                    <span className="w-36"></span>
+                                </div>
+
+                                {/* List Items */}
+                                <div className="space-y-3">
+                                    {paginatedList.map((test, idx) => {
+                                        const dateStr = test.created_at ? new Date(test.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent';
+                                        const globalIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+                                        return (
+                                            <div
+                                                key={test.id}
+                                                onClick={() => { setSelectedTestId(test.id); setViewMode('writing'); }}
+                                                className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#1e3a8a]/30 transition-all duration-200 cursor-pointer flex items-center gap-4 px-5 py-4 relative overflow-hidden"
+                                            >
+                                                {/* Left accent bar on hover */}
+                                                <div className="absolute left-0 top-0 h-full w-1 bg-[#1e3a8a] scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-center rounded-l-2xl" />
+
+                                                {/* Index badge */}
+                                                <div className="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-[#1e3a8a] flex items-center justify-center shrink-0 transition-colors">
+                                                    <span className="text-sm font-black text-[#1e3a8a] group-hover:text-white transition-colors">{globalIdx}</span>
+                                                </div>
+
+                                                {/* Icon */}
+                                                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                                                    <FileText className="w-5 h-5 text-amber-500" />
+                                                </div>
+
+                                                {/* Title + chips */}
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="font-black text-gray-900 text-sm md:text-base group-hover:text-[#1e3a8a] transition-colors truncate">{test.title}</h3>
+                                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                        <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">Drafting</span>
+                                                        <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{dateStr}</span>
+                                                        {test.job_title && <span className="text-[10px] font-bold bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">{test.job_title}</span>}
+                                                        {test.test_type && <span className="text-[10px] font-bold bg-green-50 text-green-600 px-2 py-0.5 rounded-full">{test.test_type}</span>}
+                                                    </div>
+                                                </div>
+
+                                                {/* CTA */}
+                                                <button className="shrink-0 px-5 py-2.5 bg-[#f0f4ff] text-[#1e3a8a] group-hover:bg-[#1e3a8a] group-hover:text-white rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-200 whitespace-nowrap">
+                                                    Start →
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Pagination */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-2 pt-2">
+                                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#1e3a8a] hover:text-white hover:border-[#1e3a8a] disabled:opacity-40 disabled:cursor-not-allowed transition-all">← Prev</button>
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                            <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-[#1e3a8a] text-white shadow-lg' : 'border border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-[#1e3a8a]'}`}>{p}</button>
+                                        ))}
+                                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#1e3a8a] hover:text-white hover:border-[#1e3a8a] disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next →</button>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         )}
                     </div>
@@ -703,6 +782,8 @@ ORAL ORDER
                                         contentEditable={!submitted && timeLeft > 0}
                                         suppressContentEditableWarning={true}
                                         onInput={handleInputStart}
+                                        onKeyUp={updateActiveFormats}
+                                        onMouseUp={updateActiveFormats}
                                         onCopy={(e) => { e.preventDefault(); alert("Copying is disabled!"); }}
                                         onPaste={(e) => { e.preventDefault(); alert("Pasting is disabled!"); }}
                                         onContextMenu={(e) => { e.preventDefault(); }}
@@ -713,6 +794,12 @@ ORAL ORDER
                                         }}
                                         className="flex-1 min-h-0 p-10 md:p-16 outline-none font-mono text-[16px] md:text-[18px] leading-loose text-justify text-black overflow-y-auto"
                                         spellCheck={false}
+                                        autoComplete="off"
+                                        autoCorrect="off"
+                                        autoCapitalize="off"
+                                        data-gramm="false"
+                                        data-gramm_editor="false"
+                                        data-enable-grammarly="false"
                                     >
                                         <p><br /></p>
                                     </div>

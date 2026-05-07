@@ -9,6 +9,8 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
     const [viewMode, setViewMode] = useState('selection'); // 'selection' | 'practice'
     const [activeDateTab, setActiveDateTab] = useState('Today');
     const [isLoadingExercises, setIsLoadingExercises] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
 
     // Initial Load
     useEffect(() => {
@@ -34,16 +36,19 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                     }));
                 }
 
-                // 2. Fetch from Local Admin Data
+                // 2. Fetch from Local Admin Data — only include items not already in Supabase (by ID)
                 const saved = localStorage.getItem('admin_pitman_data_list');
                 if (saved) {
                     const local = JSON.parse(saved);
-                    const localMapped = local.map(d => ({
-                        ...d,
-                        isDynamic: true,
-                        image: d.pdf || d.image_url,
-                        lines: (d.original_text || d.text || '').split('\n').filter(l => l.trim() !== '')
-                    }));
+                    const remoteIds = new Set(mergedData.map(d => String(d.id)));
+                    const localMapped = local
+                        .filter(d => !remoteIds.has(String(d.id))) // Skip items already fetched from Supabase
+                        .map(d => ({
+                            ...d,
+                            isDynamic: true,
+                            image: d.pdf || d.image_url,
+                            lines: (d.original_text || d.text || '').split('\n').filter(l => l.trim() !== '')
+                        }));
                     mergedData = [...mergedData, ...localMapped];
                 }
             } catch(e) {}
@@ -151,7 +156,8 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
 
     const handleSubmit = async () => {
         setIsStarted(false);
-        const refWords = selectedExercise.lines.join(' ').split(' ');
+        // Properly split reference text filtering empty tokens from multi-space/newline joins
+        const refWords = selectedExercise.lines.join(' ').split(/\s+/).filter(w => w !== '');
         const typedWords = inputText.trim().split(/\s+/).filter(w => w !== '');
         let fullMistakes = 0; let halfMistakes = 0;
         refWords.forEach((ref, i) => {
@@ -163,9 +169,10 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
             if (cRef === cTyped) halfMistakes++; else fullMistakes++;
         });
         const deduction = fullMistakes + (halfMistakes * 0.5);
-        const wpmVal = Math.round((typedWords.length - deduction) / ((timerPreset - timeLeft) / 60 || 1));
-        const accVal = refWords.length > 0 ? Math.round(((refWords.length - deduction) / refWords.length) * 100) : 100;
-        const stats = { wpm: wpmVal, accuracy: accVal, fullMistakes, halfMistakes, totalWords: typedWords.length };
+        const timeElapsedMin = (timerPreset - timeLeft) / 60 || 1;
+        const wpmVal = Math.max(0, Math.round((typedWords.length - deduction) / timeElapsedMin));
+        const accVal = refWords.length > 0 ? Math.max(0, Math.min(100, Math.round(((refWords.length - deduction) / refWords.length) * 100))) : 100;
+        const stats = { wpm: wpmVal, accuracy: accVal, fullMistakes, halfMistakes, totalWords: typedWords.length, totalRefWords: refWords.length };
         setFinalStats(stats); setShowModal(true); setIsSaving(true); setHasSubmitted(true);
         try {
             const userSess = JSON.parse(localStorage.getItem('currentUser') || '{}');
@@ -198,6 +205,9 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
 
     if (viewMode === 'selection') {
         const activeList = groupedTests[activeDateTab] || [];
+        const totalPages = Math.ceil(activeList.length / ITEMS_PER_PAGE);
+        const paginatedList = activeList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+        const handleTabChange = (tab) => { setActiveDateTab(tab); setCurrentPage(1); };
         return (
             <div className="h-full flex-1 bg-[#f8fafc] flex flex-col font-sans">
                 <div className="bg-[#1e3a8a] text-white px-6 py-4 flex items-center space-x-4 shadow-md">
@@ -213,7 +223,12 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                             </div>
                             <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
                                 {['Today', 'Yesterday', 'All Practice'].map(tab => (
-                                    <button key={tab} onClick={() => setActiveDateTab(tab)} className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeDateTab === tab ? 'bg-[#1e3a8a] text-white shadow-lg' : 'text-gray-400 hover:text-blue-900'}`}>{tab}</button>
+                                    <button key={tab} onClick={() => handleTabChange(tab)} className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${activeDateTab === tab ? 'bg-[#1e3a8a] text-white shadow-lg' : 'text-gray-400 hover:text-blue-900'}`}>
+                                        {tab}
+                                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeDateTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                            {groupedTests[tab]?.length ?? 0}
+                                        </span>
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -225,15 +240,69 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                                 <p className="text-gray-400 text-sm mt-1">Check back later or contact your administrator.</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 pb-10">
-                                {activeList.map((test) => (
-                                    <div key={test.id} onClick={() => { setSelectedExercise(test); setViewMode('practice'); handleReset(); }} className="group bg-white rounded-[2rem] p-6 shadow-xl hover:translate-y-[-8px] transition-all cursor-pointer border border-transparent hover:border-[#1e3a8a]/30">
-                                        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-6"><Eye className="w-7 h-7 text-blue-600" /></div>
-                                        <h3 className="text-lg font-black text-gray-900 mb-2 leading-tight group-hover:text-[#1e3a8a] line-clamp-2">{test.title}</h3>
-                                        <p className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-wider">{test.lines?.join(' ').split(' ').length} WORDS • {new Date(test.created_at || Date.now()).toLocaleDateString()}</p>
-                                        <button className="w-full py-3 bg-[#f8fbff] text-blue-600 group-hover:bg-[#1e3a8a] group-hover:text-white rounded-xl text-xs font-black uppercase transition-all">Start Practice</button>
+                            <div className="space-y-6 pb-10">
+                                {/* List Header */}
+                                <div className="hidden md:grid grid-cols-[3rem_1fr_auto_auto] items-center gap-4 px-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    <span>#</span>
+                                    <span>Exercise Title</span>
+                                    <span className="text-center w-28">Published</span>
+                                    <span className="w-32"></span>
+                                </div>
+
+                                {/* List Items */}
+                                <div className="space-y-3">
+                                    {paginatedList.map((test, idx) => {
+                                        const wordCount = test.lines?.join(' ').split(/\s+/).filter(Boolean).length || 0;
+                                        const dateStr = test.created_at ? new Date(test.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent';
+                                        const globalIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+                                        return (
+                                            <div
+                                                key={test.id}
+                                                onClick={() => { setSelectedExercise(test); setViewMode('practice'); handleReset(); }}
+                                                className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#1e3a8a]/30 transition-all duration-200 cursor-pointer flex items-center gap-4 px-5 py-4 relative overflow-hidden"
+                                            >
+                                                {/* Left accent bar on hover */}
+                                                <div className="absolute left-0 top-0 h-full w-1 bg-[#1e3a8a] scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-center rounded-l-2xl" />
+
+                                                {/* Index badge */}
+                                                <div className="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-[#1e3a8a] flex items-center justify-center shrink-0 transition-colors">
+                                                    <span className="text-sm font-black text-[#1e3a8a] group-hover:text-white transition-colors">{globalIdx}</span>
+                                                </div>
+
+                                                {/* Icon */}
+                                                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                                                    <Eye className="w-5 h-5 text-indigo-500" />
+                                                </div>
+
+                                                {/* Title + chips */}
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="font-black text-gray-900 text-sm md:text-base group-hover:text-[#1e3a8a] transition-colors truncate">{test.title}</h3>
+                                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                        <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{wordCount} words</span>
+                                                        <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{dateStr}</span>
+                                                        {test.job_title && <span className="text-[10px] font-bold bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">{test.job_title}</span>}
+                                                    </div>
+                                                </div>
+
+                                                {/* CTA */}
+                                                <button className="shrink-0 px-5 py-2.5 bg-[#f0f4ff] text-[#1e3a8a] group-hover:bg-[#1e3a8a] group-hover:text-white rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-200 whitespace-nowrap">
+                                                    Start →
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Pagination */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-2 pt-2">
+                                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#1e3a8a] hover:text-white hover:border-[#1e3a8a] disabled:opacity-40 disabled:cursor-not-allowed transition-all">← Prev</button>
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                            <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-[#1e3a8a] text-white shadow-lg' : 'border border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-[#1e3a8a]'}`}>{p}</button>
+                                        ))}
+                                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#1e3a8a] hover:text-white hover:border-[#1e3a8a] disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next →</button>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         )}
                     </div>
@@ -341,13 +410,30 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                              <h2 className="text-2xl font-black">Practice Logged</h2>
                              <p className="text-blue-200 text-sm italic">Session completed successfully</p>
                         </div>
-                        <div className="p-8 space-y-6">
+                        <div className="p-8 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-blue-50 p-4 rounded-2xl text-center"><span className="text-[9px] font-black text-blue-400 block mb-1 uppercase">Final Speed</span><span className="text-2xl font-black text-[#1e3a8a] leading-none">{finalStats.wpm} WPM</span></div>
                                 <div className="bg-green-50 p-4 rounded-2xl text-center transition-all"><span className="text-[9px] font-black text-green-400 block mb-1 uppercase">Accuracy</span><span className="text-2xl font-black text-green-600 leading-none">{finalStats.accuracy}%</span></div>
                             </div>
-                            
-                            <div className="flex flex-col space-y-3">
+
+                            {/* Words typed vs total */}
+                            <div className="bg-gray-50 px-5 py-3 rounded-2xl flex justify-between items-center">
+                                <span className="text-xs font-black text-gray-400 uppercase tracking-wider">Words Typed</span>
+                                <span className="text-base font-black text-gray-800">
+                                    {finalStats.totalWords}
+                                    <span className="text-gray-400 font-bold"> / {finalStats.totalRefWords}</span>
+                                </span>
+                            </div>
+
+                            {/* Mistake breakdown */}
+                            <div className="bg-red-50 px-5 py-3 rounded-2xl flex justify-between items-center">
+                                <span className="text-xs font-black text-red-400 uppercase tracking-wider">Mistakes</span>
+                                <span className="text-xs font-bold text-red-700">
+                                    {finalStats.fullMistakes} full &nbsp;·&nbsp; {finalStats.halfMistakes} half
+                                </span>
+                            </div>
+
+                            <div className="flex flex-col space-y-3 pt-2">
                                 <button 
                                     onClick={() => onTestComplete && onTestComplete(attemptId)} 
                                     disabled={!attemptId || isSaving}

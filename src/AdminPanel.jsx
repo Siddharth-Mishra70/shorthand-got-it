@@ -115,6 +115,13 @@ const UploadForm = ({ title, setTitle, text, setText, pdf, setPdf, onFileSelect,
 );
 
 const TestList = ({ tests, onDelete, emptyMsg, onEdit }) => {
+    const ITEMS_PER_PAGE = 10;
+    const [activeTab, setActiveTab] = React.useState('All');
+    const [page, setPage] = React.useState(1);
+
+    // Reset to page 1 whenever tab or the tests list changes
+    React.useEffect(() => { setPage(1); }, [activeTab, tests.length]);
+
     // Helper to clean up preview text if it's JSON-encoded (High Court style)
     const getPreviewText = (raw) => {
         if (!raw) return '';
@@ -127,33 +134,121 @@ const TestList = ({ tests, onDelete, emptyMsg, onEdit }) => {
         return raw;
     };
 
+    // Group by date
+    const todayStr     = new Date().toLocaleDateString();
+    const yesterdayStr = new Date(Date.now() - 86400000).toLocaleDateString();
+
+    const grouped = React.useMemo(() => {
+        const cats = { Today: [], Yesterday: [], All: [] };
+        tests.forEach(t => {
+            const d = t.created_at ? new Date(t.created_at).toLocaleDateString() : todayStr;
+            if (d === todayStr) cats.Today.push(t);
+            else if (d === yesterdayStr) cats.Yesterday.push(t);
+            cats.All.push(t);
+        });
+        return cats;
+    }, [tests]);
+
+    const filteredTests = grouped[activeTab] || [];
+    const totalPages    = Math.ceil(filteredTests.length / ITEMS_PER_PAGE);
+    const paginated     = filteredTests.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
     return (
-        <div className="space-y-3">
-            {tests.length === 0 ? (
-                <div className="bg-white p-10 rounded-xl shadow-sm border border-gray-200 text-center text-gray-400">{emptyMsg}</div>
-            ) : tests.map(t => (
-                <div key={t.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex justify-between items-start group hover:border-red-200 transition-all">
-                    <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-800">{t.title}</h4>
-                        <p className="text-xs text-gray-400 mt-1">{t.created_at ? new Date(t.created_at).toLocaleDateString() : t.date}</p>
-                        {(t.original_text || t.text) && (
-                            <p className="text-xs text-gray-500 italic font-serif mt-2 line-clamp-2">
-                                {'"'}{getPreviewText(t.original_text || t.text)?.slice(0, 120)}{'..."'}
-                            </p>
-                        )}
-                    </div>
-                    <div className="flex items-center space-x-2 shrink-0 opacity-0 group-hover:opacity-100 transition-all">
-                        {onEdit && (
-                            <button onClick={() => onEdit(t.id)} className="p-2 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all" title="Edit">
-                                <Edit2 className="w-4 h-4" />
-                            </button>
-                        )}
-                        <button onClick={() => onDelete(t.id)} className="p-2 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all" title="Delete">
-                            <Trash2 className="w-4 h-4" />
+        <div className="space-y-4">
+            {/* Date Tabs + item count */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex bg-white border border-gray-200 rounded-xl p-1 shadow-sm gap-1">
+                    {['Today', 'Yesterday', 'All'].map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+                                activeTab === tab
+                                    ? 'bg-red-700 text-white shadow'
+                                    : 'text-gray-400 hover:text-red-700 hover:bg-red-50'
+                            }`}
+                        >
+                            {tab}
+                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                                activeTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                            }`}>
+                                {grouped[tab]?.length ?? 0}
+                            </span>
                         </button>
-                    </div>
+                    ))}
                 </div>
-            ))}
+                {filteredTests.length > 0 && (
+                    <span className="text-xs text-gray-400 font-bold">
+                        Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, filteredTests.length)} of {filteredTests.length}
+                    </span>
+                )}
+            </div>
+
+            {/* Content list */}
+            <div className="space-y-3">
+                {paginated.length === 0 ? (
+                    <div className="bg-white p-10 rounded-xl shadow-sm border border-gray-200 text-center text-gray-400">
+                        {activeTab === 'All' ? emptyMsg : `No content uploaded ${activeTab === 'Today' ? 'today' : 'yesterday'}.`}
+                    </div>
+                ) : paginated.map(t => (
+                    <div key={t.id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex justify-between items-start group hover:border-red-200 transition-all">
+                        <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-gray-800">{t.title}</h4>
+                            <p className="text-xs text-gray-400 mt-1">
+                                {t.created_at ? new Date(t.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : t.date}
+                            </p>
+                            {(t.original_text || t.text) && (
+                                <p className="text-xs text-gray-500 italic font-serif mt-2 line-clamp-2">
+                                    {'"'}{getPreviewText(t.original_text || t.text)?.slice(0, 120)}{'..."'}
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex items-center space-x-2 shrink-0 opacity-0 group-hover:opacity-100 transition-all">
+                            {onEdit && (
+                                <button onClick={() => onEdit(t.id)} className="p-2 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all" title="Edit">
+                                    <Edit2 className="w-4 h-4" />
+                                </button>
+                            )}
+                            <button onClick={() => onDelete(t.id)} className="p-2 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all" title="Delete">
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-2">
+                    <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-500 hover:bg-red-50 hover:text-red-700 hover:border-red-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                        ← Prev
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                        <button
+                            key={p}
+                            onClick={() => setPage(p)}
+                            className={`w-8 h-8 rounded-lg text-xs font-black transition-all ${
+                                page === p
+                                    ? 'bg-red-700 text-white shadow'
+                                    : 'border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-700 hover:border-red-200'
+                            }`}
+                        >
+                            {p}
+                        </button>
+                    ))}
+                    <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-500 hover:bg-red-50 hover:text-red-700 hover:border-red-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                        Next →
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
@@ -327,7 +422,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 const seen = new Set();
                 setHcTests(hc.filter(i => { if (seen.has(i.id)) return false; seen.add(i.id); return true; }));
             }
-            const { data: pit } = await supabase.from('exercises').select('*').eq('category', 'pitman').is('is_hidden', false).order('created_at', { ascending: false });
+            const { data: pit } = await supabase.from('exercises').select('*').ilike('category', '%pitman%').is('is_hidden', false).order('created_at', { ascending: false });
             if (pit) {
                 const seen = new Set();
                 setPitmanTests(pit.filter(i => { if (seen.has(i.id)) return false; seen.add(i.id); return true; }));
@@ -1177,7 +1272,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     test_type: globalTestType,
                     original_text: pitmanText,
                     image_url: finalImageUrl,
-                    category: 'Pitman Shorthand'
+                    category: 'pitman'
                 };
 
                 if (isEdit) {
@@ -1196,7 +1291,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             setTimeout(() => setPitmanSuccess(false), 3000);
 
             const newTest = {
-                id: testId, title: pitmanTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: pitmanText, image_url: finalImageUrl, pdf: finalImageUrl, category: 'Pitman Shorthand',
+                id: testId, title: pitmanTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: pitmanText, image_url: finalImageUrl, pdf: finalImageUrl, category: 'pitman',
                 created_at: isEdit ? pitmanTests.find(t => t.id === testId)?.created_at || new Date().toISOString() : new Date().toISOString()
             };
             const updated = isEdit ? pitmanTests.map(t => t.id === testId ? newTest : t) : [newTest, ...pitmanTests];
@@ -2703,6 +2798,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                                     <HcToolBtn icon={AlignLeft} cmd="justifyLeft" title="Align Left" onAction={(cmd) => execHcCommand(cmd, quickHcEditorRef)} />
                                                     <HcToolBtn icon={AlignCenter} cmd="justifyCenter" title="Center" onAction={(cmd) => execHcCommand(cmd, quickHcEditorRef)} />
                                                     <HcToolBtn icon={AlignRight} cmd="justifyRight" title="Align Right" onAction={(cmd) => execHcCommand(cmd, quickHcEditorRef)} />
+                                                    <HcToolBtn icon={AlignJustify} cmd="justifyFull" title="Justify" onAction={(cmd) => execHcCommand(cmd, quickHcEditorRef)} />
                                                 </div>
                                                 <div
                                                     ref={quickHcEditorRef}
