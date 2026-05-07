@@ -361,7 +361,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [addFormData, setAddFormData] = useState({
         firstName: '', lastName: '', email: '', phone: '',
         password: '', state: '', city: '', gender: '',
-        enrolledCourses: ['hc-formatting', 'pitman-ex']
+        enrolledCourses: ['hc-formatting', 'pitman-ex'],
+        validityPeriod: '29_days'
     });
 
     // Edit User State
@@ -958,6 +959,13 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 }
             }
 
+            let validUntil = null;
+            if (addFormData.validityPeriod === '29_days') {
+                const expiry = new Date();
+                expiry.setDate(expiry.getDate() + 29);
+                validUntil = expiry.toISOString();
+            }
+
             const dbUser = {
                 first_name: addFormData.firstName.trim() || 'Student',
                 last_name: addFormData.lastName.trim() || '',
@@ -968,6 +976,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 gender: addFormData.gender || null,
                 status: 'active',
                 role: 'student',
+                valid_until: validUntil,
                 enrolled_courses: addFormData.enrolledCourses,
                 joinedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
                 created_at: new Date().toISOString(),
@@ -992,6 +1001,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 firstName: '', lastName: '', email: '', phone: '',
                 password: '', state: '', city: '', gender: '',
                 enrolledCourses: ['hc-formatting', 'pitman-ex'],
+                validityPeriod: '29_days'
             });
         } catch (err) {
             console.error('Add Student Error:', err);
@@ -2088,6 +2098,13 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1">City</label>
                                     <input value={addFormData.city} onChange={e => setAddFormData({...addFormData, city: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Account Validity Period</label>
+                                    <select value={addFormData.validityPeriod} onChange={e => setAddFormData({...addFormData, validityPeriod: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500 bg-white">
+                                        <option value="29_days">Activate for 29 Days (from today)</option>
+                                        <option value="unlimited">Unlimited / Lifetime Access</option>
+                                    </select>
                                 </div>
                             </div>
 

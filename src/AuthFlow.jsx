@@ -106,6 +106,12 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
         return;
       }
 
+      if (userRecord.valid_until && new Date(userRecord.valid_until) < new Date()) {
+        await supabase.auth.signOut();
+        setError('Your account has expired. Please renew your subscription to continue.');
+        return;
+      }
+
       // Active — grant access
       const finalUser = { ...userRecord, role: userRecord.role || 'student' };
       localStorage.setItem('currentUser', JSON.stringify(finalUser));

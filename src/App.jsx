@@ -195,11 +195,13 @@ function App() {
                 try {
                     const { data: userRecord, error } = await supabase
                         .from('users')
-                        .select('status')
+                        .select('status, valid_until')
                         .eq('email', user.email)
                         .maybeSingle();
 
                     if (error || !userRecord || userRecord.status === 'inactive') {
+                        handleLogout();
+                    } else if (userRecord.valid_until && new Date(userRecord.valid_until) < new Date()) {
                         handleLogout();
                     }
                 } catch (err) {
@@ -420,7 +422,11 @@ function App() {
                 <div className="bg-gradient-to-r from-[#0f2167] to-[#1e3a8a] p-8 text-white text-center">
                     <div className="inline-block px-4 py-1.5 bg-amber-400 text-blue-900 rounded-full text-xs font-black uppercase tracking-wider mb-4 shadow-lg">Premium Active</div>
                     <h3 className="text-3xl font-black mb-2">Master Course Plan</h3>
-                    <p className="opacity-80 text-sm">Valid until: 22 March 2027</p>
+                    <p className="opacity-80 text-sm">
+                        {user?.valid_until 
+                            ? `Valid until: ${new Date(user.valid_until).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` 
+                            : 'Unlimited / Lifetime Access'}
+                    </p>
                 </div>
                 
                 <div className="p-8 md:p-10 space-y-8">
