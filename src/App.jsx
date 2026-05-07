@@ -195,7 +195,7 @@ function App() {
                 try {
                     const { data: userRecord, error } = await supabase
                         .from('users')
-                        .select('status, valid_until')
+                        .select('*')
                         .eq('email', user.email)
                         .maybeSingle();
 

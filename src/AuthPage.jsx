@@ -168,6 +168,11 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
         throw new Error('Your account has been deactivated. Please contact support.');
       }
 
+      if (foundUser.valid_until && new Date(foundUser.valid_until) < new Date()) {
+        await supabase.auth.signOut();
+        throw new Error('Your account has expired. Please renew your subscription to continue.');
+      }
+
       // 4. Active — proceed
       const userData = {
         ...foundUser,
