@@ -2292,17 +2292,27 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                 <td className="px-6 py-4 text-sm text-gray-600">{u.gender || '-'}</td>
                                 <td className="px-6 py-4 text-sm text-gray-600">{u.joinedDate || '-'}</td>
                                 <td className="px-6 py-4 text-sm">
-                                    <button 
-                                        onClick={() => handleToggleStudentStatus(u.email, u.status)}
-                                        className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${
-                                            (u.status || 'active').toLowerCase() === 'active' 
-                                                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                                                : 'bg-red-100 text-red-700 hover:bg-red-200'
-                                        }`}
-                                        title={`Click to ${ (u.status || 'active').toLowerCase() === 'active' ? 'Block' : 'Activate' } student`}
-                                    >
-                                        {(u.status || 'active').toLowerCase() === 'active' ? 'Active' : 'Inactive'}
-                                    </button>
+                                    <div className="flex items-center space-x-3">
+                                        <button 
+                                            type="button"
+                                            onClick={() => handleToggleStudentStatus(u.email, u.status)}
+                                            className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 shadow-inner ${
+                                                (u.status || 'active').toLowerCase() === 'active' ? 'bg-green-500' : 'bg-gray-300'
+                                            }`}
+                                            title={`Click to ${ (u.status || 'active').toLowerCase() === 'active' ? 'Block' : 'Activate' } student`}
+                                        >
+                                            <span 
+                                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                                                    (u.status || 'active').toLowerCase() === 'active' ? 'translate-x-4' : 'translate-x-0'
+                                                }`} 
+                                            />
+                                        </button>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest ${
+                                            (u.status || 'active').toLowerCase() === 'active' ? 'text-green-600' : 'text-gray-400'
+                                        }`}>
+                                            {(u.status || 'active').toLowerCase() === 'active' ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4 text-sm text-right">
                                     <div className="flex items-center justify-end gap-2">
