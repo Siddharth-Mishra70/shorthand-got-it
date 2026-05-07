@@ -185,9 +185,31 @@ function App() {
             const sessionFound = localStorage.getItem('currentUser');
             if (!sessionFound) {
                 setCurrentView('auth');
+                return;
             }
         }
-    }, [currentView, isLoggedIn]);
+
+        // Verify session status against database to kick out deleted/blocked users
+        const verifySessionStatus = async () => {
+            if (isLoggedIn && user?.email && isProtected) {
+                try {
+                    const { data: userRecord, error } = await supabase
+                        .from('users')
+                        .select('status')
+                        .eq('email', user.email)
+                        .maybeSingle();
+
+                    if (error || !userRecord || userRecord.status === 'inactive') {
+                        handleLogout();
+                    }
+                } catch (err) {
+                    console.error('Session verification failed:', err);
+                }
+            }
+        };
+
+        verifySessionStatus();
+    }, [currentView, isLoggedIn, user?.email]);
 
   // ── Auth Page ─────────────────────────────────────────────
   if (currentView === 'auth') {

@@ -848,14 +848,15 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         }
     };
 
-    const handleDeleteUser = async (phone) => {
+    const handleDeleteUser = async (email) => {
+        if (!email) {
+            alert('Cannot delete: This user does not have a valid email.');
+            return;
+        }
         if (window.confirm('Delete this student?')) {
             try {
-                // First get the user's email so we can delete from Auth too
-                const userToDelete = users.find(u => u.phone === phone);
-
                 if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
-                    const { error } = await supabase.from('users').delete().eq('phone', phone);
+                    const { error } = await supabase.from('users').delete().eq('email', email);
                     if (error) {
                         console.error('Delete student failed:', error.message);
                         alert('Failed to delete: ' + error.message);
@@ -863,11 +864,11 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     }
 
                     // Also delete from Supabase Auth so the email can be re-used cleanly
-                    if (serviceRoleClient && userToDelete?.email) {
+                    if (serviceRoleClient) {
                         try {
                             // Find auth user by email
                             const { data: authList } = await serviceRoleClient.auth.admin.listUsers();
-                            const authUser = authList?.users?.find(u => u.email === userToDelete.email);
+                            const authUser = authList?.users?.find(u => u.email === email);
                             if (authUser?.id) {
                                 await serviceRoleClient.auth.admin.deleteUser(authUser.id);
                             }
@@ -877,7 +878,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     }
                 }
 
-                const updatedUsers = users.filter(u => u.phone !== phone);
+                const updatedUsers = users.filter(u => u.email !== email);
                 setUsers(updatedUsers);
                 localStorage.setItem('auth_users', JSON.stringify(updatedUsers));
             } catch (err) {
@@ -2254,7 +2255,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                 <tr><td colSpan="10" className="text-center py-10 text-gray-400">No students found matching your search.</td></tr>
                             );
                             return filtered.map(u => (
-                            <tr key={u.phone} className="border-b border-gray-100 hover:bg-red-50 transition-colors">
+                            <tr key={u.email || u.phone} className="border-b border-gray-100 hover:bg-red-50 transition-colors">
                                 <td className="px-6 py-4 text-sm font-semibold text-gray-800">{u.first_name || (u.name ? u.name.split(' ')[0] : '-')}</td>
                                 <td className="px-6 py-4 text-sm font-semibold text-gray-800">{u.last_name || (u.name ? u.name.split(' ').slice(1).join(' ') : '-')}</td>
                                 <td className="px-6 py-4 text-sm text-gray-600">{u.phone || '-'}</td>
@@ -2282,7 +2283,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                             <Edit2 className="w-4 h-4" />
                                         </button>
                                         <button
-                                            onClick={() => handleDeleteUser(u.phone)}
+                                            onClick={() => handleDeleteUser(u.email)}
                                             className="p-1.5 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all"
                                             title="Delete student"
                                         >
