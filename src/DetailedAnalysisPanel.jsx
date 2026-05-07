@@ -351,6 +351,7 @@ const DetailedAnalysisPanel = ({
   // ── Stats ────────────────────────────────────────────────────
   const stats = [
     { label: 'Total Words',  value: summary.totalWords,    color: '#1e3a8a' },
+    { label: 'Typed Words',  value: summary.attemptedWords, color: '#0284c7' },
     { label: 'Correct',      value: summary.correctWords,  color: '#16a34a' },
     { label: 'Mistakes',     value: summary.totalMistakes, color: '#dc2626' },
     { label: 'Accuracy',     value: `${summary.accuracy}%`, color: summary.accuracy >= 80 ? '#16a34a' : summary.accuracy >= 60 ? '#d97706' : '#dc2626' },
@@ -441,6 +442,9 @@ const DetailedAnalysisPanel = ({
           <div className="flex flex-wrap items-center gap-2 px-5 py-3 bg-blue-50 border-b border-blue-100">
             <Eye className="w-4 h-4 text-[#1e3a8a] flex-shrink-0" />
             <span className="text-sm font-black text-[#1e3a8a] mr-1">Comparison View</span>
+            <span className="text-[10px] font-bold bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full mr-1">
+              {summary.attemptedWords} words typed
+            </span>
 
             {/* Legend chips */}
             <div className="flex flex-wrap gap-1.5 ml-auto">
