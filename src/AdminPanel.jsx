@@ -7,6 +7,7 @@ import {
     MessageSquare, Mail, ShieldCheck, UserPlus
 } from 'lucide-react';
 import AdminUserManagement from './AdminUserManagement';
+import DetailedAnalysisPanel from './DetailedAnalysisPanel';
 import { adminAuthClient, serviceRoleClient } from './supabaseClient';
 
 const STATE_EXAMS = [
@@ -382,6 +383,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [resultSearchTerm, setResultSearchTerm] = useState('');
     const [resultCurrentPage, setResultCurrentPage] = useState(1);
     const [resultItemsPerPage] = useState(10);
+    const [viewingResult, setViewingResult] = useState(null);
     
     // Student Pagination
     const [studentCurrentPage, setStudentCurrentPage] = useState(1);
@@ -2516,7 +2518,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                         </td>
                                     </tr>
                                 ) : currentResults.map(res => (
-                                    <tr key={res.id} className="group hover:bg-red-50/20 transition-all duration-300">
+                                    <tr key={res.id} onClick={() => setViewingResult(res)} className="group hover:bg-red-50/20 transition-all duration-300 cursor-pointer">
                                         <td className="px-8 py-6 whitespace-nowrap">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-white to-gray-50 text-red-700 flex items-center justify-center font-black text-base border border-gray-100 shadow-sm group-hover:bg-red-700 group-hover:text-white group-hover:border-red-700 transition-all duration-300 overflow-hidden">
@@ -2621,6 +2623,54 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         </div>
                     </div>
                 </div>
+
+                {/* --- DETAILED ANALYSIS MODAL --- */}
+                {viewingResult && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-gray-900/60 backdrop-blur-md animate-in fade-in">
+                        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col relative">
+                            <button 
+                                onClick={() => setViewingResult(null)}
+                                className="absolute top-6 right-6 z-50 p-3 bg-white/80 hover:bg-red-50 text-gray-400 hover:text-red-700 rounded-2xl transition-all shadow-lg backdrop-blur"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                            
+                            <div className="flex-1 overflow-y-auto p-4 md:p-10">
+                                <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="px-3 py-1 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-full">Performance Report</span>
+                                            <span className="text-gray-300">•</span>
+                                            <span className="text-gray-400 text-[10px] font-bold uppercase">{new Date(viewingResult.created_at).toLocaleString()}</span>
+                                        </div>
+                                        <h2 className="text-4xl font-black text-gray-900 tracking-tight">{viewingResult.studentAuthName}</h2>
+                                        <p className="text-gray-500 font-bold mt-1">Exercise: <span className="text-red-700">{viewingResult.exercise_title}</span></p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Typing Speed</p>
+                                            <p className="text-3xl font-black text-gray-900">{viewingResult.wpm} <span className="text-sm text-gray-400">WPM</span></p>
+                                        </div>
+                                        <div className="w-px h-10 bg-gray-100 self-center"></div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Accuracy</p>
+                                            <p className="text-3xl font-black text-green-600">{viewingResult.accuracy}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <DetailedAnalysisPanel 
+                                    originalText={viewingResult.original_text || viewingResult.text || ''}
+                                    originalHtml={viewingResult.exercise_id ? null : viewingResult.original_text} // formatting logic fallback
+                                    attemptedText={viewingResult.mistakes_data?.typedText || viewingResult.typed_text || ''}
+                                    attemptedHtml={viewingResult.mistakes_data?.htmlContent || viewingResult.html_content}
+                                    durationSec={viewingResult.duration_sec}
+                                    title="Student Test Analysis"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };
