@@ -77,7 +77,7 @@ export async function saveTestResult(supabase, params) {
     console.warn('[saveTestResult] Falling back to local storage due to error:', error?.message);
     
     /* ── LocalStorage Fallback ────────────────────────────────── */
-    const localKey = 'stn_local_results';
+    const localKey = LOCAL_STORAGE_KEY;
     const attemptId = 'local_' + Date.now();
     const localData = JSON.parse(localStorage.getItem(localKey) || '[]');
     const localEntry = { ...row, id: attemptId, created_at: new Date().toISOString() };
@@ -147,7 +147,9 @@ export async function fetchAllResults(supabase, userId) {
   }
 
   // 2. Merge with Local Results
-  const local = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+  const local1 = JSON.parse(localStorage.getItem('shorthandians_local_results') || '[]');
+  const local2 = JSON.parse(localStorage.getItem('stn_local_results') || '[]');
+  const local = [...local1, ...local2];
   const filteredLocal = local.filter(r => r.user_id === userId);
 
   // Sort combined results newest-first

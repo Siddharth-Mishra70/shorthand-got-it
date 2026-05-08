@@ -382,11 +382,19 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [resultSearchTerm, setResultSearchTerm] = useState('');
     const [resultCurrentPage, setResultCurrentPage] = useState(1);
     const [resultItemsPerPage] = useState(10);
+    
+    // Student Pagination
+    const [studentCurrentPage, setStudentCurrentPage] = useState(1);
+    const [studentItemsPerPage] = useState(10);
 
     // Reset pagination to page 1 when search or date filters change 
     useEffect(() => {
         setResultCurrentPage(1);
     }, [resultSearchTerm, selectedResultDate]);
+
+    useEffect(() => {
+        setStudentCurrentPage(1);
+    }, [studentSearchTerm]);
 
     // State Exam uploads (stored per state+type)
     const [stateExams, setStateExams] = useState(() => {
@@ -2270,90 +2278,130 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 </div>
             )}
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-                <table className="w-full text-left whitespace-nowrap">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">First Name</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Last Name</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Phone Number</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Gmail Id</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">State</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">City</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Gender</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Joined</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600">Status</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-600 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {(() => {
-                            const term = studentSearchTerm.toLowerCase();
-                            const filtered = users.filter(u => {
-                                const fullName = `${u.first_name || ''} ${u.last_name || ''} ${u.name || ''}`.toLowerCase();
-                                const phone = (u.phone || '').toLowerCase();
-                                const email = (u.email || '').toLowerCase();
-                                return fullName.includes(term) || phone.includes(term) || email.includes(term);
-                            });
-                            if (filtered.length === 0) return (
-                                <tr><td colSpan="10" className="text-center py-10 text-gray-400">No students found matching your search.</td></tr>
-                            );
-                            return filtered.map(u => (
-                            <tr key={u.email || u.phone} className="border-b border-gray-100 hover:bg-red-50 transition-colors">
-                                <td className="px-6 py-4 text-sm font-semibold text-gray-800">{u.first_name || (u.name ? u.name.split(' ')[0] : '-')}</td>
-                                <td className="px-6 py-4 text-sm font-semibold text-gray-800">{u.last_name || (u.name ? u.name.split(' ').slice(1).join(' ') : '-')}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{u.phone || '-'}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{u.email || '-'}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{u.state || '-'}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{u.city || '-'}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{u.gender || '-'}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{u.joinedDate || '-'}</td>
-                                <td className="px-6 py-4 text-sm">
-                                    <div className="flex items-center space-x-3">
-                                        <button 
-                                            type="button"
-                                            onClick={() => handleToggleStudentStatus(u.email, u.status)}
-                                            className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 shadow-inner ${
-                                                (u.status || 'active').toLowerCase() === 'active' ? 'bg-green-500' : 'bg-gray-300'
-                                            }`}
-                                            title={`Click to ${ (u.status || 'active').toLowerCase() === 'active' ? 'Block' : 'Activate' } student`}
-                                        >
-                                            <span 
-                                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                                                    (u.status || 'active').toLowerCase() === 'active' ? 'translate-x-4' : 'translate-x-0'
-                                                }`} 
-                                            />
-                                        </button>
-                                        <span className={`text-[10px] font-black uppercase tracking-widest ${
-                                            (u.status || 'active').toLowerCase() === 'active' ? 'text-green-600' : 'text-gray-400'
-                                        }`}>
-                                            {(u.status || 'active').toLowerCase() === 'active' ? 'Active' : 'Inactive'}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <button
-                                            onClick={() => openEditModal(u)}
-                                            className="p-1.5 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all"
-                                            title="Edit student"
-                                        >
-                                            <Edit2 className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteUser(u.email)}
-                                            className="p-1.5 text-red-700 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all"
-                                            title="Delete student"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </td>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-gray-50/80 border-b border-gray-200">
+                            <tr>
+                                {['First Name', 'Last Name', 'Phone', 'Gmail Id', 'State', 'City', 'Gender', 'Joined'].map(col => (
+                                    <th key={col} className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase tracking-widest whitespace-nowrap">{col}</th>
+                                ))}
+                                <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase tracking-widest whitespace-nowrap sticky right-[120px] bg-gray-50 z-10 hidden md:table-cell">Status</th>
+                                <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase tracking-widest whitespace-nowrap sticky right-0 bg-gray-50 z-10 text-right">Actions</th>
                             </tr>
-                        ));
-                        })()}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {(() => {
+                                const term = studentSearchTerm.toLowerCase();
+                                const filtered = users.filter(u => {
+                                    const fullName = `${u.first_name || ''} ${u.last_name || ''} ${u.name || ''}`.toLowerCase();
+                                    const phone = (u.phone || '').toLowerCase();
+                                    const email = (u.email || '').toLowerCase();
+                                    return fullName.includes(term) || phone.includes(term) || email.includes(term);
+                                });
+
+                                if (filtered.length === 0) return (
+                                    <tr><td colSpan="10" className="text-center py-20">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <Users className="w-10 h-10 text-gray-200" />
+                                            <p className="text-gray-400 font-bold">No students found matching your search.</p>
+                                        </div>
+                                    </td></tr>
+                                );
+
+                                // Pagination Logic
+                                const indexOfLast = studentCurrentPage * studentItemsPerPage;
+                                const indexOfFirst = indexOfLast - studentItemsPerPage;
+                                const currentStudents = filtered.slice(indexOfFirst, indexOfLast);
+                                const totalPages = Math.ceil(filtered.length / studentItemsPerPage);
+
+                                return (
+                                    <>
+                                        {currentStudents.map(u => (
+                                            <tr key={u.email || u.id} className="group hover:bg-red-50/30 transition-colors">
+                                                <td className="px-6 py-4 text-sm font-bold text-gray-900 whitespace-nowrap">{u.first_name || (u.name ? u.name.split(' ')[0] : '-')}</td>
+                                                <td className="px-6 py-4 text-sm font-bold text-gray-900 whitespace-nowrap">{u.last_name || (u.name ? u.name.split(' ').slice(1).join(' ') : '-')}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">{u.phone || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600 truncate max-w-[150px]" title={u.email}>{u.email || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600 truncate max-w-[120px]" title={u.state}>{u.state || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600 truncate max-w-[120px]" title={u.city}>{u.city || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">{u.gender || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{u.joinedDate || '-'}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap sticky right-[120px] bg-white group-hover:bg-red-50/30 z-10 hidden md:table-cell border-l border-gray-50">
+                                                    <div className="flex items-center space-x-2">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleToggleStudentStatus(u.email, u.status)}
+                                                            className={`relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                                                (u.status || 'active').toLowerCase() === 'active' ? 'bg-green-500' : 'bg-gray-300'
+                                                            }`}
+                                                        >
+                                                            <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                                                (u.status || 'active').toLowerCase() === 'active' ? 'translate-x-4' : 'translate-x-0'
+                                                            }`} />
+                                                        </button>
+                                                        <span className={`text-[10px] font-black uppercase tracking-tighter ${
+                                                            (u.status || 'active').toLowerCase() === 'active' ? 'text-green-600' : 'text-gray-400'
+                                                        }`}>
+                                                            {(u.status || 'active').toLowerCase() === 'active' ? 'Active' : 'Inactive'}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-red-50/30 z-10 border-l border-gray-50 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.05)]">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <button onClick={() => openEditModal(u)} className="p-2 text-gray-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all" title="Edit student"><Edit2 className="w-4 h-4" /></button>
+                                                        <button onClick={() => handleDeleteUser(u.email)} className="p-2 text-gray-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all" title="Delete student"><Trash2 className="w-4 h-4" /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {/* Pagination Footer Injection */}
+                                        {totalPages > 1 && (
+                                            <tr>
+                                                <td colSpan="10" className="px-6 py-4 bg-gray-50/50">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                            Showing {indexOfFirst + 1} to {Math.min(indexOfLast, filtered.length)} of {filtered.length} Students
+                                                        </p>
+                                                        <div className="flex items-center gap-2">
+                                                            <button 
+                                                                onClick={() => setStudentCurrentPage(p => Math.max(1, p - 1))}
+                                                                disabled={studentCurrentPage === 1}
+                                                                className="p-2 bg-white border border-gray-200 rounded-lg disabled:opacity-30 hover:text-red-700 hover:border-red-400 transition-all"
+                                                            >
+                                                                <ArrowLeft className="w-4 h-4" />
+                                                            </button>
+                                                            <div className="flex gap-1">
+                                                                {[...Array(totalPages)].map((_, i) => (
+                                                                    <button 
+                                                                        key={i} 
+                                                                        onClick={() => setStudentCurrentPage(i + 1)}
+                                                                        className={`w-8 h-8 rounded-lg text-xs font-black transition-all ${
+                                                                            studentCurrentPage === i + 1 ? 'bg-red-700 text-white shadow-lg' : 'bg-white text-gray-400 border border-gray-100'
+                                                                        }`}
+                                                                    >
+                                                                        {i + 1}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            <button 
+                                                                onClick={() => setStudentCurrentPage(p => Math.min(totalPages, p + 1))}
+                                                                disabled={studentCurrentPage === totalPages}
+                                                                className="p-2 bg-white border border-gray-200 rounded-lg disabled:opacity-30 hover:text-red-700 hover:border-red-400 transition-all"
+                                                            >
+                                                                <ChevronRight className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </>
+                                );
+                            })()}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

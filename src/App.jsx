@@ -315,7 +315,7 @@ function App() {
   }
 
   if (currentView === 'formatting') {
-    return <HighCourtFormatting onBack={() => setCurrentView('dashboard')} user={user} />;
+    return <HighCourtFormatting onBack={() => setCurrentView('dashboard')} user={user} onTestComplete={(id) => setCurrentView(`results:${id}`)} />;
   }
 
   if (currentView === 'pitman') {

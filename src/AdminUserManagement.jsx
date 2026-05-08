@@ -163,6 +163,8 @@ const AdminUserManagement = () => {
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'pending' | 'inactive'
   const [updatingId,  setUpdatingId]  = useState(null);
   const [toast,       setToast]       = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const STUDENTS_PER_PAGE = 15;
 
   // ─── Add Student State ───────────────────────────────────────────────────
   const [showAddModal, setShowAddModal] = useState(false);
@@ -284,6 +286,16 @@ const AdminUserManagement = () => {
     const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredUsers.length / STUDENTS_PER_PAGE);
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * STUDENTS_PER_PAGE,
+    currentPage * STUDENTS_PER_PAGE
+  );
 
   // ─── Stats ───────────────────────────────────────────────────────────────
   const stats = {
@@ -515,14 +527,16 @@ const AdminUserManagement = () => {
       {/* ── Table ────────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-3xl shadow-xl shadow-gray-100/80 border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left whitespace-nowrap">
+          <table className="w-full text-left">
             <thead className="bg-gray-50/80 border-b border-gray-100">
               <tr>
-                {['Student', 'Email', 'Phone', 'State / City', 'Registered', 'Status', 'Actions'].map((col) => (
-                  <th key={col} className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                {['Student', 'Email', 'Phone', 'State / City', 'Registered'].map((col) => (
+                  <th key={col} className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] whitespace-nowrap">
                     {col}
                   </th>
                 ))}
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] whitespace-nowrap sticky right-[120px] bg-gray-50/80 z-10 hidden md:table-cell">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] whitespace-nowrap sticky right-0 bg-gray-50/80 z-10">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -548,16 +562,16 @@ const AdminUserManagement = () => {
                     </div>
                   </td>
                 </tr>
-              ) : filteredUsers.map((u) => (
+              ) : paginatedUsers.map((u) => (
                 <tr key={u.id} className="group hover:bg-blue-50/20 transition-all duration-200">
                   {/* Student Name */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 max-w-[200px]">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1e3a8a] to-blue-500 flex items-center justify-center text-white font-black text-sm shadow-sm shrink-0 group-hover:shadow-md transition-shadow">
                         {displayName(u).charAt(0).toUpperCase()}
                       </div>
-                      <div>
-                        <p className="text-sm font-black text-gray-900 leading-none group-hover:text-[#1e3a8a] transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-gray-900 leading-none group-hover:text-[#1e3a8a] transition-colors truncate">
                           {displayName(u)}
                         </p>
                         {u.gender && (
@@ -568,27 +582,27 @@ const AdminUserManagement = () => {
                   </td>
 
                   {/* Email */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 max-w-[200px]">
                     <div className="flex items-center gap-1.5">
                       <Mail className="w-3.5 h-3.5 text-gray-300 shrink-0" />
-                      <span className="text-sm text-gray-600 font-medium">{u.email || '—'}</span>
+                      <span className="text-sm text-gray-600 font-medium truncate" title={u.email}>{u.email || '—'}</span>
                     </div>
                   </td>
 
                   {/* Phone */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm text-gray-600 font-medium">{u.phone || '—'}</span>
                   </td>
 
                   {/* State / City */}
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-600 font-medium">
+                  <td className="px-6 py-4 max-w-[150px]">
+                    <span className="text-sm text-gray-600 font-medium truncate block" title={u.state && u.city ? `${u.city}, ${u.state}` : (u.state || u.city || '—')}>
                       {u.state && u.city ? `${u.city}, ${u.state}` : (u.state || u.city || '—')}
                     </span>
                   </td>
 
                   {/* Registration Date */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <CalendarDays className="w-3.5 h-3.5 text-gray-300 shrink-0" />
                       <span className="text-sm text-gray-500 font-medium">
@@ -598,12 +612,12 @@ const AdminUserManagement = () => {
                   </td>
 
                   {/* Status Badge */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap sticky right-[120px] bg-white group-hover:bg-blue-50/20 transition-colors z-10 hidden md:table-cell shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.05)] border-l border-gray-50">
                     <StatusBadge status={u.status || 'pending'} />
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4 flex items-center gap-2">
+                  <td className="px-6 py-4 flex items-center gap-2 whitespace-nowrap sticky right-0 bg-white group-hover:bg-blue-50/20 transition-colors z-10 md:shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.05)] shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.1)] border-l md:border-l-0 border-gray-50">
                     <StatusDropdown
                       userId={u.id}
                       currentStatus={u.status || 'pending'}
@@ -623,12 +637,43 @@ const AdminUserManagement = () => {
           </table>
         </div>
 
-        {/* Footer */}
+        {/* Footer with pagination */}
         {!loading && filteredUsers.length > 0 && (
-          <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-50 flex items-center justify-between">
+          <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
-              Showing {filteredUsers.length} of {users.length} students
+              Showing {Math.min((currentPage - 1) * STUDENTS_PER_PAGE + 1, filteredUsers.length)}–{Math.min(currentPage * STUDENTS_PER_PAGE, filteredUsers.length)} of {filteredUsers.length} students
             </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#1e3a8a] hover:text-white hover:border-[#1e3a8a] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  ← Prev
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p)}
+                    className={`w-8 h-8 rounded-lg text-xs font-black transition-all ${
+                      currentPage === p
+                        ? 'bg-[#1e3a8a] text-white shadow-md'
+                        : 'border border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-[#1e3a8a]'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#1e3a8a] hover:text-white hover:border-[#1e3a8a] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

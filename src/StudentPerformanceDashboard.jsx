@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from './supabaseClient';
+import { fetchAllResults } from './lib/saveTestResult';
 import { 
     Activity, Clock, TrendingUp, TrendingDown, CheckCircle2, 
     ArrowLeft, Award, BookOpen, Target, ChevronRight, BarChart2,
@@ -12,18 +13,12 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
     const [activeFilter, setActiveFilter] = useState('all');
 
     useEffect(() => {
-        const fetchAllResults = async () => {
+        const fetchResults = async () => {
             if (!user?.id) return;
             setLoading(true);
             try {
-                // Fetch all test results for current student, newest to oldest
-                const { data, error } = await supabase
-                    .from('test_results')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
+                // Fetch all test results (Supabase + LocalStorage)
+                const data = await fetchAllResults(supabase, user.id);
                 setResults(data || []);
             } catch (err) {
                 console.error('Failed to fetch performance data', err);
@@ -31,7 +26,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                 setLoading(false);
             }
         };
-        fetchAllResults();
+        fetchResults();
     }, [user]);
 
     // Grouping by category - EXACT NAMES FROM APP.JSX
@@ -52,6 +47,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
         const normMap = {
             'highcourt':        'formatting',
             'formatting':        'formatting',
+            'hc':                'formatting',
             'dictation':         'audio',
             'audio dictation':   'audio',
             'audio section':     'audio',
@@ -60,6 +56,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
             'pitman aps':        'pitman',
             'pitman shorthand':  'pitman',
             'pitman exercise':   'pitman',
+            'pitman shorthand practice': 'pitman',
             'kailash':           'kailash',
             'kailash chandra':   'kailash',
             'kailash dictation': 'kailash',
@@ -88,7 +85,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
             } else if (exId.includes('state-') || exId.includes('exam') || exTitle.includes('state')) {
                 cat = 'state';
             } else {
-                cat = 'audio'; 
+                cat = 'formatting'; // Default to formatting if completely unknown, since it's the primary product
             }
         }
         
@@ -98,20 +95,34 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
     }, {});
 
     const filteredModuleInfo = useMemo(() => {
+        // Always show modules that have actual result data
+        // Additionally show enrolled modules even without results
         const enrolled = user?.enrolled_courses || [];
         if (user?.role === 'admin') return moduleInfo;
 
         const filtered = {};
         const mapping = { 'hc-formatting': 'formatting', 'pitman-ex': 'pitman' };
         
+        // 1. Include modules the student is enrolled in
         Object.entries(moduleInfo).forEach(([key, info]) => {
             const courseId = Object.keys(mapping).find(id => mapping[id] === key);
             if (enrolled.includes(courseId)) {
                 filtered[key] = info;
             }
         });
-        return filtered;
-    }, [user?.enrolled_courses, user?.role]);
+
+        // 2. Also include modules where student has actual result data
+        Object.keys(modulesWithData).forEach(key => {
+            if (moduleInfo[key] && !filtered[key]) {
+                filtered[key] = moduleInfo[key];
+            } else if (!moduleInfo[key] && !filtered[key]) {
+                // If the moduleInfo doesn't exist for this category, create a fallback so it doesn't disappear
+                filtered[key] = { title: key.charAt(0).toUpperCase() + key.slice(1) + ' Test', icon: BookOpen, color: 'gray', view: key };
+            }
+        });
+
+        return Object.keys(filtered).length > 0 ? filtered : moduleInfo;
+    }, [user?.enrolled_courses, user?.role, modulesWithData]);
 
     const filteredModulesList = useMemo(() => {
         if (activeFilter === 'all') return Object.entries(filteredModuleInfo);

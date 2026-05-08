@@ -71,7 +71,7 @@ const getFormattedContent = (rawContent) => {
         .replace(/\n/g, '<br/>'); // Convert real newlines to HTML breaks
 };
 
-const HighCourtFormatting = ({ onBack, user }) => {
+const HighCourtFormatting = ({ onBack, user, onTestComplete }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [finalText, setFinalText] = useState('');
@@ -395,43 +395,52 @@ ORAL ORDER
     const handleSubmit = async () => {
         if (!editorRef.current) return;
         const htmlContent = editorRef.current.innerHTML;
-        const resultText = editorRef.current.innerText;
+        const resultText = editorRef.current.innerText?.trim() || '';
 
-        if (!resultText.trim() || resultText === '<br>') return;
-
+        // Always proceed — even if empty — to show the result screen (especially on timer expiry)
         setIsSubmitting(true);
+        setIsTimerRunning(false);
 
         try {
             // 1. Generate Automated Analysis for scoring (strict mode to include punctuation)
             const originalBase = plainReferenceForScoring;
-            const analysis = generateDetailedAnalysis(originalBase, resultText, { strict: true });
-            const { accuracy, totalMistakes } = analysis.summary;
 
-            // 2. Save via Utility to Primary DB (test_results)
-            const result = await saveTestResult(supabase, {
-                wpm: 0, // Formatting test - not timed
-                accuracy: accuracy,
-                totalMistakes: totalMistakes, 
-                attemptedText: resultText,
-                originalText: originalBase,
-                exerciseId: selectedTestId,
-                exerciseCategory: 'formatting',
-                userId: user?.id,
-                studentName: user?.name,
-                // Attach HTML for the admin to check formatting specifically
-                extraMistakesData: { html_content: htmlContent }
-            });
+            let accuracy = 0;
+            let totalMistakes = 0;
+            let savedAttemptId = null;
 
-            if (result && result.attemptId) {
-                console.log('[HighCourt] Save success:', result.attemptId);
+            if (resultText && resultText !== '<br>') {
+                const analysis = generateDetailedAnalysis(originalBase, resultText, { strict: true });
+                accuracy = analysis.summary.accuracy;
+                totalMistakes = analysis.summary.totalMistakes;
+
+                // 2. Save via Utility to Primary DB (test_results)
+                const result = await saveTestResult(supabase, {
+                    wpm: 0, // Formatting test - not timed
+                    accuracy: accuracy,
+                    totalMistakes: totalMistakes, 
+                    attemptedText: resultText,
+                    originalText: originalBase,
+                    exerciseId: selectedTestId,
+                    exerciseCategory: 'formatting',
+                    userId: user?.id,
+                    studentName: user?.name,
+                    // Attach HTML for the admin to check formatting specifically
+                    extraMistakesData: { html_content: htmlContent }
+                });
+
+                if (result && result.attemptId) {
+                    savedAttemptId = result.attemptId;
+                    console.log('[HighCourt] Save success:', result.attemptId);
+                }
             }
         } catch (err) {
             console.error('[HighCourt] Submission failed:', err);
             // Fallback saved via local logic in saveTestResult.js 'stn_local_results'
         } finally {
-            // Update local UI state
-            setFinalText(resultText);
-            const newAttempt = { text: resultText, html: htmlContent, timestamp: new Date().toLocaleString() };
+            // Always update local UI state to show result screen
+            setFinalText(resultText || '(No content submitted)');
+            const newAttempt = { text: resultText || '', html: htmlContent || '', timestamp: new Date().toLocaleString() };
             const updatedAttempts = [newAttempt, ...pastAttempts];
             setPastAttempts(updatedAttempts);
             localStorage.setItem('hc_formatting_attempts', JSON.stringify(updatedAttempts));
@@ -439,6 +448,11 @@ ORAL ORDER
             setSubmitted(true);
             setIsSubmitting(false);
             setIsTimerRunning(false);
+            
+            // Auto-navigate to result
+            if (onTestComplete && savedAttemptId) {
+                onTestComplete(savedAttemptId);
+            }
         }
     };
 

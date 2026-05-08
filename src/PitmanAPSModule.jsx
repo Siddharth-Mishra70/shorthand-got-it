@@ -124,11 +124,14 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
 
     useEffect(() => {
         let timer;
-        if (isStarted && timeLeft > 0) {
+        if (isStarted && timeLeft > 0 && !hasSubmitted) {
             timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+        } else if (isStarted && timeLeft === 0 && !hasSubmitted) {
+            // ── Auto-submit when timer expires ──
+            handleSubmit();
         }
         return () => clearInterval(timer);
-    }, [isStarted, timeLeft]);
+    }, [isStarted, timeLeft, hasSubmitted]);
 
     useEffect(() => {
         if (!isStarted || inputText.length === 0) return;
