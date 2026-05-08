@@ -189,6 +189,28 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                        </div>
                    </div>
                 </div>
+                <div className="flex-1 max-w-[1600px] mx-auto w-full flex flex-col min-h-0">
+                    <div className="flex items-center justify-between mb-8">
+                        <button 
+                            onClick={onBack}
+                            className="flex items-center gap-2 text-gray-500 hover:text-[#1e3a8a] font-bold transition-all group"
+                        >
+                            <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:bg-[#1e3a8a] group-hover:text-white transition-all">
+                                <ArrowLeft className="w-4 h-4" />
+                            </div>
+                            <span className="text-sm uppercase tracking-widest">Back to Dashboard</span>
+                        </button>
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-blue-50 rounded-2xl">
+                                <Activity className="w-6 h-6 text-[#1e3a8a]" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-black text-gray-900 tracking-tighter">My Performance</h1>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Interactive Skill Meter</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div className="mt-8 flex flex-col items-center gap-2">
                     <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 p-4 px-6 rounded-[2rem] shadow-sm">
                         <div className="flex flex-col items-center border-r border-gray-200 pr-6">
