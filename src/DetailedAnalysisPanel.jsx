@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useCallback } from 'react';
 import {
   CheckCircle2, AlertCircle, Type, MinusCircle, PlusCircle,
-  FileText, Eye,
+  FileText, Eye, Gavel
 } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -197,8 +197,8 @@ const DetailedAnalysisPanel = ({
 }) => {
   // ── Run analysis ────────────────────────────────────────────
   const analysis = useMemo(
-    () => generateDetailedAnalysis(originalText, attemptedText, { durationSec }),
-    [originalText, attemptedText, durationSec]
+    () => generateDetailedAnalysis(originalText, attemptedText, { durationSec, originalHtml, attemptedHtml }),
+    [originalText, attemptedText, durationSec, originalHtml, attemptedHtml]
   );
 
   const { summary, wordDiff } = analysis;
@@ -350,7 +350,7 @@ const DetailedAnalysisPanel = ({
 
   // ── Stats ────────────────────────────────────────────────────
   const stats = [
-    { label: 'Total Words',  value: summary.totalWords,    color: '#1e3a8a' },
+    { label: 'Total Words',  value: summary.totalWords,    color: '#0d6e70' },
     { label: 'Typed Words',  value: summary.attemptedWords, color: '#0284c7' },
     { label: 'Correct',      value: summary.correctWords,  color: '#16a34a' },
     { label: 'Mistakes',     value: summary.totalMistakes, color: '#dc2626' },
@@ -364,7 +364,7 @@ const DetailedAnalysisPanel = ({
       {/* ── Panel Header ──────────────────────────────────────── */}
       <div
         className="px-6 py-4 flex items-center justify-between"
-        style={{ background: 'linear-gradient(135deg, #0f2167 0%, #1e3a8a 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #07414e 0%, #0d6e70 100%)' }}
       >
         <div className="flex items-center space-x-3">
           {/* Mac-style dots */}
@@ -440,8 +440,8 @@ const DetailedAnalysisPanel = ({
         <div className="flex flex-col">
           {/* Panel header */}
           <div className="flex flex-wrap items-center gap-2 px-5 py-3 bg-blue-50 border-b border-blue-100">
-            <Eye className="w-4 h-4 text-[#1e3a8a] flex-shrink-0" />
-            <span className="text-sm font-black text-[#1e3a8a] mr-1">Comparison View</span>
+            <Eye className="w-4 h-4 text-[#0d6e70] flex-shrink-0" />
+            <span className="text-sm font-black text-[#0d6e70] mr-1">Comparison View</span>
             <span className="text-[10px] font-bold bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full mr-1">
               {summary.attemptedWords} words typed
             </span>
@@ -471,30 +471,63 @@ const DetailedAnalysisPanel = ({
         </div>
       </div>
 
+      {/* ── Formatting errors section ─────────────────────────── */}
+      {analysis.formattingErrors && analysis.formattingErrors.length > 0 && (
+        <div className="px-6 py-4 bg-red-50/40 border-t border-red-100">
+          <h4 className="text-xs font-black text-red-800 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <Gavel className="w-4 h-4 text-red-600 animate-pulse" />
+            Formatting & Alignment Mismatches ({analysis.formattingErrors.length})
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {analysis.formattingErrors.map((err, idx) => (
+              <div key={idx} className="flex items-start gap-3 bg-white p-3.5 rounded-xl border border-red-100 shadow-sm text-xs text-gray-700">
+                <span className="font-mono bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold shrink-0">Line {err.lineIndex + 1}</span>
+                <div className="space-y-1 min-w-0 flex-1">
+                  <p className="font-bold text-gray-800 italic truncate">"{err.lineText}"</p>
+                  <p className="text-red-600 font-semibold">{err.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Mistake counts footer bar ─────────────────────────── */}
       <div className="flex flex-wrap gap-2 items-center px-5 py-3 bg-gray-50 border-t border-gray-100">
         <span className="text-xs font-black text-gray-500 uppercase tracking-widest mr-2">Breakdown:</span>
-        {[
-          { icon: MinusCircle, label: 'Missing',        count: summary.missingCount,          color: '#dc2626', bg: '#fee2e2' },
-          { icon: PlusCircle,  label: 'Extra',          count: summary.extraCount,            color: '#b45309', bg: '#fef3c7' },
-          { icon: AlertCircle, label: 'Spelling',       count: summary.spellingCount,         color: '#7c3aed', bg: '#f3e8ff' },
-          { icon: Type,        label: 'Capitalisation', count: summary.capitalisationCount,   color: '#2563eb', bg: '#dbeafe' },
-        ].map(({ icon: Icon, label, count, color, bg }) => (
-          <span
-            key={label}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
-            style={{ background: bg, color }}
-          >
-            <Icon style={{ width: 12, height: 12 }} />
-            {label}
+        {(() => {
+          const breakdownItems = [
+            { icon: MinusCircle, label: 'Missing',        count: summary.missingCount,          color: '#dc2626', bg: '#fee2e2' },
+            { icon: PlusCircle,  label: 'Extra',          count: summary.extraCount,            color: '#b45309', bg: '#fef3c7' },
+            { icon: AlertCircle, label: 'Spelling',       count: summary.spellingCount,         color: '#7c3aed', bg: '#f3e8ff' },
+            { icon: Type,        label: 'Capitalisation', count: summary.capitalisationCount,   color: '#2563eb', bg: '#dbeafe' },
+          ];
+          if (summary.formattingMistakes !== undefined && summary.formattingMistakes > 0) {
+            breakdownItems.push({
+              icon: Gavel,
+              label: 'Formatting',
+              count: summary.formattingMistakes,
+              color: '#0f172a',
+              bg: '#e2e8f0'
+            });
+          }
+          return breakdownItems.map(({ icon: Icon, label, count, color, bg }) => (
             <span
-              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-black"
-              style={{ background: color }}
+              key={label}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
+              style={{ background: bg, color }}
             >
-              {count}
+              <Icon style={{ width: 12, height: 12 }} />
+              {label}
+              <span
+                className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-black"
+                style={{ background: color }}
+              >
+                {count}
+              </span>
             </span>
-          </span>
-        ))}
+          ));
+        })()}
       </div>
 
     </div>

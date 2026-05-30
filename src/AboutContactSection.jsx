@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { supabase } from './supabaseClient';
 import {
   MapPin,
@@ -42,12 +42,12 @@ const AboutSection = () => {
       <div className="max-w-7xl mx-auto">
         {/* Section Label */}
         <div className="text-center mb-16">
-          <span className="inline-block text-xs font-bold tracking-widest text-[#1e3a8a] uppercase bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full mb-4">
+          <span className="inline-block text-xs font-bold tracking-widest text-[#0d6e70] uppercase bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full mb-4">
             Who We Are
           </span>
           <h2 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4">
             About{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1e3a8a] to-blue-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0d6e70] to-blue-500">
               Shorthandians
             </span>
           </h2>
@@ -61,11 +61,11 @@ const AboutSection = () => {
           {/* Left: Director Card */}
           <div className="relative">
             {/* Background decoration */}
-            <div className="absolute -inset-4 bg-gradient-to-br from-[#1e3a8a]/8 to-blue-100/60 rounded-3xl -z-10"></div>
+            <div className="absolute -inset-4 bg-gradient-to-br from-[#0d6e70]/8 to-blue-100/60 rounded-3xl -z-10"></div>
 
             <div className="bg-white rounded-3xl shadow-xl border border-blue-50 overflow-hidden">
               {/* Card Header */}
-              <div className="bg-gradient-to-r from-[#0f2167] to-[#1e3a8a] px-8 py-10 text-white relative overflow-hidden">
+              <div className="bg-gradient-to-r from-[#07414e] to-[#0d6e70] px-8 py-10 text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
                 <div className="relative z-10">
@@ -91,7 +91,7 @@ const AboutSection = () => {
                 <div className="space-y-3">
                   {qualities.slice(0, 3).map((q, i) => (
                     <div key={i} className="flex items-start space-x-3">
-                      <CheckCircle className="w-5 h-5 text-[#1e3a8a] flex-shrink-0 mt-0.5" />
+                      <CheckCircle className="w-5 h-5 text-[#0d6e70] flex-shrink-0 mt-0.5" />
                       <span className="text-gray-600 text-sm">{q}</span>
                     </div>
                   ))}
@@ -119,7 +119,7 @@ const AboutSection = () => {
             <div className="space-y-3 mb-8">
               {qualities.slice(3).map((q, i) => (
                 <div key={i} className="flex items-start space-x-3">
-                  <CheckCircle className="w-5 h-5 text-[#1e3a8a] flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="w-5 h-5 text-[#0d6e70] flex-shrink-0 mt-0.5" />
                   <span className="text-gray-600 text-sm">{q}</span>
                 </div>
               ))}
@@ -132,11 +132,11 @@ const AboutSection = () => {
                   key={label}
                   className="flex items-center space-x-4 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 hover:bg-blue-100/60 transition-colors duration-200"
                 >
-                  <div className="w-10 h-10 bg-[#1e3a8a] rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-[#0d6e70] rounded-xl flex items-center justify-center flex-shrink-0">
                     <Icon className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <div className="text-xl font-black text-[#1e3a8a]">{value}</div>
+                    <div className="text-xl font-black text-[#0d6e70]">{value}</div>
                     <div className="text-xs text-gray-500 font-medium">{label}</div>
                   </div>
                 </div>
@@ -210,7 +210,7 @@ const ContactSection = () => {
       label: 'Address',
       value: '98/25/33 LIC Colony, Tagore Town, Prayagraj',
       href: 'https://maps.google.com/?q=Tagore+Town+Prayagraj',
-      color: 'bg-blue-50 text-[#1e3a8a]',
+      color: 'bg-blue-50 text-[#0d6e70]',
     },
     {
       icon: PhoneCall,
@@ -233,12 +233,12 @@ const ContactSection = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <span className="inline-block text-xs font-bold tracking-widest text-[#1e3a8a] uppercase bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full mb-4">
+          <span className="inline-block text-xs font-bold tracking-widest text-[#0d6e70] uppercase bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full mb-4">
             Reach Out
           </span>
           <h2 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4">
             Get in{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1e3a8a] to-blue-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0d6e70] to-blue-500">
               Touch
             </span>
           </h2>
@@ -266,7 +266,7 @@ const ContactSection = () => {
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-0.5">{label}</p>
                   <p className="font-bold text-gray-800 text-sm sm:text-base truncate">{value}</p>
                 </div>
-                <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-[#1e3a8a] transition-colors flex-shrink-0" />
+                <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-[#0d6e70] transition-colors flex-shrink-0" />
               </a>
             ))}
 
@@ -288,7 +288,7 @@ const ContactSection = () => {
           {/* Right: Contact Form */}
           <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
             {/* Form Header */}
-            <div className="bg-gradient-to-r from-[#0f2167] to-[#1e3a8a] px-8 py-8 text-white">
+            <div className="bg-gradient-to-r from-[#07414e] to-[#0d6e70] px-8 py-8 text-white">
               <h3 className="text-2xl font-black mb-1">Send a Message</h3>
               <p className="text-blue-200 text-sm">
                 We typically respond within a few hours.
@@ -308,7 +308,7 @@ const ContactSection = () => {
                   </p>
                   <button
                     onClick={() => { setSubmitted(false); setForm({ name: '', phone: '', message: '' }); }}
-                    className="mt-6 text-[#1e3a8a] font-bold text-sm hover:underline"
+                    className="mt-6 text-[#0d6e70] font-bold text-sm hover:underline"
                   >
                     Send another message
                   </button>
@@ -331,7 +331,7 @@ const ContactSection = () => {
                         value={form.name}
                         onChange={handleChange}
                         placeholder="Your full name"
-                        className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d6e70]/30 focus:border-[#0d6e70] transition-all duration-200 bg-gray-50 focus:bg-white"
                       />
                     </div>
                   </div>
@@ -351,7 +351,7 @@ const ContactSection = () => {
                         value={form.phone}
                         onChange={handleChange}
                         placeholder="+91 XXXXX XXXXX"
-                        className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition-all duration-200 bg-gray-50 focus:bg-white"
+                        className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d6e70]/30 focus:border-[#0d6e70] transition-all duration-200 bg-gray-50 focus:bg-white"
                       />
                     </div>
                   </div>
@@ -371,7 +371,7 @@ const ContactSection = () => {
                         value={form.message}
                         onChange={handleChange}
                         placeholder="Tell us about your course interest, doubt, or feedback..."
-                        className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/30 focus:border-[#1e3a8a] transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                        className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d6e70]/30 focus:border-[#0d6e70] transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
                       />
                     </div>
                   </div>
@@ -381,7 +381,7 @@ const ContactSection = () => {
                     id="contact-submit-btn"
                     type="submit"
                     disabled={loading}
-                    className="w-full flex items-center justify-center space-x-3 bg-[#1e3a8a] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
+                    className="w-full flex items-center justify-center space-x-3 bg-[#0d6e70] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
                   >
                     {loading ? (
                       <>
@@ -425,7 +425,7 @@ const ContactSection = () => {
 // Footer
 // ─────────────────────────────────────────────────────────────────────────────
 const Footer = () => (
-  <footer className="bg-[#0f2167] text-white py-10 px-4 sm:px-6 lg:px-8">
+  <footer className="bg-[#07414e] text-white py-10 px-4 sm:px-6 lg:px-8">
     <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="flex items-center space-x-3">
         <div className="w-9 h-9 bg-amber-400 rounded-lg flex items-center justify-center font-black text-blue-900 text-lg">

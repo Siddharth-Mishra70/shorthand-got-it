@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Trophy, Medal, Target, Zap, Crown,
   ArrowLeft, Loader2, Users, Star, TrendingUp
@@ -198,7 +198,7 @@ const Leaderboard = ({ onBack }) => {
 
         {/* ── Header ── */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#0f2167] to-[#1e3a8a] rounded-3xl shadow-2xl shadow-blue-900/20 mb-5">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#07414e] to-[#0d6e70] rounded-3xl shadow-2xl shadow-blue-900/20 mb-5">
             <Trophy className="w-10 h-10 text-amber-400" />
           </div>
           <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">Leaderboard</h1>

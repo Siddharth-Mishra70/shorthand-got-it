@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Download,
   CheckCircle2,
@@ -59,7 +59,7 @@ const LivePreviewSection = () => {
   const [activeTab, setActiveTab] = useState('missing');
 
   const stats = [
-    { value: '203', label: 'Total Words', color: '#1e3a8a', bg: 'bg-blue-50' },
+    { value: '203', label: 'Total Words', color: '#0d6e70', bg: 'bg-blue-50' },
     { value: '198', label: 'User Words', color: '#0369a1', bg: 'bg-sky-50' },
     { value: '68',  label: 'Total Mistakes', color: '#dc2626', bg: 'bg-red-50' },
     { value: '15',  label: 'Capital Mistakes', color: '#d97706', bg: 'bg-amber-50' },
@@ -114,21 +114,21 @@ const LivePreviewSection = () => {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <span className="inline-block text-xs font-bold tracking-widest text-[#1e3a8a] uppercase bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full mb-4">
+          <span className="inline-block text-xs font-bold tracking-widest text-[#0d6e70] uppercase bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full mb-4">
             Live Demo
           </span>
           <h2 className="text-4xl sm:text-5xl font-black text-gray-900 mb-3">
             See{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1e3a8a] to-blue-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0d6e70] to-blue-500">
               Shorthandians
             </span>{' '}
             in Action
           </h2>
           <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed">
             Experience the power of our comprehensive stenography training platform with{' '}
-            <span className="font-semibold text-[#1e3a8a]">real-time analysis</span>,{' '}
-            <span className="font-semibold text-[#1e3a8a]">detailed feedback</span>, and{' '}
-            <span className="font-semibold text-[#1e3a8a]">advanced performance tracking</span>.
+            <span className="font-semibold text-[#0d6e70]">real-time analysis</span>,{' '}
+            <span className="font-semibold text-[#0d6e70]">detailed feedback</span>, and{' '}
+            <span className="font-semibold text-[#0d6e70]">advanced performance tracking</span>.
           </p>
         </div>
 
@@ -136,7 +136,7 @@ const LivePreviewSection = () => {
         <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
 
           {/* Card Header Bar */}
-          <div className="bg-gradient-to-r from-[#0f2167] to-[#1e3a8a] px-6 py-4 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-[#07414e] to-[#0d6e70] px-6 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="flex space-x-1.5">
                 <div className="w-3 h-3 bg-red-400 rounded-full" />
@@ -170,7 +170,7 @@ const LivePreviewSection = () => {
               <div className="rounded-2xl border border-blue-200 overflow-hidden">
                 <div className="flex items-center space-x-2 bg-blue-50 border-b border-blue-200 px-4 py-2.5">
                   <XCircle className="w-4 h-4 text-red-400" />
-                  <span className="text-sm font-bold text-[#1e3a8a]">Comparison Result</span>
+                  <span className="text-sm font-bold text-[#0d6e70]">Comparison Result</span>
                 </div>
                 <div className="p-4 text-sm leading-7 font-mono max-h-44 overflow-y-auto">
                   {comparison.map((token, i) => {
@@ -206,7 +206,7 @@ const LivePreviewSection = () => {
                   <p className="text-xs text-gray-400 font-medium">Comprehensive analysis of errors and corrections</p>
                 </div>
                 <button
-                  className="flex items-center space-x-2 bg-[#1e3a8a] hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-colors shadow-sm hover:shadow-md"
+                  className="flex items-center space-x-2 bg-[#0d6e70] hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-colors shadow-sm hover:shadow-md"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download Dictation Report</span>
@@ -224,7 +224,7 @@ const LivePreviewSection = () => {
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center space-x-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${
                         isActive
-                          ? 'border-[#1e3a8a] text-[#1e3a8a] bg-blue-50/60'
+                          ? 'border-[#0d6e70] text-[#0d6e70] bg-blue-50/60'
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                       }`}
                     >

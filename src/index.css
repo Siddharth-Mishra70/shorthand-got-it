@@ -14,7 +14,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f3f4f6;
+  background-color: #f0fafb;
 }
 
 /* ─── Hero Animated Orbs ────────────────────────────────────── */
@@ -29,7 +29,7 @@ body {
 .hero-orb-1 {
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.35) 0%, transparent 70%);
   top: -150px;
   right: -100px;
   animation-delay: 0s;
@@ -38,7 +38,7 @@ body {
 .hero-orb-2 {
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.30) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 70%);
   bottom: 50px;
   left: -80px;
   animation-delay: 4s;

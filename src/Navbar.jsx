@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Menu, X, BookOpen, User, LogOut, LayoutDashboard } from 'lucide-react';
 
 const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
@@ -18,7 +18,7 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
     { label: 'Contact', href: '#contact' },
   ];
 
-  const textClass = scrolled ? 'text-gray-700 hover:text-[#1e3a8a] hover:bg-blue-50' : 'text-white/90 hover:text-white hover:bg-white/15';
+  const textClass = scrolled ? 'text-gray-700 hover:text-[#0d6e70] hover:bg-blue-50' : 'text-white/90 hover:text-white hover:bg-white/15';
 
   return (
     <nav
@@ -33,14 +33,14 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
           {/* Logo */}
           <div className="flex items-center space-x-3 group cursor-pointer">
             <div className="relative">
-              <div className="w-11 h-11 bg-[#1e3a8a] rounded-xl flex items-center justify-center shadow-md group-hover:shadow-blue-400/40 transition-shadow duration-300">
+              <div className="w-11 h-11 bg-[#0d6e70] rounded-xl flex items-center justify-center shadow-md group-hover:shadow-blue-400/40 transition-shadow duration-300">
                 <span className="text-white font-black text-xl leading-none">S</span>
               </div>
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full shadow-sm"></div>
             </div>
             <span
               className={`text-2xl font-black tracking-tight transition-colors duration-300 ${
-                scrolled ? 'text-[#1e3a8a]' : 'text-white drop-shadow'
+                scrolled ? 'text-[#0d6e70]' : 'text-white drop-shadow'
               }`}
             >
               Shorthandians
@@ -68,7 +68,7 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
                 {/* User chip */}
                 <div
                   className={`flex items-center space-x-2 px-4 py-2 rounded-full font-semibold text-sm transition-colors ${
-                    scrolled ? 'bg-blue-50 text-[#1e3a8a] border border-blue-100' : 'bg-white/15 text-white border border-white/20'
+                    scrolled ? 'bg-blue-50 text-[#0d6e70] border border-blue-100' : 'bg-white/15 text-white border border-white/20'
                   }`}
                 >
                   <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center">
@@ -81,7 +81,7 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
                 <button
                   onClick={onDashboard}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-full font-semibold text-sm transition-all duration-200 ${
-                    scrolled ? 'bg-[#1e3a8a] text-white hover:bg-blue-700' : 'bg-white/20 text-white hover:bg-white/30 border border-white/25'
+                    scrolled ? 'bg-[#0d6e70] text-white hover:bg-blue-700' : 'bg-white/20 text-white hover:bg-white/30 border border-white/25'
                   } hover:shadow-md`}
                 >
                   <LayoutDashboard className="w-4 h-4" />
@@ -105,13 +105,13 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
               <button
                 id="navbar-login-btn"
                 onClick={onLoginClick}
-                className="group relative overflow-hidden px-6 py-2.5 rounded-full font-bold text-sm transition-all duration-300 bg-[#1e3a8a] text-white hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0"
+                className="group relative overflow-hidden px-6 py-2.5 rounded-full font-bold text-sm transition-all duration-300 bg-[#0d6e70] text-white hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0"
               >
                 <span className="relative z-10 flex items-center space-x-2">
                   <BookOpen className="w-4 h-4" />
                   <span>Login</span>
                 </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-[#1e3a8a] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-[#0d6e70] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
             )}
           </div>
@@ -119,7 +119,7 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
           {/* Mobile toggle */}
           <button
             className={`md:hidden p-2 rounded-lg transition-colors ${
-              scrolled ? 'text-[#1e3a8a] hover:bg-blue-50' : 'text-white hover:bg-white/15'
+              scrolled ? 'text-[#0d6e70] hover:bg-blue-50' : 'text-white hover:bg-white/15'
             }`}
             onClick={() => setMenuOpen(!menuOpen)}
           >
@@ -140,7 +140,7 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
               key={link.label}
               href={link.href}
               onClick={() => setMenuOpen(false)}
-              className="flex items-center px-4 py-3 rounded-xl text-gray-700 font-semibold hover:text-[#1e3a8a] hover:bg-blue-50 transition-colors"
+              className="flex items-center px-4 py-3 rounded-xl text-gray-700 font-semibold hover:text-[#0d6e70] hover:bg-blue-50 transition-colors"
             >
               {link.label}
             </a>
@@ -151,7 +151,7 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
               <>
                 <button
                   onClick={() => { setMenuOpen(false); onDashboard?.(); }}
-                  className="w-full bg-[#1e3a8a] text-white font-bold py-3 rounded-xl hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2"
+                  className="w-full bg-[#0d6e70] text-white font-bold py-3 rounded-xl hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2"
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   <span>Go to Dashboard</span>
@@ -167,7 +167,7 @@ const Navbar = ({ isLoggedIn, user, onLoginClick, onLogout, onDashboard }) => {
             ) : (
               <button
                 onClick={() => { setMenuOpen(false); onLoginClick?.(); }}
-                className="w-full bg-[#1e3a8a] text-white font-bold py-3 rounded-xl hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2"
+                className="w-full bg-[#0d6e70] text-white font-bold py-3 rounded-xl hover:bg-blue-800 transition-colors flex items-center justify-center space-x-2"
               >
                 <BookOpen className="w-4 h-4" />
                 <span>Login</span>

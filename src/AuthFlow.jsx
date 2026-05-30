@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { 
   Mail, Lock, User, Phone, AlertCircle, 
   ArrowRight, ShieldCheck, Clock, Loader2, Sparkles, 
@@ -12,7 +12,7 @@ const Input = ({ label, icon: Icon, type = 'text', placeholder, value, onChange,
   <div className="space-y-2">
     <label className="text-sm font-bold text-gray-700 block px-1 capitalize">{label}</label>
     <div className="relative group">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#1e3a8a] transition-colors">
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#0d6e70] transition-colors">
         <Icon className="w-5 h-5" />
       </div>
       <input
@@ -21,7 +21,7 @@ const Input = ({ label, icon: Icon, type = 'text', placeholder, value, onChange,
         value={value}
         onChange={onChange}
         required={required}
-        className="w-full pl-12 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#1e3a8a] transition-all duration-300"
+        className="w-full pl-12 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0d6e70] transition-all duration-300"
       />
       {rightElement && (
         <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -224,7 +224,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
         {/* Logo & Branding */}
         <div className="text-center mb-10">
           <div
-            className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#0f2167] to-[#1e3a8a] rounded-3xl shadow-2xl shadow-blue-900/20 mb-6 group hover:scale-105 transition-transform duration-500 cursor-pointer"
+            className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#07414e] to-[#0d6e70] rounded-3xl shadow-2xl shadow-blue-900/20 mb-6 group hover:scale-105 transition-transform duration-500 cursor-pointer"
             onClick={onBack}
           >
             <BookOpen className="w-10 h-10 text-white" />
@@ -252,7 +252,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
               </div>
               <button
                 onClick={() => setTab('login')}
-                className="w-full py-4 bg-[#1e3a8a] text-white font-black rounded-2xl hover:bg-black transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
+                className="w-full py-4 bg-[#0d6e70] text-white font-black rounded-2xl hover:bg-black transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
               >
                 Return to Login <ArrowRight className="w-5 h-5" />
               </button>
@@ -268,7 +268,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
                       key={t}
                       onClick={() => { setTab(t); clearMessages(); setOtpToken(''); }}
                       className={`flex-1 py-3 text-sm font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
-                        tab === t ? 'bg-white text-[#1e3a8a] shadow-xl' : 'text-gray-400 hover:text-gray-600'
+                        tab === t ? 'bg-white text-[#0d6e70] shadow-xl' : 'text-gray-400 hover:text-gray-600'
                       }`}
                     >
                       {t}
@@ -312,7 +312,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-4 bg-[#1e3a8a] hover:bg-black text-white font-black rounded-2xl transition-all shadow-xl shadow-blue-900/10 active:scale-[0.98] flex items-center justify-center gap-3 group disabled:bg-blue-300"
+                    className="w-full py-4 bg-[#0d6e70] hover:bg-black text-white font-black rounded-2xl transition-all shadow-xl shadow-blue-900/10 active:scale-[0.98] flex items-center justify-center gap-3 group disabled:bg-blue-300"
                   >
                     {loading ? <Loader2 className="w-6 h-6 animate-spin text-white" /> : (
                       <>
@@ -367,7 +367,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-4 bg-[#1e3a8a] text-white font-black rounded-2xl mt-4 shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3 disabled:bg-blue-300"
+                    className="w-full py-4 bg-[#0d6e70] text-white font-black rounded-2xl mt-4 shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3 disabled:bg-blue-300"
                   >
                     {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
                       <>
@@ -383,7 +383,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
               {tab === 'otp' && (
                 <form onSubmit={handleVerifyOtp} className="space-y-8 animate-in slide-in-from-right-4 duration-500">
                   <div className="text-center">
-                    <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-[#1e3a8a]">
+                    <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-[#0d6e70]">
                       <KeyRound className="w-10 h-10" />
                     </div>
                     <h3 className="text-2xl font-black text-gray-900 mb-2">Check Your Email</h3>
@@ -403,7 +403,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
                       value={otpToken}
                       onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       maxLength={6}
-                      className="w-full text-center text-4xl font-black tracking-[0.4em] py-5 bg-gray-50 border-2 border-gray-100 rounded-3xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#1e3a8a] transition-all"
+                      className="w-full text-center text-4xl font-black tracking-[0.4em] py-5 bg-gray-50 border-2 border-gray-100 rounded-3xl focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0d6e70] transition-all"
                     />
                     <p className="text-center text-xs font-bold text-gray-400 capitalize">Enter 6-digit Verification Code</p>
                   </div>
@@ -412,7 +412,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
                     <button
                       type="submit"
                       disabled={loading || otpToken.length < 6}
-                      className="w-full py-4 bg-[#1e3a8a] text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-2 active:scale-95 disabled:bg-blue-200 transition-all"
+                      className="w-full py-4 bg-[#0d6e70] text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-2 active:scale-95 disabled:bg-blue-200 transition-all"
                     >
                       {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Complete Registration'}
                     </button>
@@ -429,7 +429,7 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
                     <button
                       type="button"
                       onClick={() => { setTab('register'); clearMessages(); setOtpToken(''); }}
-                      className="w-full py-3 text-sm font-bold text-gray-400 hover:text-[#1e3a8a] transition-colors flex items-center justify-center gap-2"
+                      className="w-full py-3 text-sm font-bold text-gray-400 hover:text-[#0d6e70] transition-colors flex items-center justify-center gap-2"
                     >
                       <ArrowLeft className="w-4 h-4" /> Use different email
                     </button>

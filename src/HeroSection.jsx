@@ -30,7 +30,7 @@ const HeroSection = ({ onJoinNow }) => {
       id="home"
       className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #0f2167 0%, #1e3a8a 45%, #1a56db 100%)',
+        background: 'linear-gradient(135deg, #07414e 0%, #0d6e70 45%, #0891b2 100%)',
       }}
     >
       {/* Animated Background Orbs */}
@@ -66,7 +66,7 @@ const HeroSection = ({ onJoinNow }) => {
           </span>{' '}
           <br className="hidden sm:block" />
           Steno Exams with{' '}
-          <span className="text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(90deg, #93c5fd, #60a5fa)' }}>
+          <span className="text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(90deg, #5eead4, #2dd4bf)' }}>
             Shorthandians
           </span>
         </h1>
@@ -126,7 +126,7 @@ const HeroSection = ({ onJoinNow }) => {
         <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
           <path
             d="M0,80 C360,20 1080,20 1440,80 L1440,80 L0,80 Z"
-            fill="#f3f4f6"
+            fill="#f0fafb"
           />
         </svg>
       </div>

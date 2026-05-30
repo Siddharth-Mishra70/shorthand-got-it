@@ -4,12 +4,13 @@ import {
   AlertTriangle, Type, MinusCircle, PlusCircle, Hash,
   FileText, TrendingUp, User, Calendar, Loader2,
   BarChart2, Eye, ChevronRight, Award, Zap, Target,
-  BookOpen, RefreshCw, Clock, Maximize, Minimize,
+  BookOpen, RefreshCw, Clock, Maximize, Minimize, Gavel
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { fetchTestResult, fetchAllResults } from './lib/saveTestResult';
 import DetailedAnalysisPanel from './DetailedAnalysisPanel';
 import TypingPracticeWidget from './TypingPracticeWidget';
+import { generateDetailedAnalysis } from './lib/generateDetailedAnalysis';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Demo / fallback data
@@ -192,7 +193,7 @@ const MiniBarChart = ({ history }) => {
               style={{
                 height: `${Math.max(4, heightPct)}%`,
                 background: isLast
-                  ? 'linear-gradient(180deg, #1e3a8a, #3b82f6)'
+                  ? 'linear-gradient(180deg, #0d6e70, #06b6d4)'
                   : 'linear-gradient(180deg, #93c5fd, #bfdbfe)',
               }}
             />
@@ -244,7 +245,7 @@ const HighlightedComparison = ({ originalText, attemptedText }) => {
 
         if (cleanOrig === cleanTyped) {
           return (
-            <span key={index} className="inline-block bg-blue-50 text-[#1e3a8a] font-bold px-2 py-0.5 rounded mr-1 shadow-sm border border-blue-200" title={`Formatting/Case. Expected: ${origWord}`}>
+            <span key={index} className="inline-block bg-blue-50 text-[#0d6e70] font-bold px-2 py-0.5 rounded mr-1 shadow-sm border border-blue-200" title={`Formatting/Case. Expected: ${origWord}`}>
               {typedWord}
             </span>
           );
@@ -357,6 +358,24 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
             originalText = (tmp.innerText || tmp.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
         }
 
+        let formattingMistakes = row.mistakes_data?.formatting_errors?.length ?? 0;
+        let formattingErrors = row.mistakes_data?.formatting_errors ?? [];
+
+        // If formatting_errors is not in DB but we have HTML, calculate on the fly
+        if (formattingMistakes === 0 && originalHtml && row.mistakes_data?.html_content) {
+          try {
+            const analysis = generateDetailedAnalysis(originalText, attemptedText, {
+              strict: true,
+              originalHtml: originalHtml,
+              attemptedHtml: row.mistakes_data.html_content
+            });
+            formattingMistakes = analysis.summary.formattingMistakes ?? 0;
+            formattingErrors = analysis.formattingErrors ?? [];
+          } catch (e) {
+            console.error('Failed to calculate formatting on-the-fly', e);
+          }
+        }
+
         // 3. Map → component data shape
         setLiveData({
           studentName:      row.student_name ?? row.mistakes_data?.student_name ?? user?.name ?? 'Student',
@@ -383,6 +402,8 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
           spellingErrors:   row.spelling_errors    ?? [],
           capitalErrors:    row.capital_errors     ?? [],
           attemptedHtml:    row.mistakes_data?.html_content ?? null,
+          formattingMistakes: formattingMistakes,
+          formattingErrors:   formattingErrors,
         });
       })
       .catch((err) => {
@@ -459,7 +480,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
           <h2 className="text-xl font-black text-gray-900 mb-2">Couldn't Load Result</h2>
           <p className="text-gray-500 text-sm mb-6">{loadError}</p>
           {onBack && (
-            <button onClick={onBack} className="bg-[#1e3a8a] text-white font-bold px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors">
+            <button onClick={onBack} className="bg-[#0d6e70] text-white font-bold px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors">
               Go Back
             </button>
           )}
@@ -487,7 +508,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
     const accBorder = accuracyNum >= 80 ? 'border-green-100' : accuracyNum >= 60 ? 'border-amber-100' : 'border-red-100';
 
     const stats = [
-        { icon: Hash,         value: data.totalWords,     label: 'Total Words',       valueColor: '#1e3a8a', bg: 'bg-blue-50',   border: 'border-blue-100' },
+        { icon: Hash,         value: data.totalWords,     label: 'Total Words',       valueColor: '#0d6e70', bg: 'bg-blue-50',   border: 'border-blue-100' },
         { icon: FileText,     value: data.userWords,       label: 'Words Typed',       valueColor: '#0369a1', bg: 'bg-sky-50',    border: 'border-sky-100' },
         { icon: XCircle,      value: data.totalMistakes,   label: 'Total Mistakes',    valueColor: '#dc2626', bg: 'bg-red-50',    border: 'border-red-100' },
         { icon: AlertTriangle,value: data.capitalMistakes, label: 'Capital Errors',    valueColor: '#d97706', bg: 'bg-amber-50',  border: 'border-amber-100' },
@@ -517,7 +538,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
         <div className="w-full px-4 md:px-6 py-3 flex items-center justify-between gap-3">
           <button 
             onClick={onBack}
-            className="flex items-center gap-2 text-gray-500 hover:text-[#1e3a8a] font-bold transition-all group shrink-0"
+            className="flex items-center gap-2 text-gray-500 hover:text-[#0d6e70] font-bold transition-all group shrink-0"
             title="Go Back"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -532,7 +553,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
                 onClick={() => setActiveTab(id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   activeTab === id
-                    ? 'bg-white text-[#1e3a8a] shadow-sm'
+                    ? 'bg-white text-[#0d6e70] shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -545,7 +566,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
           <div className="flex items-center space-x-2">
             <button
               onClick={toggleFullscreen}
-              className="flex items-center space-x-1.5 border-2 border-gray-200 text-gray-500 hover:border-[#1e3a8a] hover:text-[#1e3a8a] font-bold px-3 py-2 rounded-xl transition-colors text-xs"
+              className="flex items-center space-x-1.5 border-2 border-gray-200 text-gray-500 hover:border-[#0d6e70] hover:text-[#0d6e70] font-bold px-3 py-2 rounded-xl transition-colors text-xs"
               title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             >
               {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
@@ -553,14 +574,14 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-1.5 border-2 border-gray-200 text-gray-500 hover:border-[#1e3a8a] hover:text-[#1e3a8a] font-bold px-3 py-2 rounded-xl transition-colors text-xs"
+              className="flex items-center space-x-1.5 border-2 border-gray-200 text-gray-500 hover:border-[#0d6e70] hover:text-[#0d6e70] font-bold px-3 py-2 rounded-xl transition-colors text-xs"
             >
               <Printer className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Print</span>
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-1.5 bg-[#1e3a8a] hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl transition-all hover:shadow-lg hover:shadow-blue-500/25 text-xs"
+              className="flex items-center space-x-1.5 bg-[#0d6e70] hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl transition-all hover:shadow-lg hover:shadow-blue-500/25 text-xs"
             >
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Download</span>
@@ -578,7 +599,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
         {/* ── Gradient Header ────────────────────────────────── */}
         <div
           className="px-8 py-8 print:py-6 relative overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #0f2167 0%, #1e3a8a 60%, #1a56db 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #07414e 0%, #0d6e70 60%, #0891b2 100%)' }}
         >
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-blue-300/10 rounded-full blur-3xl pointer-events-none" />
@@ -639,7 +660,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
               {/* ── Performance Snapshot ─────────────────────────── */}
               <div>
                 <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 print:mb-2 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-[#1e3a8a]" /> Performance Snapshot
+                  <Target className="w-4 h-4 text-[#0d6e70]" /> Performance Snapshot
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
                   {/* Accuracy Gauge */}
@@ -652,7 +673,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
                   {/* Stats Grid 2x2 */}
                   <div className="sm:col-span-8 grid grid-cols-2 gap-3">
                     {[
-                      { icon: Hash,         label: 'Total Words',    value: data.totalWords,      color: '#1e3a8a', bg: '#eff6ff', description: 'Maximum possible' },
+                      { icon: Hash,         label: 'Total Words',    value: data.totalWords,      color: '#0d6e70', bg: '#eff6ff', description: 'Maximum possible' },
                       { icon: FileText,     label: 'Words Typed',    value: data.userWords,       color: '#0369a1', bg: '#f0f9ff', description: 'Your input length' },
                       { icon: XCircle,      label: 'Total Mistakes', value: data.totalMistakes,   color: '#dc2626', bg: '#fef2f2', description: 'Errors detected' },
                       { icon: Zap,          label: 'Typing Speed',   value: (data.wpm ?? (parseFloat(data.speed) || 0)), color: '#7c3aed', bg: '#faf5ff', description: 'Words per minute', suffix: ' WPM' },
@@ -680,7 +701,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
               {/* ── Stats Grid ───────────────────────────────────── */}
               <div>
                 <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 print:mb-2 flex items-center gap-2">
-                  <BarChart2 className="w-4 h-4 text-[#1e3a8a]" /> Full Statistics
+                  <BarChart2 className="w-4 h-4 text-[#0d6e70]" /> Full Statistics
                 </h2>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 print:gap-2">
                   {stats.map((s) => <StatCard key={s.label} {...s} />)}
@@ -722,30 +743,63 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
 
                 {/* Mistake type progress bars */}
                 <div className="bg-gray-50 rounded-2xl border border-gray-100 p-5 mb-4">
-                  {[
-                    { label: 'Spelling Errors',        count: data.spellingMistakes ?? 0,  total: data.totalWords || 1, color: '#7c3aed' },
-                    { label: 'Capitalisation Errors',  count: data.capitalMistakes ?? 0,   total: data.totalWords || 1, color: '#d97706' },
-                    { label: 'Missing Words',           count: data.missingCount    ?? (data.missingWords?.length ?? 0), total: data.totalWords || 1, color: '#dc2626' },
-                    { label: 'Extra Words',             count: data.extraCount      ?? (data.extraWords?.length ?? 0),   total: data.totalWords || 1, color: '#0891b2' },
-                  ].map(({ label, count, total, color }) => (
-                    <div key={label} className="mb-3 last:mb-0">
-                      <div className="flex justify-between text-xs font-bold text-gray-600 mb-1">
-                        <span>{label}</span>
-                        <span style={{ color }}>{count} words</span>
+                  {(() => {
+                    const errorBars = [
+                      { label: 'Spelling Errors',        count: data.spellingMistakes ?? 0,  total: data.totalWords || 1, color: '#7c3aed', unit: 'words' },
+                      { label: 'Capitalisation Errors',  count: data.capitalMistakes ?? 0,   total: data.totalWords || 1, color: '#d97706', unit: 'words' },
+                      { label: 'Missing Words',           count: data.missingCount    ?? (data.missingWords?.length ?? 0), total: data.totalWords || 1, color: '#dc2626', unit: 'words' },
+                      { label: 'Extra Words',             count: data.extraCount      ?? (data.extraWords?.length ?? 0),   total: data.totalWords || 1, color: '#0891b2', unit: 'words' },
+                    ];
+                    if (data.formattingMistakes !== undefined && data.formattingMistakes > 0) {
+                      errorBars.push({
+                        label: 'Formatting & Alignment Errors',
+                        count: data.formattingMistakes,
+                        total: data.totalWords || 1,
+                        color: '#0f172a',
+                        unit: 'errors'
+                      });
+                    }
+                    return errorBars.map(({ label, count, total, color, unit }) => (
+                      <div key={label} className="mb-3 last:mb-0">
+                        <div className="flex justify-between text-xs font-bold text-gray-600 mb-1">
+                          <span>{label}</span>
+                          <span style={{ color }}>{count} {unit}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{ width: `${Math.min(100, (count / total) * 100)}%`, background: color }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${Math.min(100, (count / total) * 100)}%`, background: color }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:gap-3">
                   {mistakeSections.map((sec) => <MistakeList key={sec.title} {...sec} />)}
                 </div>
+
+                {/* ── Formatting errors section ─────────────────────────── */}
+                {data.formattingErrors && data.formattingErrors.length > 0 && (
+                  <div className="mt-4 p-5 bg-red-50/40 rounded-2xl border border-red-100">
+                    <h4 className="text-sm font-black text-red-800 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <Gavel className="w-4 h-4 text-red-600 animate-pulse" />
+                      Formatting & Alignment Mismatches ({data.formattingErrors.length})
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {data.formattingErrors.map((err, idx) => (
+                        <div key={idx} className="flex items-start gap-3 bg-white p-3.5 rounded-xl border border-red-100 shadow-sm text-xs text-gray-700">
+                          <span className="font-mono bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold shrink-0">Line {err.lineIndex + 1}</span>
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <p className="font-bold text-gray-800 italic truncate">"{err.lineText}"</p>
+                            <p className="text-red-600 font-semibold">{err.message}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -788,9 +842,9 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
             <div className="print:hidden space-y-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#1e3a8a]" /> Performance History
+                  <Clock className="w-4 h-4 text-[#0d6e70]" /> Performance History
                 </h2>
-                <span className="text-xs bg-blue-50 text-[#1e3a8a] font-black px-3 py-1 rounded-full border border-blue-100">
+                <span className="text-xs bg-blue-50 text-[#0d6e70] font-black px-3 py-1 rounded-full border border-blue-100">
                   {history.length} attempts
                 </span>
               </div>
@@ -829,7 +883,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
                       >
                         <div className="flex items-center gap-4">
                           <div className={`w-10 h-10 rounded-xl border flex items-center justify-center font-black text-sm ${
-                            isCurrent ? 'bg-[#1e3a8a] border-[#1e3a8a] text-white' : 'bg-white border-gray-100 text-[#1e3a8a]'
+                            isCurrent ? 'bg-[#0d6e70] border-[#0d6e70] text-white' : 'bg-white border-gray-100 text-[#0d6e70]'
                           }`}>
                             {idx + 1}
                           </div>
@@ -844,7 +898,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
                               <span className="w-1 h-1 bg-gray-300 rounded-full" />
                               <span className="text-[10px] font-bold" style={{ color: hColor }}>{h.accuracy}% acc</span>
                               {isCurrent && (
-                                <span className="text-[10px] font-black bg-[#1e3a8a] text-white px-1.5 py-0.5 rounded-full">
+                                <span className="text-[10px] font-black bg-[#0d6e70] text-white px-1.5 py-0.5 rounded-full">
                                   Current
                                 </span>
                               )}
@@ -853,7 +907,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <p className="text-xl font-black" style={{ color: '#1e3a8a' }}>{h.wpm}</p>
+                            <p className="text-xl font-black" style={{ color: '#0d6e70' }}>{h.wpm}</p>
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">WPM</p>
                           </div>
                           <div
@@ -881,7 +935,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
           {activeTab === 'practice' && (
             <div className="print:hidden space-y-4">
               <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-[#1e3a8a]" /> Practice This Passage
+                <BookOpen className="w-4 h-4 text-[#0d6e70]" /> Practice This Passage
               </h2>
               {data.original ? (
                 <TypingPracticeWidget
@@ -900,11 +954,11 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
           {/* ── Footer ────────────────────────────────────────── */}
           <div className="border-t border-gray-100 pt-6 print:pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-[#1e3a8a] to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+              <div className="w-9 h-9 bg-gradient-to-br from-[#0d6e70] to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
                 <span className="text-white font-black text-sm">S</span>
               </div>
               <div>
-                <p className="font-black text-[#1e3a8a] text-sm">Shorthandians</p>
+                <p className="font-black text-[#0d6e70] text-sm">Shorthandians</p>
                 <p className="text-gray-400 text-xs">Under the guidance of Ayush Pandey · Prayagraj</p>
               </div>
             </div>

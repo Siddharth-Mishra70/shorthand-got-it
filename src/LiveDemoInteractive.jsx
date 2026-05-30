@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+﻿import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Download,
   CheckCircle2,
@@ -72,7 +72,7 @@ const LiveDemoInteractive = ({ onRegister }) => {
   }, [showResult, typedText, startTime, endTime]);
 
   const stats = analysis ? [
-    { value: analysis.summary.totalWords, label: 'Total Words', color: '#1e3a8a', bg: 'bg-blue-50' },
+    { value: analysis.summary.totalWords, label: 'Total Words', color: '#0d6e70', bg: 'bg-blue-50' },
     { value: analysis.summary.attemptedWords, label: 'Typed Words', color: '#0369a1', bg: 'bg-sky-50' },
     { value: analysis.summary.totalMistakes, label: 'Total Mistakes', color: '#dc2626', bg: 'bg-red-50' },
     { value: analysis.summary.accuracy + '%', label: 'Accuracy', color: '#16a34a', bg: 'bg-green-50' },
@@ -86,13 +86,13 @@ const LiveDemoInteractive = ({ onRegister }) => {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <span className="inline-flex items-center space-x-2 text-xs font-bold tracking-widest text-[#1e3a8a] uppercase bg-blue-50 border border-blue-100 px-4 py-2 rounded-full mb-4">
+          <span className="inline-flex items-center space-x-2 text-xs font-bold tracking-widest text-[#0d6e70] uppercase bg-blue-50 border border-blue-100 px-4 py-2 rounded-full mb-4">
             <Zap className="w-3 h-3 fill-current" />
             <span>Free Practice Trial</span>
           </span>
           <h2 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4 tracking-tight">
             Try Our{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1e3a8a] to-blue-600">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0d6e70] to-blue-600">
                Practice Dashboard
             </span>{' '}
             Now
@@ -107,7 +107,7 @@ const LiveDemoInteractive = ({ onRegister }) => {
         <div className="bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden transition-all duration-500 transform hover:scale-[1.01]">
 
           {/* Card Header Bar */}
-          <div className="bg-gradient-to-r from-[#0f2167] via-[#1e3a8a] to-[#2563eb] px-8 py-5 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-[#07414e] via-[#0d6e70] to-[#2563eb] px-8 py-5 flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex space-x-2">
                 <div className="w-3.5 h-3.5 bg-[#ff5f57] rounded-full shadow-inner" />
@@ -168,7 +168,7 @@ const LiveDemoInteractive = ({ onRegister }) => {
                   </div>
                   <button
                     onClick={handleSubmit}
-                    className="group w-full sm:w-auto bg-[#1e3a8a] hover:bg-blue-700 text-white font-black px-10 py-5 rounded-2xl transition-all duration-300 shadow-[0_10px_30px_rgba(30,58,138,0.3)] hover:shadow-[0_15px_40px_rgba(30,58,138,0.4)] flex items-center justify-center space-x-3 transform hover:-translate-y-1"
+                    className="group w-full sm:w-auto bg-[#0d6e70] hover:bg-blue-700 text-white font-black px-10 py-5 rounded-2xl transition-all duration-300 shadow-[0_10px_30px_rgba(30,58,138,0.3)] hover:shadow-[0_15px_40px_rgba(30,58,138,0.4)] flex items-center justify-center space-x-3 transform hover:-translate-y-1"
                   >
                     <span>Check My Speed & Accuracy</span>
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -231,7 +231,7 @@ const LiveDemoInteractive = ({ onRegister }) => {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-8 pt-6 border-t border-gray-100">
                   <button 
                     onClick={handleReset}
-                    className="flex items-center space-x-2 text-gray-400 hover:text-[#1e3a8a] font-bold text-sm transition-colors group"
+                    className="flex items-center space-x-2 text-gray-400 hover:text-[#0d6e70] font-bold text-sm transition-colors group"
                   >
                     <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
                     <span>Try Another Session</span>

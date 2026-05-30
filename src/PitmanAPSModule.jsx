@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Activity, CheckCircle2, Share2, X, FileCheck, ArrowLeft, Eye, Clock, Maximize, Minimize, TrendingUp } from 'lucide-react';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { Activity, CheckCircle2, Share2, X, FileCheck, ArrowLeft, Eye, Clock, Maximize, Minimize, TrendingUp, Search } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { saveTestResult } from './lib/saveTestResult';
 
@@ -9,8 +9,14 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
     const [viewMode, setViewMode] = useState('selection'); // 'selection' | 'practice'
     const [activeDateTab, setActiveDateTab] = useState('Today');
     const [isLoadingExercises, setIsLoadingExercises] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
+
+    // Reset currentPage when search query or activeDateTab changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, activeDateTab]);
 
     // Initial Load
     useEffect(() => {
@@ -73,18 +79,29 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
         return () => window.removeEventListener('storage', load);
     }, []);
 
+    const filteredExercises = React.useMemo(() => {
+        if (!searchQuery.trim()) return exercises;
+        const q = searchQuery.toLowerCase();
+        return exercises.filter(ex => 
+            (ex.title || '').toLowerCase().includes(q) ||
+            (ex.job_title || '').toLowerCase().includes(q) ||
+            (ex.lines || []).join(' ').toLowerCase().includes(q)
+        );
+    }, [exercises, searchQuery]);
+
     const groupedTests = React.useMemo(() => {
         const today = new Date().toLocaleDateString();
         const yesterday = new Date(Date.now() - 86400000).toLocaleDateString();
         const cats = { 'Today': [], 'Yesterday': [], 'All Practice': [] };
-        exercises.forEach(ex => {
+        
+        filteredExercises.forEach(ex => {
             const dateStr = ex.created_at ? new Date(ex.created_at).toLocaleDateString() : new Date().toLocaleDateString();
             if (dateStr === today) cats['Today'].push(ex);
             else if (dateStr === yesterday) cats['Yesterday'].push(ex);
             cats['All Practice'].push(ex);
         });
         return cats;
-    }, [exercises]);
+    }, [filteredExercises]);
 
     const mockReferenceText = selectedExercise?.lines?.join(' ') || '';
     const [inputText, setInputText] = useState('');
@@ -199,8 +216,8 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
         return (
             <div className="h-screen bg-gray-50 flex items-center justify-center p-8 font-sans">
                 <div className="text-center animate-in fade-in duration-500">
-                    <div className="w-16 h-16 border-4 border-[#1e3a8a] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-[#1e3a8a] font-bold text-lg">Loading Course Syllabus...</p>
+                    <div className="w-16 h-16 border-4 border-[#0d6e70] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-[#0d6e70] font-bold text-lg">Loading Course Syllabus...</p>
                 </div>
             </div>
         );
@@ -213,7 +230,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
         const handleTabChange = (tab) => { setActiveDateTab(tab); setCurrentPage(1); };
         return (
             <div className="h-full flex-1 bg-[#f8fafc] flex flex-col font-sans">
-                <div className="bg-[#1e3a8a] text-white px-6 py-4 flex items-center space-x-4 shadow-md">
+                <div className="bg-[#0d6e70] text-white px-6 py-4 flex items-center space-x-4 shadow-md">
                     <button onClick={onBack} className="hover:bg-blue-800 p-2 rounded-full transition-colors"><ArrowLeft className="w-6 h-6" /></button>
                     <h2 className="text-xl font-bold tracking-wide">Pitman Shorthand Module</h2>
                 </div>
@@ -221,12 +238,12 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                     <div className="w-full mx-auto space-y-10">
                          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div>
-                                <h3 className="text-4xl font-black text-[#1e3a8a] tracking-tight">Pitman Dashboard</h3>
+                                <h3 className="text-4xl font-black text-[#0d6e70] tracking-tight">Pitman Dashboard</h3>
                                 <p className="text-gray-500 font-bold mt-1 uppercase text-xs tracking-widest italic text-blue-600">Select an exercise to begin your shorthand practice</p>
                             </div>
-                            <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
+                            <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100 gap-1">
                                 {['Today', 'Yesterday', 'All Practice'].map(tab => (
-                                    <button key={tab} onClick={() => handleTabChange(tab)} className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${activeDateTab === tab ? 'bg-[#1e3a8a] text-white shadow-lg' : 'text-gray-400 hover:text-blue-900'}`}>
+                                    <button key={tab} onClick={() => handleTabChange(tab)} className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${activeDateTab === tab ? 'bg-[#0d6e70] text-white shadow-lg' : 'text-gray-400 hover:text-blue-900'}`}>
                                         {tab}
                                         <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeDateTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
                                             {groupedTests[tab]?.length ?? 0}
@@ -234,6 +251,33 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Search Bar + Navigation indicator */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                            <div className="relative flex-1 max-w-md">
+                                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search exercises by title, job, text..."
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="w-full pl-9 pr-9 py-2 text-xs border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0d6e70] focus:border-[#0d6e70] bg-white text-gray-800"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                            {activeList.length > 0 && (
+                                <span className="text-xs text-gray-400 font-bold self-end sm:self-auto">
+                                    Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, activeList.length)} of {activeList.length}
+                                </span>
+                            )}
                         </div>
 
                         {activeList.length === 0 ? (
@@ -262,14 +306,14 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                                             <div
                                                 key={test.id}
                                                 onClick={() => { setSelectedExercise(test); setViewMode('practice'); handleReset(); }}
-                                                className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#1e3a8a]/30 transition-all duration-200 cursor-pointer flex items-center gap-4 px-5 py-4 relative overflow-hidden"
+                                                className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#0d6e70]/30 transition-all duration-200 cursor-pointer flex items-center gap-4 px-5 py-4 relative overflow-hidden"
                                             >
                                                 {/* Left accent bar on hover */}
-                                                <div className="absolute left-0 top-0 h-full w-1 bg-[#1e3a8a] scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-center rounded-l-2xl" />
+                                                <div className="absolute left-0 top-0 h-full w-1 bg-[#0d6e70] scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-center rounded-l-2xl" />
 
                                                 {/* Index badge */}
-                                                <div className="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-[#1e3a8a] flex items-center justify-center shrink-0 transition-colors">
-                                                    <span className="text-sm font-black text-[#1e3a8a] group-hover:text-white transition-colors">{globalIdx}</span>
+                                                <div className="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-[#0d6e70] flex items-center justify-center shrink-0 transition-colors">
+                                                    <span className="text-sm font-black text-[#0d6e70] group-hover:text-white transition-colors">{globalIdx}</span>
                                                 </div>
 
                                                 {/* Icon */}
@@ -279,7 +323,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
 
                                                 {/* Title + chips */}
                                                 <div className="flex-1 min-w-0">
-                                                    <h3 className="font-black text-gray-900 text-sm md:text-base group-hover:text-[#1e3a8a] transition-colors truncate">{test.title}</h3>
+                                                    <h3 className="font-black text-gray-900 text-sm md:text-base group-hover:text-[#0d6e70] transition-colors truncate">{test.title}</h3>
                                                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                                         <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{wordCount} words</span>
                                                         <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{dateStr}</span>
@@ -288,7 +332,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                                                 </div>
 
                                                 {/* CTA */}
-                                                <button className="shrink-0 px-5 py-2.5 bg-[#f0f4ff] text-[#1e3a8a] group-hover:bg-[#1e3a8a] group-hover:text-white rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-200 whitespace-nowrap">
+                                                <button className="shrink-0 px-5 py-2.5 bg-[#f0fafa] text-[#0d6e70] group-hover:bg-[#0d6e70] group-hover:text-white rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-200 whitespace-nowrap">
                                                     Start →
                                                 </button>
                                             </div>
@@ -299,11 +343,11 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                                 {/* Pagination */}
                                 {totalPages > 1 && (
                                     <div className="flex items-center justify-center gap-2 pt-2">
-                                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#1e3a8a] hover:text-white hover:border-[#1e3a8a] disabled:opacity-40 disabled:cursor-not-allowed transition-all">← Prev</button>
+                                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#0d6e70] hover:text-white hover:border-[#0d6e70] disabled:opacity-40 disabled:cursor-not-allowed transition-all">← Prev</button>
                                         {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                                            <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-[#1e3a8a] text-white shadow-lg' : 'border border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-[#1e3a8a]'}`}>{p}</button>
+                                            <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-[#0d6e70] text-white shadow-lg' : 'border border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-[#0d6e70]'}`}>{p}</button>
                                         ))}
-                                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#1e3a8a] hover:text-white hover:border-[#1e3a8a] disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next →</button>
+                                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#0d6e70] hover:text-white hover:border-[#0d6e70] disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next →</button>
                                     </div>
                                 )}
                             </div>
@@ -317,7 +361,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
     // ── Practice Mode ─────────────────────────────────────
     return (
         <div className="h-full flex-1 bg-white flex flex-col font-sans overflow-hidden">
-            <div className="bg-[#1e3a8a] text-white px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-lg z-20">
+            <div className="bg-[#0d6e70] text-white px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-lg z-20">
                 <div className="flex items-center space-x-4 mb-4 md:mb-0 w-full md:w-1/3">
                     <button onClick={() => setViewMode('selection')} className="hover:bg-blue-800 p-2 rounded-full transition-colors"><ArrowLeft className="w-5 h-5" /></button>
                     <div><h2 className="text-lg font-black tracking-tight line-clamp-1">{selectedExercise?.title}</h2><span className="text-[10px] text-blue-200 uppercase font-black">Pitman Shorthand Practice</span></div>
@@ -372,7 +416,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Live Transcription Area</span>
                         <div className="flex items-center space-x-2">
                             <Clock className="w-4 h-4 text-gray-400" />
-                            <span className={`font-mono font-black text-xl ${timeLeft < 60 ? 'text-red-600' : 'text-[#1e3a8a]'}`}>
+                            <span className={`font-mono font-black text-xl ${timeLeft < 60 ? 'text-red-600' : 'text-[#0d6e70]'}`}>
                                 {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}
                             </span>
                         </div>
@@ -408,14 +452,14 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
             {showModal && finalStats && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
                     <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl">
-                        <div className="bg-[#1e3a8a] p-10 text-center text-white relative">
+                        <div className="bg-[#0d6e70] p-10 text-center text-white relative">
                              <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-400" />
                              <h2 className="text-2xl font-black">Practice Logged</h2>
                              <p className="text-blue-200 text-sm italic">Session completed successfully</p>
                         </div>
                         <div className="p-8 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-blue-50 p-4 rounded-2xl text-center"><span className="text-[9px] font-black text-blue-400 block mb-1 uppercase">Final Speed</span><span className="text-2xl font-black text-[#1e3a8a] leading-none">{finalStats.wpm} WPM</span></div>
+                                <div className="bg-blue-50 p-4 rounded-2xl text-center"><span className="text-[9px] font-black text-blue-400 block mb-1 uppercase">Final Speed</span><span className="text-2xl font-black text-[#0d6e70] leading-none">{finalStats.wpm} WPM</span></div>
                                 <div className="bg-green-50 p-4 rounded-2xl text-center transition-all"><span className="text-[9px] font-black text-green-400 block mb-1 uppercase">Accuracy</span><span className="text-2xl font-black text-green-600 leading-none">{finalStats.accuracy}%</span></div>
                             </div>
 
@@ -440,7 +484,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                                 <button 
                                     onClick={() => onTestComplete && onTestComplete(attemptId)} 
                                     disabled={!attemptId || isSaving}
-                                    className={`w-full py-4 bg-[#1e3a8a] hover:bg-blue-800 text-white font-black rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 ${(!attemptId || isSaving) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`w-full py-4 bg-[#0d6e70] hover:bg-blue-800 text-white font-black rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 ${(!attemptId || isSaving) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     <TrendingUp className="w-5 h-5" />
                                     <span>VIEW DETAILED ANALYSIS</span>

@@ -20,7 +20,8 @@ import {
     Keyboard,
     Clock,
     Maximize,
-    Minimize
+    Minimize,
+    Search
 } from 'lucide-react';
 import 'react-quill/dist/quill.snow.css';
 import DetailedAnalysisPanel from './DetailedAnalysisPanel';
@@ -92,30 +93,46 @@ const HighCourtFormatting = ({ onBack, user, onTestComplete }) => {
     });
 
     const updateActiveFormats = () => {
+        if (!editorRef.current) return;
+        
         try {
-            setActiveFormats({
-                bold:          document.queryCommandState('bold'),
-                italic:        document.queryCommandState('italic'),
-                underline:     document.queryCommandState('underline'),
-                justifyLeft:   document.queryCommandState('justifyLeft'),
-                justifyCenter: document.queryCommandState('justifyCenter'),
-                justifyRight:  document.queryCommandState('justifyRight'),
-                justifyFull:   document.queryCommandState('justifyFull'),
-            });
-        } catch (_) {}
-    };
+            // Check browser's internal command state for formatting
+            const isBold = document.queryCommandState('bold');
+            const isItalic = document.queryCommandState('italic');
+            const isUnderline = document.queryCommandState('underline');
+            const isLeft = document.queryCommandState('justifyLeft');
+            const isCenter = document.queryCommandState('justifyCenter');
+            const isRight = document.queryCommandState('justifyRight');
+            const isFull = document.queryCommandState('justifyFull');
 
-    // Listen to selection changes so toolbar stays in sync when cursor moves
-    useEffect(() => {
-        document.addEventListener('selectionchange', updateActiveFormats);
-        return () => document.removeEventListener('selectionchange', updateActiveFormats);
-    }, []);
+            setActiveFormats({
+                bold: isBold,
+                italic: isItalic,
+                underline: isUnderline,
+                justifyLeft: isLeft,
+                justifyCenter: isCenter,
+                justifyRight: isRight,
+                justifyFull: isFull
+            });
+        } catch (_) {
+            setActiveFormats({
+                bold: false, italic: false, underline: false,
+                justifyLeft: false, justifyCenter: false, justifyRight: false, justifyFull: false
+            });
+        }
+    };
 
     const [hcTests, setHcTests] = useState([]);
     const [selectedTestId, setSelectedTestId] = useState(null); // Initialize as null, will be set in useEffect
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
+
+    // Reset currentPage when search query or activeDateTab changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, activeDateTab]);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -256,13 +273,24 @@ ORAL ORDER
     Post this matter after four weeks.`;
 
     // ── Grouping Logic ──────────────────────────────────────────
+    const filteredHcTests = React.useMemo(() => {
+        if (!searchQuery.trim()) return hcTests;
+        const q = searchQuery.toLowerCase();
+        return hcTests.filter(t => 
+            (t.title || '').toLowerCase().includes(q) ||
+            (t.job_title || '').toLowerCase().includes(q) ||
+            (t.test_type || '').toLowerCase().includes(q) ||
+            (t.original_text || t.text || '').toLowerCase().includes(q)
+        );
+    }, [hcTests, searchQuery]);
+
     const groupedTests = React.useMemo(() => {
         const today = new Date().toLocaleDateString();
         const yesterday = new Date(Date.now() - 86400000).toLocaleDateString();
 
         const categories = { 'Today': [], 'Yesterday': [], 'All Practice': [] };
         
-        hcTests.forEach(ex => {
+        filteredHcTests.forEach(ex => {
             const exDate = ex.created_at ? new Date(ex.created_at) : new Date();
             const dateStr = exDate.toLocaleDateString();
             
@@ -273,7 +301,7 @@ ORAL ORDER
         });
 
         return categories;
-    }, [hcTests]);
+    }, [filteredHcTests]);
 
     const selectedTest = hcTests.find(t => t.id === selectedTestId);
     const [docViewMode, setDocViewMode] = useState('word');
@@ -388,6 +416,23 @@ ORAL ORDER
     const execCmd = (command, value = null) => {
         document.execCommand(command, false, value);
         if (editorRef.current) editorRef.current.focus();
+
+        // Snappy optimistic UI state update
+        if (['bold', 'italic', 'underline'].includes(command)) {
+            setActiveFormats(prev => ({
+                ...prev,
+                [command]: !prev[command]
+            }));
+        } else if (command.startsWith('justify')) {
+            setActiveFormats(prev => ({
+                ...prev,
+                justifyLeft: command === 'justifyLeft',
+                justifyCenter: command === 'justifyCenter',
+                justifyRight: command === 'justifyRight',
+                justifyFull: command === 'justifyFull'
+            }));
+        }
+
         // Update toolbar highlights after applying formatting
         setTimeout(updateActiveFormats, 0);
     };
@@ -410,7 +455,11 @@ ORAL ORDER
             let savedAttemptId = null;
 
             if (resultText && resultText !== '<br>') {
-                const analysis = generateDetailedAnalysis(originalBase, resultText, { strict: true });
+                const analysis = generateDetailedAnalysis(originalBase, resultText, { 
+                    strict: true,
+                    originalHtml: decodedHtml || decodedPlain || getFormattedContent(referenceText),
+                    attemptedHtml: htmlContent
+                });
                 accuracy = analysis.summary.accuracy;
                 totalMistakes = analysis.summary.totalMistakes;
 
@@ -426,7 +475,10 @@ ORAL ORDER
                     userId: user?.id,
                     studentName: user?.name,
                     // Attach HTML for the admin to check formatting specifically
-                    extraMistakesData: { html_content: htmlContent }
+                    extraMistakesData: { 
+                        html_content: htmlContent,
+                        formatting_errors: analysis.formattingErrors || []
+                    }
                 });
 
                 if (result && result.attemptId) {
@@ -486,7 +538,7 @@ ORAL ORDER
                 title={title}
                 className={`p-2 rounded-lg transition-all duration-150 border flex items-center justify-center active:scale-90 ${
                     isActive
-                        ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-inner'
+                        ? 'bg-[#0d6e70] text-white border-[#0d6e70] shadow-inner'
                         : 'text-gray-700 hover:text-blue-700 hover:bg-blue-50/60 border-transparent hover:border-blue-200'
                 }`}
             >
@@ -505,7 +557,7 @@ ORAL ORDER
         return (
             <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
                 {/* Fixed Top Header for Selection Mode */}
-                <div className="bg-[#1e3a8a] text-white px-6 py-4 flex justify-between items-center shadow-md z-[100]">
+                <div className="bg-[#0d6e70] text-white px-6 py-4 flex justify-between items-center shadow-md z-[100]">
                     <div className="flex items-center space-x-4">
                         <button onClick={onBack} className="hover:bg-blue-800 p-2 rounded-full transition-colors"><ArrowLeft className="w-6 h-6" /></button>
                         <h2 className="text-xl font-bold tracking-wide">High Court Formatting</h2>
@@ -517,15 +569,15 @@ ORAL ORDER
                         {/* Tab Switcher */}
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <div>
-                                <h3 className="text-3xl font-black text-[#1e3a8a] tracking-tight">Practice Dashboard</h3>
+                                <h3 className="text-3xl font-black text-[#0d6e70] tracking-tight">Practice Dashboard</h3>
                                 <p className="text-gray-500 font-bold mt-1">Select a case draft to start your formatting practice.</p>
                             </div>
-                            <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
+                            <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100 gap-1">
                                 {['Today', 'Yesterday', 'All Practice'].map(tab => (
                                     <button
                                         key={tab}
                                         onClick={() => handleTabChange(tab)}
-                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${activeDateTab === tab ? 'bg-[#1e3a8a] text-white shadow-lg' : 'text-gray-400 hover:text-[#1e3a8a]'}`}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${activeDateTab === tab ? 'bg-[#0d6e70] text-white shadow-lg' : 'text-gray-400 hover:text-[#0d6e70]'}`}
                                     >
                                         {tab}
                                         <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeDateTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
@@ -534,6 +586,33 @@ ORAL ORDER
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Search Bar + Navigation indicator */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                            <div className="relative flex-1 max-w-md">
+                                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search exercises by title, job, text..."
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="w-full pl-9 pr-9 py-2 text-xs border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0d6e70] focus:border-[#0d6e70] bg-white text-gray-800"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                            {activeList.length > 0 && (
+                                <span className="text-xs text-gray-400 font-bold self-end sm:self-auto">
+                                    Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, activeList.length)} of {activeList.length}
+                                </span>
+                            )}
                         </div>
 
                         {/* List */}
@@ -564,14 +643,14 @@ ORAL ORDER
                                             <div
                                                 key={test.id}
                                                 onClick={() => { setSelectedTestId(test.id); setViewMode('writing'); }}
-                                                className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#1e3a8a]/30 transition-all duration-200 cursor-pointer flex items-center gap-4 px-5 py-4 relative overflow-hidden"
+                                                className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#0d6e70]/30 transition-all duration-200 cursor-pointer flex items-center gap-4 px-5 py-4 relative overflow-hidden"
                                             >
                                                 {/* Left accent bar on hover */}
-                                                <div className="absolute left-0 top-0 h-full w-1 bg-[#1e3a8a] scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-center rounded-l-2xl" />
+                                                <div className="absolute left-0 top-0 h-full w-1 bg-[#0d6e70] scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-center rounded-l-2xl" />
 
                                                 {/* Index badge */}
-                                                <div className="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-[#1e3a8a] flex items-center justify-center shrink-0 transition-colors">
-                                                    <span className="text-sm font-black text-[#1e3a8a] group-hover:text-white transition-colors">{globalIdx}</span>
+                                                <div className="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-[#0d6e70] flex items-center justify-center shrink-0 transition-colors">
+                                                    <span className="text-sm font-black text-[#0d6e70] group-hover:text-white transition-colors">{globalIdx}</span>
                                                 </div>
 
                                                 {/* Icon */}
@@ -581,7 +660,7 @@ ORAL ORDER
 
                                                 {/* Title + chips */}
                                                 <div className="flex-1 min-w-0">
-                                                    <h3 className="font-black text-gray-900 text-sm md:text-base group-hover:text-[#1e3a8a] transition-colors truncate">{test.title}</h3>
+                                                    <h3 className="font-black text-gray-900 text-sm md:text-base group-hover:text-[#0d6e70] transition-colors truncate">{test.title}</h3>
                                                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                                         <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">Drafting</span>
                                                         <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{dateStr}</span>
@@ -591,7 +670,7 @@ ORAL ORDER
                                                 </div>
 
                                                 {/* CTA */}
-                                                <button className="shrink-0 px-5 py-2.5 bg-[#f0f4ff] text-[#1e3a8a] group-hover:bg-[#1e3a8a] group-hover:text-white rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-200 whitespace-nowrap">
+                                                <button className="shrink-0 px-5 py-2.5 bg-[#f0fafa] text-[#0d6e70] group-hover:bg-[#0d6e70] group-hover:text-white rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-200 whitespace-nowrap">
                                                     Start →
                                                 </button>
                                             </div>
@@ -602,11 +681,11 @@ ORAL ORDER
                                 {/* Pagination */}
                                 {totalPages > 1 && (
                                     <div className="flex items-center justify-center gap-2 pt-2">
-                                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#1e3a8a] hover:text-white hover:border-[#1e3a8a] disabled:opacity-40 disabled:cursor-not-allowed transition-all">← Prev</button>
+                                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#0d6e70] hover:text-white hover:border-[#0d6e70] disabled:opacity-40 disabled:cursor-not-allowed transition-all">← Prev</button>
                                         {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                                            <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-[#1e3a8a] text-white shadow-lg' : 'border border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-[#1e3a8a]'}`}>{p}</button>
+                                            <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-[#0d6e70] text-white shadow-lg' : 'border border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-[#0d6e70]'}`}>{p}</button>
                                         ))}
-                                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#1e3a8a] hover:text-white hover:border-[#1e3a8a] disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next →</button>
+                                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#0d6e70] hover:text-white hover:border-[#0d6e70] disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next →</button>
                                     </div>
                                 )}
                             </div>
@@ -620,7 +699,7 @@ ORAL ORDER
     return (
         <div className="h-screen overflow-hidden bg-gray-50 flex flex-col font-sans relative">
             {/* Top Header */}
-            <div className="sticky top-0 bg-[#1e3a8a] text-white px-6 py-4 flex justify-between items-center shadow-lg z-[100]">
+            <div className="sticky top-0 bg-[#0d6e70] text-white px-6 py-4 flex justify-between items-center shadow-lg z-[100]">
                 <div className="flex items-center space-x-4">
                     <button
                         onClick={() => setViewMode('selection')}
@@ -705,7 +784,7 @@ ORAL ORDER
                             <div className="flex-1 bg-white overflow-hidden flex flex-col border border-gray-300 rounded-sm">
                                 <div className="bg-gray-100 px-4 py-2 border-b text-xs font-bold text-gray-600 uppercase tracking-wider flex justify-between items-center">
                                     <div className="flex items-center space-x-4">
-                                        <span className="font-black text-[#1e3a8a]">{selectedTest?.title || 'No Test Selected'}</span>
+                                        <span className="font-black text-[#0d6e70]">{selectedTest?.title || 'No Test Selected'}</span>
                                         <div className="h-4 w-px bg-gray-300" />
                                         <span>Reference Document</span>
                                         {decodedHtml && (
@@ -798,6 +877,7 @@ ORAL ORDER
                                         onInput={handleInputStart}
                                         onKeyUp={updateActiveFormats}
                                         onMouseUp={updateActiveFormats}
+                                        onFocus={updateActiveFormats}
                                         onCopy={(e) => { e.preventDefault(); alert("Copying is disabled!"); }}
                                         onPaste={(e) => { e.preventDefault(); alert("Pasting is disabled!"); }}
                                         onContextMenu={(e) => { e.preventDefault(); }}
@@ -806,7 +886,7 @@ ORAL ORDER
                                                 e.preventDefault();
                                             }
                                         }}
-                                        className="flex-1 min-h-0 p-10 md:p-16 outline-none font-mono font-normal text-[16px] md:text-[18px] leading-loose text-justify text-black overflow-y-auto"
+                                        className="flex-1 min-h-0 p-10 md:p-16 outline-none font-mono font-normal text-[16px] md:text-[18px] leading-loose text-black overflow-y-auto"
                                         spellCheck={false}
                                         autoComplete="off"
                                         autoCorrect="off"

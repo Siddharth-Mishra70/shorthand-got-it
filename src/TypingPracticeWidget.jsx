@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Play, Square, RotateCcw, Send, Timer,
   CheckCircle2, AlertCircle, BookOpen, Keyboard,
@@ -105,12 +105,12 @@ const TypingPracticeWidget = ({
   // Render
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="w-full rounded-3xl border border-[#1e3a8a]/20 bg-white shadow-xl overflow-hidden">
+    <div className="w-full rounded-3xl border border-[#0d6e70]/20 bg-white shadow-xl overflow-hidden">
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div
         className="px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
-        style={{ background: 'linear-gradient(135deg, #0f2167 0%, #1e3a8a 60%, #1a56db 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #07414e 0%, #0d6e70 60%, #0891b2 100%)' }}
       >
         <div className="flex items-center space-x-3 flex-1">
           <div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center">
@@ -152,7 +152,7 @@ const TypingPracticeWidget = ({
                 className="h-full rounded-full transition-all duration-300"
                 style={{
                   width: `${progress}%`,
-                  background: 'linear-gradient(90deg, #1e3a8a, #3b82f6)',
+                  background: 'linear-gradient(90deg, #0d6e70, #06b6d4)',
                 }}
               />
             </div>
@@ -163,7 +163,7 @@ const TypingPracticeWidget = ({
         <div className="rounded-2xl border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-[#1e3a8a]" />
+              <BookOpen className="w-4 h-4 text-[#0d6e70]" />
               <span className="text-sm font-black text-gray-700">Original Passage</span>
               <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
                 {origWordCount} words
@@ -171,7 +171,7 @@ const TypingPracticeWidget = ({
             </div>
             <button
               onClick={() => setShowOrig(v => !v)}
-              className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-[#1e3a8a] transition-colors"
+              className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-[#0d6e70] transition-colors"
             >
               {showOrig ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               {showOrig ? 'Hide' : 'Show'}
@@ -188,7 +188,7 @@ const TypingPracticeWidget = ({
         {/* ── Typing Area ───────────────────────────────────── */}
         {phase !== 'idle' && (
           <div className="rounded-2xl border-2 overflow-hidden transition-colors duration-200"
-            style={{ borderColor: phase === 'typing' ? '#1e3a8a' : '#e5e7eb' }}>
+            style={{ borderColor: phase === 'typing' ? '#0d6e70' : '#e5e7eb' }}>
             <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100">
               <Keyboard className="w-4 h-4 text-gray-400" />
               <span className="text-sm font-black text-gray-700">Your Answer</span>
@@ -214,7 +214,7 @@ const TypingPracticeWidget = ({
         {phase === 'idle' && (
           <div className="py-8 flex flex-col items-center gap-3 text-center">
             <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center">
-              <Keyboard className="w-8 h-8 text-[#1e3a8a]" />
+              <Keyboard className="w-8 h-8 text-[#0d6e70]" />
             </div>
             <p className="text-gray-500 text-sm font-medium max-w-xs">
               Click <strong>"Start Practice"</strong> below to begin the timer and type the passage above.
@@ -227,7 +227,7 @@ const TypingPracticeWidget = ({
           {phase === 'idle' && (
             <button
               onClick={handleStart}
-              className="flex items-center gap-2 bg-[#1e3a8a] hover:bg-blue-700 text-white font-black px-6 py-3 rounded-2xl transition-all hover:shadow-lg hover:shadow-blue-500/25 text-sm"
+              className="flex items-center gap-2 bg-[#0d6e70] hover:bg-blue-700 text-white font-black px-6 py-3 rounded-2xl transition-all hover:shadow-lg hover:shadow-blue-500/25 text-sm"
             >
               <Play className="w-4 h-4" />
               Start Practice
@@ -257,7 +257,7 @@ const TypingPracticeWidget = ({
           {phase === 'done' && (
             <button
               onClick={handleStart}
-              className="flex items-center gap-2 border-2 border-[#1e3a8a] text-[#1e3a8a] hover:bg-blue-50 font-black px-6 py-3 rounded-2xl transition-colors text-sm"
+              className="flex items-center gap-2 border-2 border-[#0d6e70] text-[#0d6e70] hover:bg-blue-50 font-black px-6 py-3 rounded-2xl transition-colors text-sm"
             >
               <RotateCcw className="w-4 h-4" />
               Try Again
@@ -286,7 +286,7 @@ const TypingPracticeWidget = ({
               <div className="h-10 w-px bg-gray-200" />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1">
                 {[
-                  { label: 'Time',        value: formatTime(elapsed),                     color: '#1e3a8a' },
+                  { label: 'Time',        value: formatTime(elapsed),                     color: '#0d6e70' },
                   { label: 'WPM',         value: analysis.summary.wpm ?? '—',             color: '#7c3aed' },
                   { label: 'Mistakes',    value: analysis.summary.totalMistakes,          color: '#dc2626' },
                   { label: 'Correct',     value: analysis.summary.correctWords,           color: '#16a34a' },

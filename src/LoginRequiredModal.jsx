@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { Lock, X, LogIn, UserPlus, ShieldCheck } from 'lucide-react';
 
 const LoginRequiredModal = ({ onLogin, onRegister, onClose }) => {
@@ -35,7 +35,7 @@ const LoginRequiredModal = ({ onLogin, onRegister, onClose }) => {
         {/* Top gradient banner */}
         <div
           className="px-8 pt-10 pb-8 text-center relative overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #0f2167 0%, #1e3a8a 60%, #1a56db 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #07414e 0%, #0d6e70 60%, #0891b2 100%)' }}
         >
           {/* Decorative orb */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
@@ -55,7 +55,7 @@ const LoginRequiredModal = ({ onLogin, onRegister, onClose }) => {
         <div className="px-8 py-7">
           {/* Feature teaser */}
           <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 mb-6">
-            <div className="flex items-center space-x-2 text-[#1e3a8a] font-bold text-sm mb-3">
+            <div className="flex items-center space-x-2 text-[#0d6e70] font-bold text-sm mb-3">
               <ShieldCheck className="w-4 h-4" />
               <span>What you'll unlock after signing in:</span>
             </div>
@@ -75,7 +75,7 @@ const LoginRequiredModal = ({ onLogin, onRegister, onClose }) => {
             <button
               id="modal-login-btn"
               onClick={onLogin}
-              className="w-full flex items-center justify-center space-x-3 bg-[#1e3a8a] hover:bg-blue-700 text-white font-black py-3.5 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
+              className="w-full flex items-center justify-center space-x-3 bg-[#0d6e70] hover:bg-blue-700 text-white font-black py-3.5 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
             >
               <LogIn className="w-5 h-5" />
               <span>Sign In</span>

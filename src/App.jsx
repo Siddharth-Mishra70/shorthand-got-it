@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import {
   GraduationCap,
@@ -41,8 +41,8 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
     onClick={onClick}
     className={`flex items-center space-x-3 px-4 py-3 rounded-lg cursor-pointer transition-colors ${
       active
-        ? 'bg-[#1e3a8a] text-white'
-        : 'text-gray-600 hover:bg-blue-50 hover:text-[#1e3a8a]'
+        ? 'bg-[#0d6e70] text-white'
+        : 'text-gray-600 hover:bg-blue-50 hover:text-[#0d6e70]'
     }`}
   >
     <Icon className="w-5 h-5" />
@@ -52,7 +52,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
 
 const CircularCourseCard = ({ title, type, isPremium, onTakeTest }) => (
   <div className="flex flex-col items-center group w-full max-w-[280px]">
-    <div className="relative w-full aspect-square rounded-full bg-white shadow-xl flex flex-col justify-center items-center text-center p-6 border-4 border-transparent group-hover:border-[#1e3a8a] transition-all duration-300">
+    <div className="relative w-full aspect-square rounded-full bg-white shadow-xl flex flex-col justify-center items-center text-center p-6 border-4 border-transparent group-hover:border-[#0d6e70] transition-all duration-300">
       <div className="absolute top-2 right-2 sm:top-4 sm:right-4">
         <span
           className={`px-3 py-1 text-[10px] sm:text-xs font-black rounded-full shadow-sm ${
@@ -63,14 +63,14 @@ const CircularCourseCard = ({ title, type, isPremium, onTakeTest }) => (
         </span>
       </div>
       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
-        <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-[#1e3a8a]" />
+        <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-[#0d6e70]" />
       </div>
       <h3 className="font-extrabold text-gray-800 text-xs sm:text-sm leading-tight mb-1 px-2">{title}</h3>
       <p className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest">{type}</p>
     </div>
     <button
       onClick={onTakeTest}
-      className="mt-6 w-full sm:w-auto bg-[#1e3a8a] hover:bg-blue-800 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center justify-center space-x-2"
+      className="mt-6 w-full sm:w-auto bg-[#0d6e70] hover:bg-blue-800 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center justify-center space-x-2"
     >
       <PlayCircle className="w-4 h-4" />
       <span>Take Test</span>
@@ -95,6 +95,65 @@ const useProtectedNav = (isLoggedIn, setCurrentView, setShowAuthModal, setPendin
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// URL Mapping Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+const cleanPath = (path) => {
+  if (!path) return '';
+  let p = path.trim();
+  if (p.endsWith('/') && p.length > 1) {
+    p = p.slice(0, -1);
+  }
+  return p;
+};
+
+const getViewFromPath = (path) => {
+  const p = cleanPath(path);
+  if (!p || p === '/') return 'landing';
+  if (p === '/login' || p === '/register' || p === '/signup') return 'auth';
+  if (p === '/dashboard') return 'dashboard';
+  if (p === '/dashboard/results') return 'results';
+  if (p.startsWith('/dashboard/results/')) {
+    const id = p.slice('/dashboard/results/'.length);
+    return `results:${id}`;
+  }
+  if (p === '/dashboard/formatting') return 'formatting';
+  if (p === '/dashboard/pitman') return 'pitman';
+  if (p === '/dashboard/arena-audio') return 'arena-audio';
+  if (p === '/dashboard/arena-kc') return 'arena-kc';
+  if (p === '/dashboard/arena-comp') return 'arena-comp';
+  if (p === '/dashboard/arena-state') return 'arena-state';
+  if (p === '/dashboard/subscription') return 'subscription';
+  if (p.startsWith('/admin')) return 'admin';
+  return 'landing';
+};
+
+const getPathFromView = (view, userRole) => {
+  if (view === 'landing') return '/';
+  if (view === 'auth') {
+    return window.location.pathname === '/register' || window.location.pathname === '/signup'
+      ? window.location.pathname
+      : '/login';
+  }
+  if (view === 'dashboard') {
+    return userRole === 'admin' ? '/admin/students' : '/dashboard';
+  }
+  if (view === '/dashboard/results' || view === 'results') return '/dashboard/results';
+  if (view.startsWith('results:')) {
+    const id = view.split(':')[1];
+    return `/dashboard/results/${id}`;
+  }
+  if (view === 'formatting') return '/dashboard/formatting';
+  if (view === 'pitman') return '/dashboard/pitman';
+  if (view === 'arena-audio') return '/dashboard/arena-audio';
+  if (view === 'arena-kc') return '/dashboard/arena-kc';
+  if (view === 'arena-comp') return '/dashboard/arena-comp';
+  if (view === 'arena-state') return '/dashboard/arena-state';
+  if (view === 'subscription') return '/dashboard/subscription';
+  if (view === 'admin') return '/admin/students';
+  return '/';
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // App Root
 // ─────────────────────────────────────────────────────────────────────────────
 function App() {
@@ -116,13 +175,74 @@ function App() {
 
     const [currentView, setCurrentView] = useState(() => {
         if (typeof window === 'undefined') return 'landing';
-        return localStorage.getItem('currentUser') ? 'dashboard' : 'landing';
+        const path = window.location.pathname;
+        const viewFromPath = getViewFromPath(path);
+        
+        const currentUserStr = localStorage.getItem('currentUser');
+        const hasSession = !!currentUserStr;
+        
+        const protectedViews = ['dashboard', 'arena-kc', 'arena-comp', 'arena-state', 'arena-audio', 'formatting', 'pitman', 'results', 'admin'];
+        const isProtected = protectedViews.includes(viewFromPath) || viewFromPath.startsWith('results:');
+        
+        if (isProtected && !hasSession) {
+            return 'auth';
+        }
+        
+        if (path === '/' || path === '') {
+            return hasSession ? 'dashboard' : 'landing';
+        }
+        
+        return viewFromPath;
     });
     
     const [showAuthModal, setShowAuthModal] = useState(false); // Login Required popup
     const [pendingView, setPendingView] = useState(null);      // where to go after login
     const [arenaTab, setArenaTab] = useState('transcribe');     // 'transcribe' | 'analysis'
     const [lastAttemptId, setLastAttemptId] = useState(null);
+
+    // ── Non-admin Redirect Safety ─────────────────────────────
+    useEffect(() => {
+        if (currentView === 'admin' && isLoggedIn && user?.role !== 'admin') {
+            setCurrentView('dashboard');
+        }
+    }, [currentView, isLoggedIn, user?.role]);
+
+    // ── Popstate Listener ─────────────────────────────────────
+    useEffect(() => {
+        const handlePopState = () => {
+            const path = window.location.pathname;
+            const viewFromPath = getViewFromPath(path);
+            
+            const protectedViews = ['dashboard', 'arena-kc', 'arena-comp', 'arena-state', 'arena-audio', 'formatting', 'pitman', 'results', 'admin'];
+            const isProtected = protectedViews.includes(viewFromPath) || viewFromPath.startsWith('results:');
+            
+            if (isProtected && !isLoggedIn) {
+                setCurrentView('auth');
+            } else {
+                setCurrentView(viewFromPath);
+            }
+        };
+        
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [isLoggedIn]);
+
+    // ── URL Synchronization ──────────────────────────────────
+    useEffect(() => {
+        const targetPath = getPathFromView(currentView, user?.role);
+        const currentPath = window.location.pathname;
+        
+        if (currentView === 'admin' && currentPath.startsWith('/admin')) {
+            return;
+        }
+        if (currentView === 'auth' && (currentPath === '/login' || currentPath === '/register' || currentPath === '/signup')) {
+            return;
+        }
+        
+        if (cleanPath(currentPath) !== cleanPath(targetPath)) {
+            window.history.pushState(null, '', targetPath);
+        }
+    }, [currentView, user?.role]);
 
 
 
@@ -134,6 +254,10 @@ function App() {
   const allCourses = [
     { id: 'hc-formatting', title: 'Allahabad High Court', type: 'Formatting Test', isPremium: true, view: 'formatting', category: 'formatting' },
     { id: 'pitman-ex', title: 'Pitman Shorthand', type: 'Exercise Practice', isPremium: true, view: 'pitman', category: 'pitman' },
+    { id: 'audio-dict', title: 'Audio Dictations', type: '80/100/120 WPM', isPremium: false, view: 'arena-audio', category: 'audio' },
+    { id: 'kailash-chandra', title: 'Kailash Chandra', type: 'Standard Dictations', isPremium: false, view: 'arena-kc', category: 'kailash' },
+    { id: 'comprehension', title: 'Comprehension', type: 'Theory & Test', isPremium: false, view: 'arena-comp', category: 'comprehension' },
+    { id: 'state-exam', title: 'State Exams', type: 'Selection Focused', isPremium: true, view: 'arena-state', category: 'state' },
   ];
 
   const enrolled = user?.enrolled_courses || [];
@@ -171,6 +295,8 @@ function App() {
   // Modal helpers
   const openAuthFromModal = (tab = 'login') => {
     setShowAuthModal(false);
+    const path = tab === 'register' ? '/register' : '/login';
+    window.history.pushState(null, '', path);
     setCurrentView('auth');
   };
 
@@ -231,7 +357,7 @@ function App() {
         <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
             <div className="bg-white border-b shadow-sm sticky top-0 z-50">
                 <div className="w-full px-4 md:px-6 h-16 flex items-center justify-between">
-                    <button onClick={() => setCurrentView('dashboard')} className="flex items-center space-x-2 text-[#1e3a8a] font-bold hover:text-blue-800 transition-colors">
+                    <button onClick={() => setCurrentView('dashboard')} className="flex items-center space-x-2 text-[#0d6e70] font-bold hover:text-blue-800 transition-colors">
                         <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Back to Dashboard</span> <span className="sm:hidden text-xs">Back</span>
                     </button>
                 </div>
@@ -256,7 +382,7 @@ function App() {
                 setCurrentView('dashboard');
                 setArenaTab('transcribe');
               }}
-              className="flex items-center space-x-2 text-[#1e3a8a] font-bold hover:text-blue-800 transition-colors"
+              className="flex items-center space-x-2 text-[#0d6e70] font-bold hover:text-blue-800 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back to Dashboard</span>
@@ -269,7 +395,7 @@ function App() {
                 onClick={() => setArenaTab('transcribe')}
                 className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
                   arenaTab === 'transcribe'
-                    ? 'bg-white text-[#1e3a8a] shadow-sm'
+                    ? 'bg-white text-[#0d6e70] shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -279,7 +405,7 @@ function App() {
                 onClick={() => setArenaTab('analysis')}
                 className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
                   arenaTab === 'analysis'
-                    ? 'bg-white text-[#1e3a8a] shadow-sm'
+                    ? 'bg-white text-[#0d6e70] shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -328,7 +454,7 @@ function App() {
                 setCurrentView('dashboard');
                 setArenaTab('transcribe');
               }}
-              className="flex items-center space-x-2 text-[#1e3a8a] font-bold hover:text-blue-800 transition-colors"
+              className="flex items-center space-x-2 text-[#0d6e70] font-bold hover:text-blue-800 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back to Dashboard</span>
@@ -340,7 +466,7 @@ function App() {
                 onClick={() => setArenaTab('transcribe')}
                 className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
                   arenaTab === 'transcribe'
-                    ? 'bg-white text-[#1e3a8a] shadow-sm'
+                    ? 'bg-white text-[#0d6e70] shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -350,7 +476,7 @@ function App() {
                 onClick={() => setArenaTab('analysis')}
                 className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
                   arenaTab === 'analysis'
-                    ? 'bg-white text-[#1e3a8a] shadow-sm'
+                    ? 'bg-white text-[#0d6e70] shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -409,7 +535,7 @@ function App() {
         {/* Reuse Header */}
         <header className="bg-white shadow-sm border-b z-10">
           <div className="w-full px-4 py-4 flex justify-between items-center">
-             <button onClick={() => setCurrentView('dashboard')} className="flex items-center space-x-2 text-[#1e3a8a] font-bold hover:text-blue-800 transition-colors">
+             <button onClick={() => setCurrentView('dashboard')} className="flex items-center space-x-2 text-[#0d6e70] font-bold hover:text-blue-800 transition-colors">
                  <ArrowLeft className="w-4 h-4" /> <span>Back to Dashboard</span>
              </button>
              <h2 className="text-xl font-black text-gray-800">My Subscription</h2>
@@ -419,7 +545,7 @@ function App() {
         
         <div className="flex-1 max-w-4xl w-full mx-auto p-6 md:p-12">
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 animate-in fade-in slide-in-from-bottom-5">
-                <div className="bg-gradient-to-r from-[#0f2167] to-[#1e3a8a] p-8 text-white text-center">
+                <div className="bg-gradient-to-r from-[#07414e] to-[#0d6e70] p-8 text-white text-center">
                     <div className="inline-block px-4 py-1.5 bg-amber-400 text-blue-900 rounded-full text-xs font-black uppercase tracking-wider mb-4 shadow-lg">Premium Active</div>
                     <h3 className="text-3xl font-black mb-2">Master Course Plan</h3>
                     <p className="opacity-80 text-sm">
@@ -520,11 +646,11 @@ function App() {
           <header className="bg-white shadow-sm border-b z-10">
             <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-[#1e3a8a] rounded-lg flex justify-center items-center shadow-sm">
+                <div className="w-10 h-10 bg-[#0d6e70] rounded-lg flex justify-center items-center shadow-sm">
                   <span className="text-white font-bold text-xl">S</span>
                 </div>
                 <h1
-                  className="text-2xl font-black text-[#1e3a8a] tracking-tight cursor-pointer hover:opacity-80 transition-opacity"
+                  className="text-2xl font-black text-[#0d6e70] tracking-tight cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => setCurrentView('landing')}
                 >
                   Shorthandians
@@ -535,10 +661,10 @@ function App() {
                 {/* User badge */}
                 {user && (
                   <div className="hidden md:flex items-center space-x-2 bg-blue-50 border border-blue-100 px-4 py-2 rounded-full">
-                    <div className="w-7 h-7 bg-[#1e3a8a] rounded-full flex items-center justify-center">
+                    <div className="w-7 h-7 bg-[#0d6e70] rounded-full flex items-center justify-center">
                       <User className="w-4 h-4 text-white" />
                     </div>
-                    <span className="font-semibold text-[#1e3a8a] text-sm">{user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.name}</span>
+                    <span className="font-semibold text-[#0d6e70] text-sm">{user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.name}</span>
                   </div>
                 )}
 
@@ -590,9 +716,9 @@ function App() {
 
               <div className="mt-8 pt-6 border-t border-gray-100 hidden md:block">
                 <div className="bg-blue-50 p-4 rounded-xl text-center shadow-inner">
-                  <h4 className="font-bold text-[#1e3a8a] mb-2">Need More Tests?</h4>
+                  <h4 className="font-bold text-[#0d6e70] mb-2">Need More Tests?</h4>
                   <p className="text-xs text-gray-600 mb-3">Upgrade for unlimited access to premium dictations.</p>
-                  <button className="text-sm font-black text-white bg-[#1e3a8a] w-full py-2 rounded-lg hover:bg-blue-800 transition-all hover:scale-105 active:scale-95 shadow-lg">
+                  <button className="text-sm font-black text-white bg-[#0d6e70] w-full py-2 rounded-lg hover:bg-blue-800 transition-all hover:scale-105 active:scale-95 shadow-lg">
                     View Plans
                   </button>
                 </div>

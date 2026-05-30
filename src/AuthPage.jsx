@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   User, Lock, Phone, Mail, BookOpen,
   ArrowLeft, CheckCircle, AlertCircle, Sparkles, MapPin, Building, Users,
@@ -27,7 +27,7 @@ const InputField = ({
         onChange={onChange}
         required={required}
         disabled={disabled}
-        className="w-full pl-11 pr-11 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/25 focus:border-[#1e3a8a] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full pl-11 pr-11 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d6e70]/25 focus:border-[#0d6e70] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       />
       {rightElement && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>
@@ -49,7 +49,7 @@ const SelectField = ({ id, label, icon: Icon, value, onChange, required, options
         onChange={onChange}
         required={required}
         disabled={disabled}
-        className="w-full pl-11 pr-11 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/25 focus:border-[#1e3a8a] transition-all duration-200 appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full pl-11 pr-11 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d6e70]/25 focus:border-[#0d6e70] transition-all duration-200 appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <option value="" disabled>Select {label}</option>
         {options.map((opt) => (
@@ -78,10 +78,35 @@ const Spinner = () => (
 // ─────────────────────────────────────────────────────────────────────────────
 const AuthPage = ({ onAuthSuccess, onBack }) => {
   // 'login' | 'register' | 'forgot'
-  const [tab, setTab] = useState('login');
+  const [tab, setTab] = useState(() => {
+    if (typeof window === 'undefined') return 'login';
+    const path = window.location.pathname;
+    return (path === '/register' || path === '/signup') ? 'register' : 'login';
+  });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    const handlePop = () => {
+      const p = window.location.pathname;
+      if (p === '/register' || p === '/signup') {
+        setTab('register');
+      } else if (p === '/login') {
+        setTab('login');
+      }
+    };
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, []);
+
+  React.useEffect(() => {
+    const currentPath = window.location.pathname;
+    const targetPath = tab === 'register' ? '/register' : '/login';
+    if (currentPath !== targetPath && (currentPath === '/login' || currentPath === '/register' || currentPath === '/signup')) {
+      window.history.pushState(null, '', targetPath);
+    }
+  }, [tab]);
 
   // ── Forgot password state ─────────────────────────────────────────────────
   const [forgotEmail, setForgotEmail] = useState('');
@@ -369,7 +394,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
       {/* ── Left branding panel ─────────────────────────────────────────── */}
       <div
         className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #0f2167 0%, #1e3a8a 50%, #1a56db 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #07414e 0%, #0d6e70 50%, #0891b2 100%)' }}
       >
         <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-300/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
@@ -416,7 +441,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
       <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 overflow-y-auto">
         <button
           onClick={onBack}
-          className="lg:hidden flex items-center space-x-2 text-gray-500 hover:text-[#1e3a8a] transition-colors text-sm font-medium mb-8 self-start"
+          className="lg:hidden flex items-center space-x-2 text-gray-500 hover:text-[#0d6e70] transition-colors text-sm font-medium mb-8 self-start"
         >
           <ArrowLeft className="w-4 h-4" /><span>Back to Home</span>
         </button>
@@ -453,7 +478,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
               <button
                 onClick={() => switchTab('login')}
-                className="w-full flex items-center justify-center space-x-2 bg-[#1e3a8a] hover:bg-blue-700 text-white font-black py-4 rounded-xl transition-all hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
+                className="w-full flex items-center justify-center space-x-2 bg-[#0d6e70] hover:bg-blue-700 text-white font-black py-4 rounded-xl transition-all hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
               >
                 <BookOpen className="w-5 h-5" />
                 <span>Go to Login</span>
@@ -464,7 +489,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
             <>
               {/* ── Header ────────────────────────────────────────────── */}
               <div className="mb-8">
-                <div className="inline-flex items-center space-x-2 bg-blue-50 border border-blue-100 text-[#1e3a8a] text-xs font-bold px-3 py-1.5 rounded-full mb-4">
+                <div className="inline-flex items-center space-x-2 bg-blue-50 border border-blue-100 text-[#0d6e70] text-xs font-bold px-3 py-1.5 rounded-full mb-4">
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>
                     {tab === 'forgot'
@@ -507,7 +532,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                       onClick={() => switchTab(t)}
                       className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
                         tab === t
-                          ? 'bg-white text-[#1e3a8a] shadow-md'
+                          ? 'bg-white text-[#0d6e70] shadow-md'
                           : 'text-gray-500 hover:text-gray-700'
                       }`}
                     >
@@ -583,7 +608,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                       <button
                         type="button"
                         onClick={() => setShowLoginPassword((v) => !v)}
-                        className="text-gray-400 hover:text-[#1e3a8a] transition-colors p-1"
+                        className="text-gray-400 hover:text-[#0d6e70] transition-colors p-1"
                         tabIndex={-1}
                       >
                         {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -601,7 +626,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                     id="login-submit-btn"
                     type="submit"
                     disabled={loading}
-                    className="w-full flex items-center justify-center space-x-3 bg-[#1e3a8a] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
+                    className="w-full flex items-center justify-center space-x-3 bg-[#0d6e70] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
                   >
                     {loading
                       ? <><Spinner /><span>Signing In…</span></>
@@ -612,14 +637,14 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                     <button
                       type="button"
                       onClick={() => switchTab('register')}
-                      className="text-gray-500 hover:text-[#1e3a8a] font-bold hover:underline transition-colors"
+                      className="text-gray-500 hover:text-[#0d6e70] font-bold hover:underline transition-colors"
                     >
                       Create a free account
                     </button>
                     <button
                       type="button"
                       onClick={() => { setTab('forgot'); setForgotEmail(loginEmail); setError(''); }}
-                      className="text-[#1e3a8a] font-bold hover:underline transition-colors"
+                      className="text-[#0d6e70] font-bold hover:underline transition-colors"
                     >
                       Forgot password?
                     </button>
@@ -647,7 +672,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                       </div>
                       <button
                         onClick={() => switchTab('login')}
-                        className="w-full flex items-center justify-center space-x-2 bg-[#1e3a8a] hover:bg-blue-700 text-white font-black py-4 rounded-xl transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+                        className="w-full flex items-center justify-center space-x-2 bg-[#0d6e70] hover:bg-blue-700 text-white font-black py-4 rounded-xl transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
                       >
                         <ArrowLeft className="w-4 h-4" />
                         <span>Back to Login</span>
@@ -676,7 +701,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                         id="forgot-submit-btn"
                         type="submit"
                         disabled={loading}
-                        className="w-full flex items-center justify-center space-x-3 bg-[#1e3a8a] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+                        className="w-full flex items-center justify-center space-x-3 bg-[#0d6e70] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
                       >
                         {loading
                           ? <><Spinner /><span>Sending…</span></>
@@ -685,7 +710,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                       <button
                         type="button"
                         onClick={() => switchTab('login')}
-                        className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-[#1e3a8a] font-bold transition-colors"
+                        className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-[#0d6e70] font-bold transition-colors"
                       >
                         <ArrowLeft className="w-3.5 h-3.5" /> Back to Login
                       </button>
@@ -703,8 +728,8 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                   {/* QR Code Section */}
                   <div className="flex flex-col items-center">
                     <div className="relative group">
-                      <div className="absolute -inset-1 bg-gradient-to-br from-[#1e3a8a]/30 to-indigo-400/30 rounded-2xl blur-md opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
-                      <div className="relative bg-white border-2 border-[#1e3a8a]/20 rounded-2xl p-3 shadow-xl">
+                      <div className="absolute -inset-1 bg-gradient-to-br from-[#0d6e70]/30 to-indigo-400/30 rounded-2xl blur-md opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
+                      <div className="relative bg-white border-2 border-[#0d6e70]/20 rounded-2xl p-3 shadow-xl">
                         <img
                           src="/QRImage.jpeg"
                           alt="PhonePe Payment QR Code"
@@ -740,25 +765,25 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
                   {/* Step-by-step Instructions */}
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 space-y-4">
-                    <p className="text-xs font-black text-[#1e3a8a] uppercase tracking-widest flex items-center gap-1.5">
+                    <p className="text-xs font-black text-[#0d6e70] uppercase tracking-widest flex items-center gap-1.5">
                       <span>📋</span> Next Steps
                     </p>
 
                     <ol className="space-y-3">
                       <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center text-xs font-black">1</span>
+                        <span className="flex-shrink-0 w-6 h-6 bg-[#0d6e70] text-white rounded-full flex items-center justify-center text-xs font-black">1</span>
                         <p className="text-sm text-gray-700 font-medium leading-snug">
                           Complete the payment via <span className="font-black text-[#5f259f]">PhonePe / UPI</span> by scanning the QR code above.
                         </p>
                       </li>
                       <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center text-xs font-black">2</span>
+                        <span className="flex-shrink-0 w-6 h-6 bg-[#0d6e70] text-white rounded-full flex items-center justify-center text-xs font-black">2</span>
                         <p className="text-sm text-gray-700 font-medium leading-snug">
                           Take a <span className="font-black text-gray-900">screenshot</span> of the successful transaction.
                         </p>
                       </li>
                       <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center text-xs font-black">3</span>
+                        <span className="flex-shrink-0 w-6 h-6 bg-[#0d6e70] text-white rounded-full flex items-center justify-center text-xs font-black">3</span>
                         <p className="text-sm text-gray-700 font-medium leading-snug">
                           Send the screenshot on{' '}
                           <span className="font-black text-green-700">WhatsApp</span> to{' '}
@@ -778,7 +803,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                     <div className="flex items-center gap-2 bg-white/70 border border-blue-100 rounded-xl px-3 py-2.5 mt-1">
                       <span className="text-base">⏱️</span>
                       <p className="text-xs font-bold text-blue-800">
-                        Your account will be activated within <span className="text-[#1e3a8a]">15 minutes!</span>
+                        Your account will be activated within <span className="text-[#0d6e70]">15 minutes!</span>
                       </p>
                     </div>
                   </div>
@@ -798,7 +823,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
                   <p className="text-center text-sm text-gray-500">
                     Already have an account?{' '}
-                    <button type="button" onClick={() => switchTab('login')} className="text-[#1e3a8a] font-bold hover:underline">Sign in</button>
+                    <button type="button" onClick={() => switchTab('login')} className="text-[#0d6e70] font-bold hover:underline">Sign in</button>
                   </p>
                 </div>
               )}
@@ -811,12 +836,12 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
                   {/* Email display card */}
                   <div className="flex items-center gap-4 bg-blue-50 border border-blue-100 rounded-2xl p-4">
-                    <div className="w-12 h-12 bg-[#1e3a8a] rounded-xl flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 bg-[#0d6e70] rounded-xl flex items-center justify-center shrink-0">
                       <Mail className="w-6 h-6 text-white" />
                     </div>
                     <div>
                       <p className="text-xs font-black text-gray-400 uppercase tracking-widest">OTP sent to</p>
-                      <p className="text-sm font-black text-[#1e3a8a] break-all">{regData.email}</p>
+                      <p className="text-sm font-black text-[#0d6e70] break-all">{regData.email}</p>
                       <p className="text-xs text-gray-500">Check your inbox (and spam folder)</p>
                     </div>
                   </div>
@@ -836,7 +861,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                         value={otpCode}
                         onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         autoFocus
-                        className="w-full pl-11 pr-4 py-4 border-2 border-gray-200 rounded-xl text-2xl font-black text-center text-gray-900 tracking-[0.5em] bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/25 focus:border-[#1e3a8a] transition-all"
+                        className="w-full pl-11 pr-4 py-4 border-2 border-gray-200 rounded-xl text-2xl font-black text-center text-gray-900 tracking-[0.5em] bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d6e70]/25 focus:border-[#0d6e70] transition-all"
                       />
                     </div>
                     <p className="text-xs text-gray-400 mt-1.5 text-center">OTP expires in 5 minutes</p>
@@ -846,7 +871,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                     id="verify-otp-btn"
                     type="submit"
                     disabled={loading || otpCode.length !== 6}
-                    className="w-full flex items-center justify-center space-x-3 bg-[#1e3a8a] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
+                    className="w-full flex items-center justify-center space-x-3 bg-[#0d6e70] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
                   >
                     {loading
                       ? <><Spinner /><span>Verifying…</span></>
@@ -866,7 +891,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                       type="button"
                       onClick={handleResendOtp}
                       disabled={loading || otpResendTimer > 0}
-                      className="text-[#1e3a8a] font-bold hover:underline disabled:text-gray-300 disabled:no-underline transition-colors"
+                      className="text-[#0d6e70] font-bold hover:underline disabled:text-gray-300 disabled:no-underline transition-colors"
                     >
                       {otpResendTimer > 0 ? `Resend in ${otpResendTimer}s` : 'Resend OTP'}
                     </button>

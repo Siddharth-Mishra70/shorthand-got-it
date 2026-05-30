@@ -20,13 +20,18 @@ const STATE_EXAMS = [
 const MODULE_TYPES = [
     { key: 'highcourt', label: 'High Court Formatting', icon: Scale, color: 'from-blue-600 to-blue-800', bg: 'bg-blue-50', text: 'text-blue-700' },
     { key: 'pitman', label: 'Pitman Exercise', icon: Edit2, color: 'from-purple-600 to-purple-800', bg: 'bg-purple-50', text: 'text-purple-700' },
-    // { key: 'audio', label: 'Audio Dictation', icon: Headphones, color: 'from-green-600 to-green-800', bg: 'bg-green-50', text: 'text-green-700' },
+    { key: 'audio', label: 'Audio Dictation', icon: Headphones, color: 'from-green-600 to-green-800', bg: 'bg-green-50', text: 'text-green-700' },
+    { key: 'kailash', label: 'Kailash Chandra', icon: BookOpen, color: 'from-amber-500 to-amber-700', bg: 'bg-amber-50', text: 'text-amber-700' },
+    { key: 'comprehension', label: 'Comprehension', icon: FileText, color: 'from-cyan-600 to-cyan-800', bg: 'bg-cyan-50', text: 'text-cyan-700' },
+    { key: 'state', label: 'State Exam', icon: Globe, color: 'from-rose-600 to-rose-800', bg: 'bg-rose-50', text: 'text-rose-700' },
 ];
 
 const QUICK_MODULES = [
     { key: 'highcourt', label: 'High Court Formatting', icon: '⚖️', accept: '.pdf,image/*', textLabel: 'Formatting Reference Text' },
     { key: 'pitman',    label: 'Pitman Exercise',       icon: '✏️', accept: '.pdf,image/*', textLabel: 'English Transcription Text' },
-    // { key: 'audio',     label: 'Audio Dictation',       icon: '🎙️', accept: 'audio/*',      textLabel: 'Dictation Transcription Text' },
+    { key: 'audio',     label: 'Audio Dictation',       icon: '🎙️', accept: 'audio/*',      textLabel: 'Dictation Transcription Text' },
+    { key: 'kailash',   label: 'Kailash Chandra',         icon: '📖', accept: '.pdf',         textLabel: 'Passage Text' },
+    { key: 'comprehension', label: 'Comprehension',         icon: '📝', accept: '.pdf',         textLabel: 'Passage Text' },
 ];
 
 // ── PURE SUB-COMPONENTS (defined at module scope to prevent remount on re-render) ──
@@ -119,9 +124,10 @@ const TestList = ({ tests, onDelete, emptyMsg, onEdit }) => {
     const ITEMS_PER_PAGE = 10;
     const [activeTab, setActiveTab] = React.useState('All');
     const [page, setPage] = React.useState(1);
+    const [searchQuery, setSearchQuery] = React.useState('');
 
-    // Reset to page 1 whenever tab or the tests list changes
-    React.useEffect(() => { setPage(1); }, [activeTab, tests.length]);
+    // Reset to page 1 whenever tab, tests list or search query changes
+    React.useEffect(() => { setPage(1); }, [activeTab, tests.length, searchQuery]);
 
     // Helper to clean up preview text if it's JSON-encoded (High Court style)
     const getPreviewText = (raw) => {
@@ -135,20 +141,32 @@ const TestList = ({ tests, onDelete, emptyMsg, onEdit }) => {
         return raw;
     };
 
+    // Filter by search query
+    const filteredBySearch = React.useMemo(() => {
+        if (!searchQuery.trim()) return tests;
+        const q = searchQuery.toLowerCase();
+        return tests.filter(t => 
+            (t.title || '').toLowerCase().includes(q) ||
+            (t.job_title || '').toLowerCase().includes(q) ||
+            (t.test_type || '').toLowerCase().includes(q) ||
+            (t.original_text || t.text || '').toLowerCase().includes(q)
+        );
+    }, [tests, searchQuery]);
+
     // Group by date
     const todayStr     = new Date().toLocaleDateString();
     const yesterdayStr = new Date(Date.now() - 86400000).toLocaleDateString();
 
     const grouped = React.useMemo(() => {
         const cats = { Today: [], Yesterday: [], All: [] };
-        tests.forEach(t => {
+        filteredBySearch.forEach(t => {
             const d = t.created_at ? new Date(t.created_at).toLocaleDateString() : todayStr;
             if (d === todayStr) cats.Today.push(t);
             else if (d === yesterdayStr) cats.Yesterday.push(t);
             cats.All.push(t);
         });
         return cats;
-    }, [tests]);
+    }, [filteredBySearch]);
 
     const filteredTests = grouped[activeTab] || [];
     const totalPages    = Math.ceil(filteredTests.length / ITEMS_PER_PAGE);
@@ -156,34 +174,54 @@ const TestList = ({ tests, onDelete, emptyMsg, onEdit }) => {
 
     return (
         <div className="space-y-4">
-            {/* Date Tabs + item count */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex bg-white border border-gray-200 rounded-xl p-1 shadow-sm gap-1">
-                    {['Today', 'Yesterday', 'All'].map(tab => (
+            {/* Search + Date Tabs + item count */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search exercises by title, job, text..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-9 py-2 text-xs border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white text-gray-800"
+                    />
+                    {searchQuery && (
                         <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
-                                activeTab === tab
-                                    ? 'bg-red-700 text-white shadow'
-                                    : 'text-gray-400 hover:text-red-700 hover:bg-red-50'
-                            }`}
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
                         >
-                            {tab}
-                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                                activeTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
-                            }`}>
-                                {grouped[tab]?.length ?? 0}
-                            </span>
+                            <X className="w-3.5 h-3.5" />
                         </button>
-                    ))}
+                    )}
                 </div>
-                {filteredTests.length > 0 && (
+                <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
+                    <div className="flex bg-white border border-gray-200 rounded-xl p-1 shadow-sm gap-1">
+                        {['Today', 'Yesterday', 'All'].map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+                                    activeTab === tab
+                                        ? 'bg-red-700 text-white shadow'
+                                        : 'text-gray-400 hover:text-red-700 hover:bg-red-50'
+                                }`}
+                            >
+                                {tab}
+                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                                    activeTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                                }`}>
+                                    {grouped[tab]?.length ?? 0}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                    {filteredTests.length > 0 && (
                     <span className="text-xs text-gray-400 font-bold">
                         Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, filteredTests.length)} of {filteredTests.length}
                     </span>
                 )}
             </div>
+        </div>
 
             {/* Content list */}
             <div className="space-y-3">
@@ -254,8 +292,64 @@ const TestList = ({ tests, onDelete, emptyMsg, onEdit }) => {
     );
 };
 
+const parseAdminPath = (path) => {
+    const parts = path.split('/').filter(Boolean);
+    let tab = 'students';
+    let activeMod = 'home';
+    let selState = null;
+    let subMod = null;
+    
+    if (parts[1] === 'students') {
+        tab = 'students';
+    } else if (parts[1] === 'results') {
+        tab = 'results';
+    } else if (parts[1] === 'inquiries') {
+        tab = 'inquiries';
+    } else if (parts[1] === 'settings') {
+        tab = 'settings';
+    } else if (parts[1] === 'exercises') {
+        tab = 'content';
+        if (parts[2]) {
+            activeMod = parts[2];
+            if (activeMod === 'state') {
+                if (parts[3]) {
+                    selState = decodeURIComponent(parts[3]);
+                    if (parts[4]) {
+                        subMod = parts[4];
+                    }
+                }
+            }
+        }
+    }
+    return { tab, activeMod, selState, subMod };
+};
+
+const getAdminPath = (tab, activeMod, selState, subMod) => {
+    if (tab === 'students') return '/admin/students';
+    if (tab === 'results') return '/admin/results';
+    if (tab === 'inquiries') return '/admin/inquiries';
+    if (tab === 'settings') return '/admin/settings';
+    if (tab === 'content') {
+        if (activeMod === 'home' || !activeMod) return '/admin/exercises';
+        if (activeMod === 'state') {
+            if (!selState) return '/admin/exercises/state';
+            if (!subMod) return `/admin/exercises/state/${encodeURIComponent(selState)}`;
+            return `/admin/exercises/state/${encodeURIComponent(selState)}/${subMod}`;
+        }
+        return `/admin/exercises/${activeMod}`;
+    }
+    return '/admin/students';
+};
+
 const AdminPanel = ({ user, onLogout, supabase }) => {
-    const [currentTab, setCurrentTab] = useState('students');
+    const [currentTab, setCurrentTab] = useState(() => {
+        if (typeof window === 'undefined') return 'students';
+        const path = window.location.pathname;
+        if (path.startsWith('/admin')) {
+            return parseAdminPath(path).tab;
+        }
+        return 'students';
+    });
 
     // ── Quick Upload Drawer state ──
     const [quickOpen, setQuickOpen] = useState(false);
@@ -268,11 +362,56 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [quickSuccess, setQuickSuccess] = useState(false);
     const [editingQuickId, setEditingQuickId] = useState(null);
     // Home dashboard = 'home', else module key  
-    const [activeModule, setActiveModule] = useState('home');
+    const [activeModule, setActiveModule] = useState(() => {
+        if (typeof window === 'undefined') return 'home';
+        const path = window.location.pathname;
+        if (path.startsWith('/admin')) {
+            return parseAdminPath(path).activeMod;
+        }
+        return 'home';
+    });
 
     // State Exam sub-state
-    const [selectedState, setSelectedState] = useState(null);
-    const [stateSubModule, setStateSubModule] = useState(null);
+    const [selectedState, setSelectedState] = useState(() => {
+        if (typeof window === 'undefined') return null;
+        const path = window.location.pathname;
+        if (path.startsWith('/admin')) {
+            return parseAdminPath(path).selState;
+        }
+        return null;
+    });
+    const [stateSubModule, setStateSubModule] = useState(() => {
+        if (typeof window === 'undefined') return null;
+        const path = window.location.pathname;
+        if (path.startsWith('/admin')) {
+            return parseAdminPath(path).subMod;
+        }
+        return null;
+    });
+
+    // ── URL Synchronization ──────────────────────────────────
+    useEffect(() => {
+        const targetPath = getAdminPath(currentTab, activeModule, selectedState, stateSubModule);
+        if (window.location.pathname !== targetPath) {
+            window.history.pushState(null, '', targetPath);
+        }
+    }, [currentTab, activeModule, selectedState, stateSubModule]);
+
+    // ── Popstate Listener ─────────────────────────────────────
+    useEffect(() => {
+        const handlePopState = () => {
+            const path = window.location.pathname;
+            if (path.startsWith('/admin')) {
+                const parsed = parseAdminPath(path);
+                setCurrentTab(parsed.tab);
+                setActiveModule(parsed.activeMod);
+                setSelectedState(parsed.selState);
+                setStateSubModule(parsed.subMod);
+            }
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
 
     // KC / Kailash Chandra
     const [kcText, setKcText] = useState('');
@@ -362,7 +501,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [addFormData, setAddFormData] = useState({
         firstName: '', lastName: '', email: '', phone: '',
         password: '', state: '', city: '', gender: '',
-        enrolledCourses: ['hc-formatting', 'pitman-ex'],
+        enrolledCourses: ['hc-formatting', 'pitman-ex', 'audio-dict', 'kailash-chandra', 'comprehension', 'state-exam'],
         validityPeriod: '29_days'
     });
 
@@ -373,7 +512,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [editFormData, setEditFormData] = useState({
         firstName: '', lastName: '', email: '', phone: '',
         state: '', city: '', gender: '', status: 'active',
-        enrolledCourses: ['hc-formatting', 'pitman-ex']
+        enrolledCourses: ['hc-formatting', 'pitman-ex', 'audio-dict', 'kailash-chandra', 'comprehension', 'state-exam']
     });
 
     const [resetRequests, setResetRequests] = useState(() => JSON.parse(localStorage.getItem('auth_reset_requests') || '[]'));
@@ -1010,7 +1149,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             setAddFormData({
                 firstName: '', lastName: '', email: '', phone: '',
                 password: '', state: '', city: '', gender: '',
-                enrolledCourses: ['hc-formatting', 'pitman-ex'],
+                enrolledCourses: ['hc-formatting', 'pitman-ex', 'audio-dict', 'kailash-chandra', 'comprehension', 'state-exam'],
                 validityPeriod: '29_days'
             });
         } catch (err) {
@@ -1892,12 +2031,12 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             <div className="mb-6 p-4 border border-dashed border-gray-300 rounded-xl bg-gray-50 flex items-center justify-between">
                                 {pendingAudio ? (
                                     <div className="flex items-center space-x-4 w-full">
-                                        <Headphones className="w-8 h-8 text-[#1e3a8a]" />
+                                        <Headphones className="w-8 h-8 text-[#0d6e70]" />
                                         <audio controls src={pendingAudio} className="h-10 flex-1" />
                                         <button onClick={() => { setPendingAudio(null); setPendingAudioFile(null); }} className="text-red-500 hover:bg-red-50 p-2 rounded-lg font-bold text-sm transition-colors">Replace File</button>
                                     </div>
                                 ) : (
-                                    <label className="w-full flex items-center justify-center space-x-2 text-gray-500 font-bold cursor-pointer hover:text-[#1e3a8a] py-2">
+                                    <label className="w-full flex items-center justify-center space-x-2 text-gray-500 font-bold cursor-pointer hover:text-[#0d6e70] py-2">
                                         <Plus className="w-5 h-5" /> <span>Upload Base Audio File (.mp3, .wav)</span>
                                         <input type="file" accept="audio/*" className="hidden" onChange={e => {
                                             const f = e.target.files[0]; if (!f) return;
@@ -2120,11 +2259,27 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
 
                             {/* Course Enrollment */}
                             <div className="pt-4 border-t border-gray-100">
-                                <label className="block text-sm font-bold text-gray-800 mb-3">Course Enrollment</label>
+                                <div className="flex justify-between items-center mb-3">
+                                  <label className="block text-sm font-bold text-gray-800">Course Enrollment</label>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => {
+                                      const allIds = ['hc-formatting', 'pitman-ex', 'audio-dict', 'kailash-chandra', 'comprehension', 'state-exam'];
+                                      setAddFormData({...addFormData, enrolledCourses: addFormData.enrolledCourses.length === allIds.length ? [] : allIds});
+                                    }}
+                                    className="text-xs text-red-700 font-bold underline"
+                                  >
+                                    {addFormData.enrolledCourses.length === 6 ? 'Deselect All' : 'Select All'}
+                                  </button>
+                                </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {[
                                         { id: 'hc-formatting', label: 'Allahabad High Court Formatting' },
-                                        { id: 'pitman-ex', label: 'Pitman Shorthand Exercise' }
+                                        { id: 'pitman-ex', label: 'Pitman Shorthand Exercise' },
+                                        { id: 'audio-dict', label: 'Audio Dictations' },
+                                        { id: 'kailash-chandra', label: 'Kailash Chandra' },
+                                        { id: 'comprehension', label: 'Comprehension' },
+                                        { id: 'state-exam', label: 'State Exams' }
                                     ].map(course => (
                                         <label key={course.id} className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all ${
                                             addFormData.enrolledCourses.includes(course.id)
@@ -2228,11 +2383,27 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
 
                             {/* Course Enrollment */}
                             <div className="pt-4 border-t border-gray-100">
-                                <label className="block text-sm font-bold text-gray-800 mb-3">Course Enrollment</label>
+                                <div className="flex justify-between items-center mb-3">
+                                  <label className="block text-sm font-bold text-gray-800">Course Enrollment</label>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => {
+                                      const allIds = ['hc-formatting', 'pitman-ex', 'audio-dict', 'kailash-chandra', 'comprehension', 'state-exam'];
+                                      setEditFormData({...editFormData, enrolledCourses: editFormData.enrolledCourses.length === allIds.length ? [] : allIds});
+                                    }}
+                                    className="text-xs text-red-700 font-bold underline"
+                                  >
+                                    {editFormData.enrolledCourses.length === 6 ? 'Deselect All' : 'Select All'}
+                                  </button>
+                                </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {[
                                         { id: 'hc-formatting', label: 'Allahabad High Court Formatting' },
-                                        { id: 'pitman-ex', label: 'Pitman Shorthand Exercise' }
+                                        { id: 'pitman-ex', label: 'Pitman Shorthand Exercise' },
+                                        { id: 'audio-dict', label: 'Audio Dictations' },
+                                        { id: 'kailash-chandra', label: 'Kailash Chandra' },
+                                        { id: 'comprehension', label: 'Comprehension' },
+                                        { id: 'state-exam', label: 'State Exams' }
                                     ].map(course => (
                                         <label key={course.id} className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all ${
                                             editFormData.enrolledCourses.includes(course.id)

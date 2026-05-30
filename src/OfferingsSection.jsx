@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   BookOpen,
   Scale,
@@ -31,10 +31,10 @@ const OfferingCard = ({ icon: Icon, title, description, badge, badgeColor, highl
 
     {/* Icon + Title */}
     <div className="px-6 pt-4 pb-2">
-      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1e3a8a]/10 to-[#1e3a8a]/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-        <Icon className="w-7 h-7 text-[#1e3a8a]" />
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0d6e70]/10 to-[#0d6e70]/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+        <Icon className="w-7 h-7 text-[#0d6e70]" />
       </div>
-      <h3 className="text-xl font-black text-gray-900 mb-2 leading-snug group-hover:text-[#1e3a8a] transition-colors">{title}</h3>
+      <h3 className="text-xl font-black text-gray-900 mb-2 leading-snug group-hover:text-[#0d6e70] transition-colors">{title}</h3>
       <p className="text-gray-500 text-sm leading-relaxed mb-4 line-clamp-2">{description}</p>
     </div>
 
@@ -43,7 +43,7 @@ const OfferingCard = ({ icon: Icon, title, description, badge, badgeColor, highl
       <ul className="space-y-2">
         {highlights.map((h, i) => (
           <li key={i} className="flex items-center space-x-2 text-xs font-bold text-gray-600">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#1e3a8a] flex-shrink-0" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#0d6e70] flex-shrink-0" />
             <span className="truncate">{h}</span>
           </li>
         ))}
@@ -54,7 +54,7 @@ const OfferingCard = ({ icon: Icon, title, description, badge, badgeColor, highl
     <div className="px-6 pb-6 pt-5">
       <button
         onClick={onStart}
-        className="w-full group/btn flex items-center justify-center space-x-2 bg-[#1e3a8a] hover:bg-blue-700 text-white font-black py-3 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0 uppercase text-xs tracking-widest"
+        className="w-full group/btn flex items-center justify-center space-x-2 bg-[#0d6e70] hover:bg-blue-700 text-white font-black py-3 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0 uppercase text-xs tracking-widest"
       >
         <span>Enroll Now</span>
         <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
@@ -94,12 +94,12 @@ const OfferingsSection = ({ onNavigate }) => {
     <section id="courses" className="bg-gray-50 py-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <span className="inline-block text-xs font-black tracking-widest text-[#1e3a8a] uppercase bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full mb-4">
+          <span className="inline-block text-xs font-black tracking-widest text-[#0d6e70] uppercase bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full mb-4">
             Practice Portal Courses
           </span>
           <h2 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4 leading-tight">
             Explore All Our{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1e3a8a] to-blue-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0d6e70] to-blue-500">
               Practice Modules
             </span>
           </h2>
@@ -120,7 +120,7 @@ const OfferingsSection = ({ onNavigate }) => {
         </div>
 
         {/* ── Bottom CTA Banner ──────────────────────────────── */}
-        <div className="mt-20 relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-[#0f2167] via-[#1e3a8a] to-[#1a56db] p-10 sm:p-14 text-center shadow-2xl">
+        <div className="mt-20 relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-[#07414e] via-[#0d6e70] to-[#0891b2] p-10 sm:p-14 text-center shadow-2xl">
           <div className="absolute -top-16 -left-16 w-48 h-48 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
           <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-300/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -136,7 +136,7 @@ const OfferingsSection = ({ onNavigate }) => {
             </p>
             <button
               onClick={() => onNavigate('dashboard')}
-              className="group inline-flex items-center space-x-3 bg-white text-[#1e3a8a] hover:bg-amber-400 hover:text-blue-900 font-black px-12 py-5 rounded-2xl text-lg shadow-xl transition-all duration-300 hover:-translate-y-1 active:translate-y-0"
+              className="group inline-flex items-center space-x-3 bg-white text-[#0d6e70] hover:bg-amber-400 hover:text-blue-900 font-black px-12 py-5 rounded-2xl text-lg shadow-xl transition-all duration-300 hover:-translate-y-1 active:translate-y-0"
             >
               <span>Go to Full Student Portal</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+﻿import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 import { fetchAllResults } from './lib/saveTestResult';
 import { 
@@ -171,7 +171,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                        <circle cx="128" cy="128" r={radius} className="stroke-blue-100 fill-none" strokeWidth="12" />
                        <circle 
                            cx="128" cy="128" r={radius} 
-                           className={`fill-none transition-all duration-1000 ease-out ${isBetter ? 'stroke-[#1e3a8a]' : 'stroke-rose-500'}`} 
+                           className={`fill-none transition-all duration-1000 ease-out ${isBetter ? 'stroke-[#0d6e70]' : 'stroke-rose-500'}`} 
                            strokeWidth="12"
                            strokeDasharray={circumference}
                            strokeDashoffset={circumference - Math.min(progress, circumference)}
@@ -180,7 +180,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                    </svg>
                    <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
                        <span className="text-sm font-black text-gray-400 uppercase tracking-widest mb-1">Latest {metric}</span>
-                       <span className={`text-6xl font-black ${isBetter ? 'text-[#1e3a8a]' : 'text-rose-600'}`}>
+                       <span className={`text-6xl font-black ${isBetter ? 'text-[#0d6e70]' : 'text-rose-600'}`}>
                            {typeof currentVal === 'number' ? currentVal.toFixed(0) : currentVal}
                        </span>
                        <div className={`mt-2 flex items-center gap-1 text-sm font-black animate-in fade-in slide-in-from-bottom-2 ${isBetter ? 'text-green-600' : 'text-rose-500'}`}>
@@ -193,16 +193,16 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                     <div className="flex items-center justify-between mb-8">
                         <button 
                             onClick={onBack}
-                            className="flex items-center gap-2 text-gray-500 hover:text-[#1e3a8a] font-bold transition-all group"
+                            className="flex items-center gap-2 text-gray-500 hover:text-[#0d6e70] font-bold transition-all group"
                         >
-                            <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:bg-[#1e3a8a] group-hover:text-white transition-all">
+                            <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:bg-[#0d6e70] group-hover:text-white transition-all">
                                 <ArrowLeft className="w-4 h-4" />
                             </div>
                             <span className="text-sm uppercase tracking-widest">Back to Dashboard</span>
                         </button>
                         <div className="flex items-center gap-3">
                             <div className="p-3 bg-blue-50 rounded-2xl">
-                                <Activity className="w-6 h-6 text-[#1e3a8a]" />
+                                <Activity className="w-6 h-6 text-[#0d6e70]" />
                             </div>
                             <div>
                                 <h1 className="text-3xl font-black text-gray-900 tracking-tighter">My Performance</h1>
@@ -239,7 +239,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                     <div className="flex flex-wrap gap-2">
                         <button 
                             onClick={() => setActiveFilter('all')}
-                            className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeFilter === 'all' ? 'bg-[#1e3a8a] text-white shadow-xl' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
+                            className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeFilter === 'all' ? 'bg-[#0d6e70] text-white shadow-xl' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
                         >
                             All Modules
                         </button>
@@ -247,7 +247,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                             <button 
                                 key={key}
                                 onClick={() => setActiveFilter(key)}
-                                className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeFilter === key ? 'bg-[#1e3a8a] text-white shadow-xl' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
+                                className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeFilter === key ? 'bg-[#0d6e70] text-white shadow-xl' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
                             >
                                 {info.title.split(' ').pop()}
                             </button>
@@ -264,7 +264,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                     <div className="w-full flex flex-col items-center justify-center space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-1000">
                         <div className="inline-flex items-center gap-3 bg-blue-50 border border-blue-100 px-6 py-2 rounded-full shadow-sm mb-4">
                             <Sparkles className="w-5 h-5 text-amber-500" />
-                            <span className="text-sm font-black text-[#1e3a8a] uppercase tracking-widest">Live Progress Analysis</span>
+                            <span className="text-sm font-black text-[#0d6e70] uppercase tracking-widest">Live Progress Analysis</span>
                         </div>
 
                         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 items-center gap-12 bg-white rounded-[4rem] p-12 shadow-2xl relative overflow-hidden ring-1 ring-black/5">
@@ -281,11 +281,11 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                                     <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em]">Mastery Level</h3>
                                     <div className="flex items-center gap-2">
                                         <Award className="w-8 h-8 text-amber-500" />
-                                        <span className="text-3xl font-black text-[#1e3a8a]">Expert</span>
+                                        <span className="text-3xl font-black text-[#0d6e70]">Expert</span>
                                     </div>
                                 </div>
                                 <div className="h-px bg-gray-100 w-full" />
-                                <button onClick={() => onViewResult(results[0].id)} className="bg-[#1e3a8a] text-white p-6 rounded-[2.5rem] flex items-center justify-between group hover:scale-[1.02] transition-all shadow-xl shadow-blue-900/10">
+                                <button onClick={() => onViewResult(results[0].id)} className="bg-[#0d6e70] text-white p-6 rounded-[2.5rem] flex items-center justify-between group hover:scale-[1.02] transition-all shadow-xl shadow-blue-900/10">
                                     <div className="text-left">
                                         <span className="text-[10px] font-black uppercase text-blue-200">View Latest</span>
                                         <p className="font-black text-lg">Detailed Report</p>
@@ -324,10 +324,10 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                                     <div className="flex flex-col border-t border-gray-200 pt-6">
                                         <div className="flex justify-between items-center mb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                                             <span>Shorthandian Rank</span>
-                                            <span className="text-[#1e3a8a]">{Math.min(100, Math.round(results.length * 5))}%</span>
+                                            <span className="text-[#0d6e70]">{Math.min(100, Math.round(results.length * 5))}%</span>
                                         </div>
                                         <div className="w-full bg-white h-4 rounded-full p-1 border border-black/5 shadow-inner">
-                                            <div className="h-full bg-gradient-to-r from-blue-400 to-[#1e3a8a] rounded-full" style={{ width: `${Math.min(100, results.length * 5)}%` }} />
+                                            <div className="h-full bg-gradient-to-r from-blue-400 to-[#0d6e70] rounded-full" style={{ width: `${Math.min(100, results.length * 5)}%` }} />
                                         </div>
                                     </div>
                                 </div>
@@ -338,14 +338,14 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
 
                 {loading ? (
                     <div className="flex items-center justify-center py-40">
-                         <div className="w-16 h-16 rounded-full border-4 border-blue-50 border-t-[#1e3a8a] animate-spin shadow-2xl" />
+                         <div className="w-16 h-16 rounded-full border-4 border-blue-50 border-t-[#0d6e70] animate-spin shadow-2xl" />
                     </div>
                 ) : results.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-2xl mb-8"><BookOpen className="w-16 h-16 text-blue-100" /></div>
                         <h2 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter">Start Your Performance Tracking</h2>
                         <p className="text-gray-500 max-w-lg mb-10 text-lg font-medium">Complete any test to see your interactive meter and analysis dashboard.</p>
-                        <button onClick={onBack} className="bg-[#1e3a8a] text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-widest shadow-2xl hover:bg-black transition-all">Start Your First Test</button>
+                        <button onClick={onBack} className="bg-[#0d6e70] text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-widest shadow-2xl hover:bg-black transition-all">Start Your First Test</button>
                     </div>
                 ) : (
                     <div className="space-y-12">
@@ -380,7 +380,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                                                 <div className="bg-gray-50/50 p-6 rounded-2xl border border-black/[0.02]">
                                                     <div className="flex items-center justify-between mb-4">
                                                         <span className="text-[10px] font-black text-gray-400 uppercase">Recent Metrics</span>
-                                                        <span className="text-[10px] font-black text-[#1e3a8a] bg-blue-50 px-2.5 py-1 rounded-lg">LATEST</span>
+                                                        <span className="text-[10px] font-black text-[#0d6e70] bg-blue-50 px-2.5 py-1 rounded-lg">LATEST</span>
                                                     </div>
                                                     <div className="flex items-end justify-between">
                                                         <div className="flex flex-col">
@@ -395,7 +395,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <button onClick={() => onViewResult(currentTest.id)} className="w-full bg-[#1e3a8a] text-white font-black uppercase text-[10px] py-4 rounded-2xl tracking-[0.2em] transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg">View Full Report</button>
+                                                <button onClick={() => onViewResult(currentTest.id)} className="w-full bg-[#0d6e70] text-white font-black uppercase text-[10px] py-4 rounded-2xl tracking-[0.2em] transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg">View Full Report</button>
                                             </div>
                                         ) : (
                                             <div className="flex-1 flex flex-col justify-center items-center text-center py-6">
@@ -403,7 +403,7 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                                                 <p className="text-xs font-bold text-gray-400 mb-4">No content practiced in this module yet.</p>
                                                 <button 
                                                     onClick={() => onTakeTest && onTakeTest(modMeta.view)} 
-                                                    className="text-[10px] font-black text-[#1e3a8a] uppercase tracking-widest border-b-2 border-blue-100 hover:border-[#1e3a8a] transition-all"
+                                                    className="text-[10px] font-black text-[#0d6e70] uppercase tracking-widest border-b-2 border-blue-100 hover:border-[#0d6e70] transition-all"
                                                 >
                                                     Go Practice →
                                                 </button>

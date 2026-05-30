@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Volume2, FastForward, Clock, Activity, CheckCircle2, Share2, X, FileCheck, TrendingUp, Headphones, ArrowLeft, Maximize, Minimize, Sparkles, Upload, Music, FileText } from 'lucide-react';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { Play, Pause, RotateCcw, Volume2, FastForward, Clock, Activity, CheckCircle2, Share2, X, FileCheck, TrendingUp, Headphones, ArrowLeft, Maximize, Minimize, Sparkles, Upload, Music, FileText, Search } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { saveTestResult } from './lib/saveTestResult';
 
@@ -39,6 +39,9 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
     const [activeDateTab, setActiveDateTab] = useState('Today');
     const [isTestActive, setIsTestActive] = useState(false);
     const [countdown, setCountdown] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
     const textareaRef = useRef(null);
 
     // Additional state & refs for Typing Arena
@@ -138,6 +141,9 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                         id: ex.id,                       // UUID (used for DB save)
                         title: ex.title,
                         category: ex.category,           // Important for grouping
+                        job_title: ex.job_title,
+                        test_type: ex.test_type,
+                        created_at: ex.created_at,
                         lines: (ex.original_text || '')
                             .split('\n')
                             .filter(l => l.trim() !== '')
@@ -148,9 +154,12 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                     if (stored) {
                         const list = JSON.parse(stored);
                         localKc = list.map((item, idx) => ({
-                            id: `kc-local-${idx + 1}`,
+                            id: item.id || `kc-local-${idx + 1}`,
                             title: item.title || `Kailash Chandra Vol (Test #${list.length - idx})`,
                             category: 'kailash',
+                            job_title: item.job_title,
+                            test_type: item.test_type,
+                            created_at: item.created_at,
                             lines: (item.text || item.original_text || '').split('\n').filter(line => line.trim() !== '')
                         }));
                     }
@@ -163,6 +172,9 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             id: item.id || `comp-local-${idx + 1}`,
                             title: item.title || `Comprehension #${list.length - idx}`,
                             category: 'comprehension',
+                            job_title: item.job_title,
+                            test_type: item.test_type,
+                            created_at: item.created_at,
                             lines: (item.text || item.original_text || '').split('\n').filter(line => line.trim() !== '')
                         }));
                     }
@@ -177,6 +189,9 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             category: 'audio',
                             audio: item.audio,
                             state: item.state,
+                            job_title: item.job_title,
+                            test_type: item.test_type,
+                            created_at: item.created_at,
                             lines: (item.text || item.original_text || '').split('\n').filter(line => line.trim() !== '')
                         }));
                     }
@@ -273,18 +288,33 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
         }
     }, [initialCourse, availableExercises, isLoadingExercises]);
 
+    // Reset currentPage when search query or activeDateTab changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, activeDateTab]);
+
     // ── Grouping Logic ──────────────────────────────────────────
+    const filteredList = React.useMemo(() => {
+        const currentCategory = selectedExercise?.category || (initialCourse === 'arena-audio' ? 'audio' : (initialCourse === 'arena-comp' ? 'comprehension' : 'kailash'));
+        const list = availableExercises.filter(e => e.category === currentCategory || (currentCategory === 'kailash' && e.id.startsWith('kc-')));
+        
+        if (!searchQuery.trim()) return list;
+        const q = searchQuery.toLowerCase();
+        return list.filter(e => 
+            (e.title || '').toLowerCase().includes(q) ||
+            (e.job_title || '').toLowerCase().includes(q) ||
+            (e.test_type || '').toLowerCase().includes(q) ||
+            (e.lines || []).join(' ').toLowerCase().includes(q)
+        );
+    }, [availableExercises, selectedExercise, initialCourse, searchQuery]);
+
     const groupedTests = React.useMemo(() => {
         const today = new Date().toLocaleDateString();
         const yesterday = new Date(Date.now() - 86400000).toLocaleDateString();
-        const sixDaysAgo = Date.now() - (5 * 86400000);
 
         const categories = { 'Today': [], 'Yesterday': [], 'All Practice': [] };
         
-        const currentCategory = selectedExercise?.category || (initialCourse === 'arena-audio' ? 'audio' : (initialCourse === 'arena-comp' ? 'comprehension' : 'kailash'));
-        const list = availableExercises.filter(e => e.category === currentCategory || (currentCategory === 'kailash' && e.id.startsWith('kc-')));
-
-        list.forEach(ex => {
+        filteredList.forEach(ex => {
             const exDate = ex.created_at ? new Date(ex.created_at) : new Date();
             const dateStr = exDate.toLocaleDateString();
             
@@ -295,7 +325,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
         });
 
         return categories;
-    }, [availableExercises, selectedExercise, initialCourse]);
+    }, [filteredList]);
 
     // Robust Date Tab fallback
     useEffect(() => {
@@ -607,8 +637,8 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
         return (
             <div className="h-full flex-1 bg-gray-50 flex flex-col items-center justify-center p-8 font-sans">
                 <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-[#1e3a8a] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-[#1e3a8a] font-bold text-lg">Loading exercises from database...</p>
+                    <div className="w-16 h-16 border-4 border-[#0d6e70] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-[#0d6e70] font-bold text-lg">Loading exercises from database...</p>
                     <p className="text-gray-400 text-sm mt-1">Connecting to Supabase</p>
                 </div>
             </div>
@@ -625,7 +655,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                              setIsCustomMode(false);
                              setViewMode('selection');
                         }}
-                        className="flex items-center text-gray-500 hover:text-[#1e3a8a] font-bold transition-colors"
+                        className="flex items-center text-gray-500 hover:text-[#0d6e70] font-bold transition-colors"
                     >
                         <ArrowLeft className="w-5 h-5 mr-2" /> Back to Library
                     </button>
@@ -720,104 +750,180 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
     // ── Main Selection UI ───────────────────────────────────────
     if (viewMode === 'selection') {
         const activeList = groupedTests[activeDateTab] || [];
+        const totalPages = Math.ceil(activeList.length / ITEMS_PER_PAGE);
+        const paginatedList = activeList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
         const moduleTitle = selectedExercise?.category === 'audio' ? 'Audio Dictation' : (selectedExercise?.category === 'comprehension' ? 'Comprehension Mastery' : 'Kailash Chandra Mastery');
         
         return (
             <div className="h-full flex-1 bg-[#f8fafc] flex flex-col p-4 md:p-8 overflow-y-auto no-scrollbar">
-                <div className="w-full px-4 md:px-6 mx-auto space-y-8">
+                <div className="w-full px-4 md:px-6 mx-auto space-y-6">
                     {/* Module Header */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h2 className="text-3xl font-black text-[#0f2167] tracking-tight">{moduleTitle}</h2>
+                            <h2 className="text-3xl font-black text-[#07414e] tracking-tight">{moduleTitle}</h2>
                             <p className="text-gray-500 font-bold mt-1">Select an exercise to begin your practice session.</p>
                         </div>
-                        <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
-                             {['Today', 'Yesterday', 'All Practice'].map( tab => (
+                        <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100 gap-1">
+                             {['Today', 'Yesterday', 'All Practice'].map(tab => (
                                  <button
                                     key={tab}
                                     onClick={() => setActiveDateTab(tab)}
-                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeDateTab === tab ? 'bg-[#1e3a8a] text-white shadow-lg' : 'text-gray-400 hover:text-[#1e3a8a]'}`}
+                                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${activeDateTab === tab ? 'bg-[#0d6e70] text-white shadow-lg' : 'text-gray-400 hover:text-[#0d6e70]'}`}
                                  >
                                      {tab}
+                                     <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeDateTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                         {groupedTests[tab]?.length ?? 0}
+                                     </span>
                                  </button>
                              ))}
                         </div>
                     </div>
 
-                    {/* Grid Selection */}
+                    {/* Search Bar + Navigation indicator */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                        <div className="relative flex-1 max-w-md">
+                            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search exercises by title, job, text..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-9 py-2 text-xs border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#0d6e70] focus:border-[#0d6e70] bg-white text-gray-800"
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
+                        {activeList.length > 0 && (
+                            <span className="text-xs text-gray-400 font-bold self-end sm:self-auto">
+                                Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, activeList.length)} of {activeList.length}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Custom Practice Banner */}
+                    <div 
+                        onClick={() => {
+                            setIsCustomMode(true);
+                            setViewMode('custom-upload');
+                        }}
+                        className="group bg-gradient-to-r from-blue-50 via-indigo-50 to-white rounded-2xl p-5 border border-indigo-100 hover:border-indigo-400 transition-all duration-300 cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden shadow-sm hover:shadow"
+                    >
+                        <div className="absolute right-0 top-0 h-full w-32 bg-indigo-500/5 rounded-l-[100px] pointer-events-none" />
+                        <div className="flex items-center space-x-4 z-10">
+                            <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0">
+                                <Sparkles className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors">
+                                    Practice with Your Own Content
+                                </h3>
+                                <p className="text-xs font-bold text-gray-500 mt-1">
+                                    Upload your own custom audio and transcription text to train at your own pace.
+                                </p>
+                            </div>
+                        </div>
+                        <button className="z-10 px-5 py-2.5 bg-indigo-600 text-white group-hover:bg-indigo-700 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 shadow-md">
+                            Get Started →
+                        </button>
+                    </div>
+
+                    {/* List Grid */}
                     {activeList.length === 0 ? (
-                        <div className="bg-white rounded-[2rem] border-2 border-dashed border-gray-200 p-20 text-center">
+                        <div className="bg-white rounded-[2rem] border-2 border-dashed border-gray-200 p-20 text-center shadow-sm">
                             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Activity className="w-10 h-10 text-gray-300" />
                             </div>
                             <h3 className="text-xl font-black text-gray-800">No content found for {activeDateTab}</h3>
-                            <p className="text-gray-400 max-w-xs mx-auto mt-2 font-bold">Try checking the 'All Practice' tab to see earlier uploads.</p>
+                            <p className="text-gray-400 max-w-xs mx-auto mt-2 font-bold">Try checking the 'All Practice' tab or search for another query.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                            {/* CUSTOM PRACTICE CARD */}
-                            <div 
-                                onClick={() => {
-                                    setIsCustomMode(true);
-                                    setViewMode('custom-upload');
-                                }}
-                                className="group bg-gradient-to-br from-indigo-50 to-white rounded-[2rem] p-6 shadow-xl shadow-indigo-100/50 border-2 border-dashed border-indigo-200 hover:border-indigo-600 hover:translate-y-[-8px] transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between"
-                            >
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-bl-[4rem] group-hover:bg-indigo-500/10 transition-colors" />
-                                <div>
-                                    <div className="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center mb-6 shadow-sm border border-indigo-200">
-                                        <Sparkles className="w-7 h-7 text-indigo-600" />
-                                    </div>
-                                    <h3 className="text-xl font-black text-gray-900 mb-2 leading-tight group-hover:text-indigo-600">
-                                        Practice with Own Content
-                                    </h3>
-                                    <p className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-wider leading-relaxed">
-                                        Upload your own audio and transcription text for personalized training.
-                                    </p>
-                                </div>
-                                <button className="w-full py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-200">
-                                    Get Started
-                                </button>
+                        <div className="space-y-6 pb-10">
+                            {/* List Header */}
+                            <div className="hidden md:grid grid-cols-[3rem_1fr_auto_auto] items-center gap-4 px-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <span>#</span>
+                                <span>Exercise Title</span>
+                                <span className="text-center w-28">Published</span>
+                                <span className="w-36"></span>
                             </div>
 
-                            {activeList.map((test, idx) => (
-                                <div 
-                                    key={test.id}
-                                    onClick={() => {
-                                        const t = {...test};
-                                        if (t.category === 'audio') {
-                                            t.isAudioCourse = true;
-                                        }
-                                        setSelectedExercise(t);
-                                        setDbExerciseId(t.id.startsWith('kc-') ? null : t.id);
-                                        setViewMode('practice');
-                                        if (t.category === 'audio' && audioRef.current && t.audio) {
-                                            audioRef.current.src = t.audio;
-                                        }
-                                    }}
-                                    className="group bg-white rounded-[2rem] p-6 shadow-xl shadow-gray-200/50 border border-gray-100 hover:border-[#1e3a8a] hover:translate-y-[-8px] transition-all cursor-pointer relative overflow-hidden"
-                                >
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#1e3a8a]/5 rounded-bl-[4rem] group-hover:bg-[#1e3a8a]/10 transition-colors" />
+                            {/* List Items */}
+                            <div className="space-y-3">
+                                {paginatedList.map((test, idx) => {
+                                    const wordCount = test.lines?.join(' ').split(/\s+/).filter(Boolean).length || 0;
+                                    const dateStr = test.created_at ? new Date(test.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent';
+                                    const globalIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+                                    const isAudio = test.category === 'audio';
                                     
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-sm ${test.category === 'audio' ? 'bg-amber-100' : 'bg-blue-50'}`}>
-                                        {test.category === 'audio' ? <Headphones className="w-7 h-7 text-amber-600" /> : <FileCheck className="w-7 h-7 text-blue-600" />}
-                                    </div>
-                                    
-                                    <h3 className="text-lg font-black text-gray-900 mb-2 leading-tight group-hover:text-[#1e3a8a]">
-                                        {test.title.length > 40 ? test.title.slice(0, 40) + '...' : test.title}
-                                    </h3>
-                                    
-                                    <div className="flex items-center gap-3 text-xs font-bold text-gray-400 mb-6 uppercase tracking-wider">
-                                        <span>{test.lines.join(' ').split(' ').length} Words</span>
-                                        <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                                        <span>{test.created_at ? new Date(test.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'Demo'}</span>
-                                    </div>
-                                    
-                                    <button className="w-full py-3 bg-gray-50 group-hover:bg-[#1e3a8a] group-hover:text-white rounded-xl text-gray-600 text-xs font-black uppercase tracking-widest transition-all">
-                                        Start Practice
-                                    </button>
+                                    return (
+                                        <div
+                                            key={test.id}
+                                            onClick={() => {
+                                                const t = {...test};
+                                                if (t.category === 'audio') {
+                                                    t.isAudioCourse = true;
+                                                }
+                                                setSelectedExercise(t);
+                                                setDbExerciseId(t.id.startsWith('kc-') ? null : t.id);
+                                                setViewMode('practice');
+                                                if (t.category === 'audio' && audioRef.current && t.audio) {
+                                                    audioRef.current.src = t.audio;
+                                                }
+                                                handleReset();
+                                            }}
+                                            className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#0d6e70]/30 transition-all duration-200 cursor-pointer flex items-center gap-4 px-5 py-4 relative overflow-hidden"
+                                        >
+                                            {/* Left accent bar on hover */}
+                                            <div className="absolute left-0 top-0 h-full w-1 bg-[#0d6e70] scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-center rounded-l-2xl" />
+
+                                            {/* Index badge */}
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-[#0d6e70] flex items-center justify-center shrink-0 transition-colors">
+                                                <span className="text-sm font-black text-[#0d6e70] group-hover:text-white transition-colors">{globalIdx}</span>
+                                            </div>
+
+                                            {/* Icon */}
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isAudio ? 'bg-amber-50' : 'bg-blue-50'}`}>
+                                                {isAudio ? <Headphones className="w-5 h-5 text-amber-500" /> : <FileText className="w-5 h-5 text-blue-500" />}
+                                            </div>
+
+                                            {/* Title + chips */}
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-black text-gray-900 text-sm md:text-base group-hover:text-[#0d6e70] transition-colors truncate">{test.title}</h3>
+                                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isAudio ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
+                                                        {isAudio ? 'Audio Dictation' : test.category === 'comprehension' ? 'Comprehension' : 'Kailash Chandra'}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{wordCount} words</span>
+                                                    <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{dateStr}</span>
+                                                    {test.job_title && <span className="text-[10px] font-bold bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">{test.job_title}</span>}
+                                                    {test.test_type && <span className="text-[10px] font-bold bg-green-50 text-green-600 px-2 py-0.5 rounded-full">{test.test_type}</span>}
+                                                </div>
+                                            </div>
+
+                                            {/* CTA */}
+                                            <button className="shrink-0 px-5 py-2.5 bg-[#f0fafa] text-[#0d6e70] group-hover:bg-[#0d6e70] group-hover:text-white rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-200 whitespace-nowrap">
+                                                Start →
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Pagination */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-2 pt-2">
+                                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#0d6e70] hover:text-white hover:border-[#0d6e70] disabled:opacity-40 disabled:cursor-not-allowed transition-all">← Prev</button>
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                        <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-[#0d6e70] text-white shadow-lg' : 'border border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-[#0d6e70]'}`}>{p}</button>
+                                    ))}
+                                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-500 hover:bg-[#0d6e70] hover:text-white hover:border-[#0d6e70] disabled:opacity-40 disabled:cursor-not-allowed transition-all">Next →</button>
                                 </div>
-                            ))}
+                            )}
                         </div>
                     )}
                 </div>
@@ -830,11 +936,11 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
             <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
                 <div className="flex-1 flex flex-col items-center justify-center p-8">
                     <div className="text-center">
-                        <Activity className="w-16 h-16 text-[#1e3a8a] mx-auto mb-4 opacity-20" />
-                        <p className="text-[#1e3a8a] font-bold text-lg">No exercise selected</p>
+                        <Activity className="w-16 h-16 text-[#0d6e70] mx-auto mb-4 opacity-20" />
+                        <p className="text-[#0d6e70] font-bold text-lg">No exercise selected</p>
                         <button 
                             onClick={() => setViewMode('selection')}
-                            className="mt-4 px-6 py-2 bg-[#1e3a8a] text-white rounded-xl font-bold shadow-lg"
+                            className="mt-4 px-6 py-2 bg-[#0d6e70] text-white rounded-xl font-bold shadow-lg"
                         >
                             Back to Selection
                         </button>
@@ -851,7 +957,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                 {/* Sticky Control Header (Timer + Audio) */}
                 <div className="sticky top-0 z-50 bg-white shrink-0 shadow-sm">
                     {/* Top Bar */}
-                    <div className="bg-[#1e3a8a] text-white px-4 py-2.5 flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 shadow-md">
+                    <div className="bg-[#0d6e70] text-white px-4 py-2.5 flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 shadow-md">
                         <div className="flex items-center space-x-2">
                             <select
                                 className="bg-blue-800/50 text-white text-[11px] font-black uppercase tracking-wider px-2 py-1.5 rounded-lg outline-none border border-blue-700/50 focus:border-blue-400 max-w-[140px] truncate"
@@ -955,13 +1061,13 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             <div className="flex items-center space-x-4">
                                 <button
                                     onClick={togglePlayPause}
-                                    className="w-10 h-10 bg-[#1e3a8a] hover:bg-blue-800 text-white rounded-full flex items-center justify-center shadow-md transition-transform active:scale-95"
+                                    className="w-10 h-10 bg-[#0d6e70] hover:bg-blue-800 text-white rounded-full flex items-center justify-center shadow-md transition-transform active:scale-95"
                                 >
                                     {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
                                 </button>
                                 <button
                                     onClick={resetAudio}
-                                    className="w-8 h-8 bg-white border border-gray-300 text-gray-600 hover:text-[#1e3a8a] hover:border-[#1e3a8a] rounded-full flex items-center justify-center shadow-sm transition-colors"
+                                    className="w-8 h-8 bg-white border border-gray-300 text-gray-600 hover:text-[#0d6e70] hover:border-[#0d6e70] rounded-full flex items-center justify-center shadow-sm transition-colors"
                                     title="Restart Audio"
                                 >
                                     <RotateCcw className="w-4 h-4" />
@@ -970,7 +1076,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Audio Dictation</span>
                                     <div className="w-32 md:w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-[#1e3a8a] transition-all duration-100 ease-linear"
+                                            className="h-full bg-[#0d6e70] transition-all duration-100 ease-linear"
                                             style={{ width: `${audioProgress}%` }}
                                         ></div>
                                     </div>
@@ -986,7 +1092,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                             key={speed}
                                             onClick={() => changeSpeed(speed)}
                                             className={`px-2 py-1 text-[10px] font-black rounded-lg transition-colors ${playbackSpeed === speed
-                                                ? 'bg-[#1e3a8a] text-white shadow-sm'
+                                                ? 'bg-[#0d6e70] text-white shadow-sm'
                                                 : 'text-gray-500 hover:bg-gray-100'
                                                 }`}
                                         >
@@ -1008,7 +1114,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 flex flex-col items-center gap-4 md:gap-5 shadow-sm">
                                         
                                         <div className="flex items-center space-x-4 shrink-0 w-full mb-3">
-                                            <div className="w-12 h-12 bg-[#1e3a8a] text-white rounded-full flex items-center justify-center shadow-md">
+                                            <div className="w-12 h-12 bg-[#0d6e70] text-white rounded-full flex items-center justify-center shadow-md">
                                                 <Headphones className="w-6 h-6" />
                                             </div>
                                             <div className="text-left flex-1">
@@ -1044,8 +1150,8 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                                                 key={speed}
                                                                 onClick={() => changeSpeed(speed)}
                                                                 className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all ${playbackSpeed === speed
-                                                                    ? 'bg-[#1e3a8a] text-white shadow-md scale-105'
-                                                                    : 'text-gray-500 hover:bg-white hover:text-[#1e3a8a]'
+                                                                    ? 'bg-[#0d6e70] text-white shadow-md scale-105'
+                                                                    : 'text-gray-500 hover:bg-white hover:text-[#0d6e70]'
                                                                     }`}
                                                             >
                                                                 {speed}x
@@ -1105,7 +1211,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     <div className="flex flex-col flex-1 min-h-[350px] mt-8 overflow-visible">
                                         <div className="mb-4 px-2 flex items-center justify-between border-b pb-3">
                                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-[#1e3a8a] mr-2" />
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#0d6e70] mr-2" />
                                                 Live Translation Area
                                             </h3>
                                             
@@ -1133,7 +1239,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                         {/* Native HTML5 Audio Player conditionally displayed for Standard Texts that have Audio attached */}
                                         {selectedExercise?.audio && (
                                             <div className="mb-6 w-full bg-blue-50/60 p-4 rounded-3xl border border-blue-100 shadow-sm flex flex-col">
-                                                <span className="text-[10px] text-[#1e3a8a] font-black uppercase tracking-[0.1em] pl-2 flex items-center mb-3">
+                                                <span className="text-[10px] text-[#0d6e70] font-black uppercase tracking-[0.1em] pl-2 flex items-center mb-3">
                                                     <Headphones className="w-3.5 h-3.5 mr-2" /> 
                                                     Dictation Source Audio
                                                 </span>
@@ -1161,7 +1267,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                                 value={inputText}
                                                 onChange={handleInputChange}
                                                 disabled={(timeLeft === 0 && isStarted) || (selectedExercise.isAudioCourse && !isStarted)}
-                                                className="w-full h-full min-h-[300px] p-8 text-xl font-serif text-gray-800 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm focus:ring-4 focus:ring-blue-50 focus:border-[#1e3a8a] transition-all resize-none leading-relaxed"
+                                                className="w-full h-full min-h-[300px] p-8 text-xl font-serif text-gray-800 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm focus:ring-4 focus:ring-blue-50 focus:border-[#0d6e70] transition-all resize-none leading-relaxed"
                                                 placeholder={isStarted || !selectedExercise.isAudioCourse ? "Click here and start typing your analysis..." : "Please start the test first to enable typing..."}
                                                 onCopy={(e) => { e.preventDefault(); }}
                                                 onPaste={(e) => { e.preventDefault(); }}
@@ -1186,7 +1292,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             {!isStarted && countdown === null && (
                                 <button
                                     onClick={() => setCountdown(5)}
-                                    className="px-6 py-2.5 bg-[#1e3a8a] hover:bg-blue-800 text-white font-black rounded-xl shadow-md transition-all hover:scale-105 active:scale-95 flex items-center space-x-2 text-[10px] tracking-widest uppercase"
+                                    className="px-6 py-2.5 bg-[#0d6e70] hover:bg-blue-800 text-white font-black rounded-xl shadow-md transition-all hover:scale-105 active:scale-95 flex items-center space-x-2 text-[10px] tracking-widest uppercase"
                                 >
                                     <Play className="w-4 h-4 fill-current" />
                                     <span>Start Dictation</span>
@@ -1222,7 +1328,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
             {showModal && finalStats && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-md animate-in fade-in zoom-in duration-300">
-                        <div className="bg-[#1e3a8a] py-6 px-6 text-center text-white relative">
+                        <div className="bg-[#0d6e70] py-6 px-6 text-center text-white relative">
                             <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-blue-200 hover:text-white">
                                 <X className="w-6 h-6" />
                             </button>
@@ -1235,7 +1341,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             <div className="grid grid-cols-2 gap-4 mb-6">
                                 <div className="bg-gray-50 p-4 rounded-xl text-center border border-gray-100">
                                     <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-1">Final WPM</span>
-                                    <span className="text-3xl font-black text-[#1e3a8a]">{finalStats.wpm}</span>
+                                    <span className="text-3xl font-black text-[#0d6e70]">{finalStats.wpm}</span>
                                 </div>
                                 <div className="bg-gray-50 p-4 rounded-xl text-center border border-gray-100">
                                     <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-1">Accuracy</span>
@@ -1259,7 +1365,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                         <button
                                             onClick={() => onTestComplete?.(attemptId)}
                                             disabled={!attemptId}
-                                            className={`w-full py-3 bg-[#1e3a8a] hover:bg-blue-800 text-white font-black rounded-xl flex items-center justify-center space-x-2 shadow-md transition-all ${!attemptId ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+                                            className={`w-full py-3 bg-[#0d6e70] hover:bg-blue-800 text-white font-black rounded-xl flex items-center justify-center space-x-2 shadow-md transition-all ${!attemptId ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
                                         >
                                             <TrendingUp className="w-5 h-5" />
                                             <span>View Detailed Analysis</span>

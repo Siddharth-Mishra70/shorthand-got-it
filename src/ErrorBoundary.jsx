@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { RefreshCw, AlertTriangle, Home } from 'lucide-react';
 
 class ErrorBoundary extends React.Component {
@@ -34,7 +34,7 @@ class ErrorBoundary extends React.Component {
             <div className="space-y-3">
               <button
                 onClick={() => window.location.reload()}
-                className="w-full flex items-center justify-center space-x-2 bg-[#1e3a8a] hover:bg-blue-800 text-white font-black py-4 rounded-2xl transition-all shadow-xl active:scale-95"
+                className="w-full flex items-center justify-center space-x-2 bg-[#0d6e70] hover:bg-blue-800 text-white font-black py-4 rounded-2xl transition-all shadow-xl active:scale-95"
               >
                 <RefreshCw className="w-5 h-5" />
                 <span>Reload Application</span>
