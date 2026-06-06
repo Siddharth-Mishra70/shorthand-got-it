@@ -263,7 +263,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
   // ─────────────────────────────────────────────────────────────────────────
   // REGISTER STEP 1 — Validate form → supabase.auth.signUp (sends OTP email)
   // ─────────────────────────────────────────────────────────────────────────
-  const handleSendOtp = async (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
     setError('');
     const { firstName, lastName, state, city, gender, phone, email, password } = regData;
