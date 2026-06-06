@@ -291,7 +291,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
         .from('users').select('id').eq('email', trimmedEmail).maybeSingle();
       if (existingEmail) throw new Error('An account with this email already exists.');
 
-      // signUp — Supabase will send the 6-digit OTP to the email
+      // signUp — Supabase registers the credentials in Auth
       const { error: signUpErr } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
@@ -306,51 +306,14 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
       if (signUpErr) throw signUpErr;
 
-      setRegStep('otp');
-      setOtpCode('');
-      startResendTimer();
-    } catch (err) {
-      console.error('Send OTP error:', err);
-      setError(err.message || 'Failed to send OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // REGISTER STEP 2 — Verify OTP → save profile → sign out (pending approval)
-  // ─────────────────────────────────────────────────────────────────────────
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!otpCode || otpCode.length !== 6) {
-      setError('Please enter the 6-digit OTP sent to your email.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const trimmedEmail = regData.email.toLowerCase().trim();
-
-      // Verify OTP — type 'signup' matches the token sent by supabase.auth.signUp()
-      const { error: verifyErr } = await supabase.auth.verifyOtp({
-        email: trimmedEmail,
-        token: otpCode.trim(),
-        type: 'signup',
-      });
-      if (verifyErr) throw verifyErr;
-
-      // Immediately sign them out — they can only log in after admin approves
-      await supabase.auth.signOut();
-
-      // Insert pending profile into custom users table
+      // Insert pending profile into custom users table directly
       const { error: insertErr } = await supabase.from('users').insert([{
-        first_name:  regData.firstName.trim(),
-        last_name:   regData.lastName.trim(),
-        state:       regData.state.trim(),
-        city:        regData.city.trim(),
-        gender:      regData.gender,
-        phone:       regData.phone.trim(),
+        first_name:  firstName.trim(),
+        last_name:   lastName.trim(),
+        state:       state.trim(),
+        city:        city.trim(),
+        gender:      gender,
+        phone:       phone.trim(),
         email:       trimmedEmail,
         status:      'pending',
         role:        'student',
@@ -360,36 +323,13 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
       if (insertErr) throw insertErr;
 
+      // Immediately sign them out so their session is clean until approved
+      await supabase.auth.signOut();
+
       setRegStep('pending');
     } catch (err) {
-      console.error('Verify OTP error:', err);
-      setError(err.message || 'OTP verification failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ── Resend OTP (re-run signUp with the same credentials) ─────────────────
-  const handleResendOtp = async () => {
-    if (otpResendTimer > 0) return;
-    setError('');
-    setLoading(true);
-    try {
-      const { error: signUpErr } = await supabase.auth.signUp({
-        email: regData.email.toLowerCase().trim(),
-        password: regData.password,
-        options: {
-          data: {
-            first_name: regData.firstName.trim(),
-            last_name: regData.lastName.trim(),
-            phone: regData.phone.trim(),
-          },
-        },
-      });
-      if (signUpErr) throw signUpErr;
-      startResendTimer();
-    } catch (err) {
-      setError(err.message || 'Failed to resend OTP.');
+      console.error('Registration error:', err);
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -893,7 +833,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                       <ul className="space-y-1.5 text-gray-600 list-decimal list-inside">
                         <li>Pay the fee by scanning the QR code above.</li>
                         <li>Take a screenshot of the payment.</li>
-                        <li>Submit this form, verify your email OTP, and send the screenshot to us on WhatsApp to activate your account.</li>
+                        <li>Submit this form, and send the screenshot to us on WhatsApp to activate your account.</li>
                       </ul>
                     </div>
 
@@ -916,76 +856,6 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                 </form>
               )}
 
-              {/* ══════════════════════════════════════════════════════════
-                  REGISTER — STEP 2: Enter OTP
-              ════════════════════════════════════════════════════════════ */}
-              {!success && tab === 'register' && regStep === 'otp' && (
-                <form onSubmit={handleVerifyOtp} className="space-y-6">
-
-                  {/* Email display card */}
-                  <div className="flex items-center gap-4 bg-blue-50 border border-blue-100 rounded-2xl p-4">
-                    <div className="w-12 h-12 bg-[#0d6e70] rounded-xl flex items-center justify-center shrink-0">
-                      <Mail className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest">OTP sent to</p>
-                      <p className="text-sm font-black text-[#0d6e70] break-all">{regData.email}</p>
-                      <p className="text-xs text-gray-500">Check your inbox (and spam folder)</p>
-                    </div>
-                  </div>
-
-                  {/* OTP input */}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1.5">
-                      OTP Code (6 digits) <span className="text-red-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="• • • • • •"
-                        maxLength={6}
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        autoFocus
-                        className="w-full pl-11 pr-4 py-4 border-2 border-gray-200 rounded-xl text-2xl font-black text-center text-gray-900 tracking-[0.5em] bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d6e70]/25 focus:border-[#0d6e70] transition-all"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1.5 text-center">OTP expires in 5 minutes</p>
-                  </div>
-
-                  <button
-                    id="verify-otp-btn"
-                    type="submit"
-                    disabled={loading || otpCode.length !== 6}
-                    className="w-full flex items-center justify-center space-x-3 bg-[#0d6e70] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
-                  >
-                    {loading
-                      ? <><Spinner /><span>Verifying…</span></>
-                      : <><ShieldCheck className="w-5 h-5" /><span>Verify & Create Account</span></>}
-                  </button>
-
-                  {/* Resend + change email */}
-                  <div className="flex items-center justify-between text-sm">
-                    <button
-                      type="button"
-                      onClick={() => { setRegStep('form'); setOtpCode(''); setError(''); }}
-                      className="text-gray-400 hover:text-gray-600 font-bold transition-colors flex items-center gap-1"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" /> Change Details
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleResendOtp}
-                      disabled={loading || otpResendTimer > 0}
-                      className="text-[#0d6e70] font-bold hover:underline disabled:text-gray-300 disabled:no-underline transition-colors"
-                    >
-                      {otpResendTimer > 0 ? `Resend in ${otpResendTimer}s` : 'Resend OTP'}
-                    </button>
-                  </div>
-                </form>
-              )}
             </>
           )}
         </div>
