@@ -37,6 +37,19 @@ const isUserActive = (u) => {
     return true;
 };
 
+const isSubscriptionExpired = (u) => {
+    if (!u) return false;
+    if (u.valid_until) {
+        return new Date(u.valid_until) < new Date();
+    }
+    if (u.created_at) {
+        const created = new Date(u.created_at);
+        created.setDate(created.getDate() + 29);
+        return created < new Date();
+    }
+    return false;
+};
+
 const MODULE_TYPES = [
     { key: 'highcourt', label: 'High Court Formatting', icon: Scale, color: 'from-blue-600 to-blue-800', bg: 'bg-blue-50', text: 'text-blue-700' },
     { key: 'pitman', label: 'Pitman Exercise', icon: Edit2, color: 'from-purple-600 to-purple-800', bg: 'bg-purple-50', text: 'text-purple-700' },
@@ -1082,7 +1095,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             const updatePayload = { status: newStatus };
             if (newStatus === 'active') {
                 const user = users.find(u => u.email === email);
-                if (user && user.valid_until && new Date(user.valid_until) < new Date()) {
+                if (user && isSubscriptionExpired(user)) {
                     const expiry = new Date();
                     expiry.setDate(expiry.getDate() + 29);
                     updatePayload.valid_until = expiry.toISOString();

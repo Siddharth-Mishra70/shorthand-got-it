@@ -44,6 +44,19 @@ const getComputedStatus = (u) => {
   return status;
 };
 
+const isSubscriptionExpired = (u) => {
+  if (!u) return false;
+  if (u.valid_until) {
+    return new Date(u.valid_until) < new Date();
+  }
+  if (u.created_at) {
+    const created = new Date(u.created_at);
+    created.setDate(created.getDate() + 29);
+    return created < new Date();
+  }
+  return false;
+};
+
 // ─── Status Dropdown for each row ─────────────────────────────────────────
 const StatusDropdown = ({ userId, currentStatus, onUpdate, isUpdating }) => {
   const [open, setOpen] = useState(false);
@@ -230,7 +243,7 @@ const AdminUserManagement = () => {
     try {
       const user = users.find(u => u.id === userId);
       const updatePayload = { status: newStatus };
-      if (newStatus === 'active' && user && user.valid_until && new Date(user.valid_until) < new Date()) {
+      if (newStatus === 'active' && user && isSubscriptionExpired(user)) {
         const expiry = new Date();
         expiry.setDate(expiry.getDate() + 29);
         updatePayload.valid_until = expiry.toISOString();
