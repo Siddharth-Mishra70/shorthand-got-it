@@ -456,7 +456,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
           <ArrowLeft className="w-4 h-4" /><span>Back to Home</span>
         </button>
 
-        <div className="w-full max-w-md">
+        <div className={`w-full transition-all duration-300 ${tab === 'register' && regStep === 'form' ? 'max-w-4xl' : 'max-w-md'}`}>
 
           {/* ── Pending Approval Screen ─────────────────────────────────── */}
           {tab === 'register' && regStep === 'pending' ? (
@@ -733,109 +733,187 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                   REGISTER — PAYMENT & VERIFICATION UI
               ════════════════════════════════════════════════════════════ */}
               {!success && tab === 'register' && regStep === 'form' && (
-                <div className="space-y-6">
+                <form onSubmit={handleSignUp} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column: Form fields */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-black text-gray-900 border-b pb-2 mb-4 flex items-center gap-2">
+                      <User className="w-5 h-5 text-[#0d6e70]" />
+                      Personal Details
+                    </h3>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <InputField
+                        id="reg-first-name"
+                        label="First Name"
+                        icon={User}
+                        placeholder="John"
+                        value={regData.firstName}
+                        onChange={(e) => setRegData({ ...regData, firstName: e.target.value })}
+                        required
+                      />
+                      <InputField
+                        id="reg-last-name"
+                        label="Last Name"
+                        icon={User}
+                        placeholder="Doe"
+                        value={regData.lastName}
+                        onChange={(e) => setRegData({ ...regData, lastName: e.target.value })}
+                        required
+                      />
+                    </div>
 
-                  {/* QR Code Section */}
-                  <div className="flex flex-col items-center">
-                    <div className="relative group">
-                      <div className="absolute -inset-1 bg-gradient-to-br from-[#0d6e70]/30 to-indigo-400/30 rounded-2xl blur-md opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
-                      <div className="relative bg-white border-2 border-[#0d6e70]/20 rounded-2xl p-3 shadow-xl">
-                        <img
-                          src="/QRImage.jpeg"
-                          alt="PhonePe Payment QR Code"
-                          className="w-52 h-52 object-contain rounded-xl"
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InputField
+                        id="reg-phone"
+                        label="Phone Number"
+                        icon={Phone}
+                        placeholder="10-digit number"
+                        value={regData.phone}
+                        onChange={(e) => setRegData({ ...regData, phone: e.target.value })}
+                        required
+                      />
+                      <InputField
+                        id="reg-email"
+                        label="Gmail Address"
+                        icon={Mail}
+                        type="email"
+                        placeholder="john.doe@gmail.com"
+                        value={regData.email}
+                        onChange={(e) => setRegData({ ...regData, email: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <InputField
+                      id="reg-password"
+                      label="Choose Password"
+                      icon={Lock}
+                      type={showRegPassword ? 'text' : 'password'}
+                      placeholder="Minimum 6 characters"
+                      value={regData.password}
+                      onChange={(e) => setRegData({ ...regData, password: e.target.value })}
+                      required
+                      rightElement={
+                        <button
+                          type="button"
+                          onClick={() => setShowRegPassword((v) => !v)}
+                          className="text-gray-400 hover:text-[#0d6e70] transition-colors p-1"
+                          tabIndex={-1}
+                        >
+                          {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      }
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <InputField
+                        id="reg-state"
+                        label="State"
+                        icon={MapPin}
+                        placeholder="e.g. UP"
+                        value={regData.state}
+                        onChange={(e) => setRegData({ ...regData, state: e.target.value })}
+                        required
+                      />
+                      <InputField
+                        id="reg-city"
+                        label="City"
+                        icon={Building}
+                        placeholder="e.g. Prayagraj"
+                        value={regData.city}
+                        onChange={(e) => setRegData({ ...regData, city: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <SelectField
+                      id="reg-gender"
+                      label="Gender"
+                      icon={Users}
+                      value={regData.gender}
+                      onChange={(e) => setRegData({ ...regData, gender: e.target.value })}
+                      required
+                      options={[
+                        { value: 'Male', label: 'Male' },
+                        { value: 'Female', label: 'Female' },
+                        { value: 'Other', label: 'Other' },
+                      ]}
+                    />
+                  </div>
+
+                  {/* Right Column: Payment details */}
+                  <div className="space-y-6 bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+                    <h3 className="text-lg font-black text-gray-900 border-b pb-2 flex items-center gap-2">
+                      <span>💳</span>
+                      UPI Payment & Activation
+                    </h3>
+
+                    {/* QR Code Section */}
+                    <div className="flex flex-col items-center">
+                      <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-br from-[#0d6e70]/30 to-indigo-400/30 rounded-2xl blur-md opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
+                        <div className="relative bg-white border-2 border-[#0d6e70]/20 rounded-2xl p-3 shadow-xl">
+                          <img
+                            src="/QRImage.jpeg"
+                            alt="PhonePe Payment QR Code"
+                            className="w-40 h-40 object-contain rounded-xl"
+                          />
+                        </div>
                       </div>
+                      <p className="mt-3 text-xs font-black text-gray-800 tracking-widest uppercase">MR. AYUSH PANDEY</p>
+                      <p className="text-[10px] text-gray-400 font-medium mt-0.5">Scan via PhonePe / Any UPI App</p>
                     </div>
-                    <p className="mt-4 text-sm font-black text-gray-800 tracking-widest uppercase">MR. AYUSH PANDEY</p>
-                    <p className="text-xs text-gray-400 font-medium mt-0.5 mb-2">Scan via PhonePe / Any UPI App</p>
-                  </div>
 
-                  {/* Pricing Info */}
-                  <div className="bg-white border-2 border-green-100 rounded-2xl p-4 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-bl-full pointer-events-none"></div>
-                    <p className="text-xs font-black text-green-700 uppercase tracking-widest mb-3 relative z-10 flex items-center gap-1.5">
-                      <span>🏷️</span> Pricing Details
-                    </p>
-                    <ul className="space-y-2 text-sm font-bold text-gray-700 relative z-10">
-                      <li className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
-                        <span>Allahabad High Court Formatting</span>
-                        <span className="text-green-700 font-black">₹ 600</span>
-                      </li>
-                      <li className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
-                        <span>Pitman Shorthand</span>
-                        <span className="text-green-700 font-black">₹ 600</span>
-                      </li>
-                      <li className="flex justify-between items-center bg-green-50 border border-green-200 px-3 py-2.5 rounded-lg mt-1 shadow-sm">
-                        <span className="text-green-900">Both Modules (Combo)</span>
-                        <span className="text-green-800 font-black text-base">₹ 1100</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  {/* Step-by-step Instructions */}
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 space-y-4">
-                    <p className="text-xs font-black text-[#0d6e70] uppercase tracking-widest flex items-center gap-1.5">
-                      <span>📋</span> Next Steps
-                    </p>
-
-                    <ol className="space-y-3">
-                      <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-[#0d6e70] text-white rounded-full flex items-center justify-center text-xs font-black">1</span>
-                        <p className="text-sm text-gray-700 font-medium leading-snug">
-                          Complete the payment via <span className="font-black text-[#5f259f]">PhonePe / UPI</span> by scanning the QR code above.
-                        </p>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-[#0d6e70] text-white rounded-full flex items-center justify-center text-xs font-black">2</span>
-                        <p className="text-sm text-gray-700 font-medium leading-snug">
-                          Take a <span className="font-black text-gray-900">screenshot</span> of the successful transaction.
-                        </p>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-[#0d6e70] text-white rounded-full flex items-center justify-center text-xs font-black">3</span>
-                        <p className="text-sm text-gray-700 font-medium leading-snug">
-                          Send the screenshot on{' '}
-                          <span className="font-black text-green-700">WhatsApp</span> to{' '}
-                          <a
-                            href="https://wa.me/917080811235"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-black text-green-600 hover:text-green-700 underline underline-offset-2 transition-colors"
-                          >
-                            +91 70808 11235
-                          </a>
-                        </p>
-                      </li>
-                    </ol>
-
-                    {/* Note */}
-                    <div className="flex items-center gap-2 bg-white/70 border border-blue-100 rounded-xl px-3 py-2.5 mt-1">
-                      <span className="text-base">⏱️</span>
-                      <p className="text-xs font-bold text-blue-800">
-                        Your account will be activated within <span className="text-[#0d6e70]">15 minutes!</span>
+                    {/* Pricing Info */}
+                    <div className="bg-white border-2 border-green-100 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+                      <p className="text-[10px] font-black text-green-700 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                        <span>🏷️</span> Pricing Details
                       </p>
+                      <ul className="space-y-1.5 text-xs font-bold text-gray-700">
+                        <li className="flex justify-between items-center bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                          <span>Allahabad High Court Formatting</span>
+                          <span className="text-green-700 font-black">₹ 600</span>
+                        </li>
+                        <li className="flex justify-between items-center bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                          <span>Pitman Shorthand</span>
+                          <span className="text-green-700 font-black">₹ 600</span>
+                        </li>
+                        <li className="flex justify-between items-center bg-green-50 border border-green-200 px-3 py-2 rounded-lg mt-1 shadow-sm">
+                          <span className="text-green-900 font-black">Both Modules (Combo)</span>
+                          <span className="text-green-800 font-black text-sm">₹ 1100</span>
+                        </li>
+                      </ul>
                     </div>
+
+                    {/* Step Instructions */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 space-y-2 text-xs font-medium">
+                      <p className="font-black text-[#0d6e70] uppercase tracking-widest flex items-center gap-1">
+                        <span>📋</span> Next Steps
+                      </p>
+                      <ul className="space-y-1.5 text-gray-600 list-decimal list-inside">
+                        <li>Pay the fee by scanning the QR code above.</li>
+                        <li>Take a screenshot of the payment.</li>
+                        <li>Submit this form, verify your email OTP, and send the screenshot to us on WhatsApp to activate your account.</li>
+                      </ul>
+                    </div>
+
+                    <button
+                      id="register-submit-btn"
+                      type="submit"
+                      disabled={loading}
+                      className="w-full flex items-center justify-center space-x-3 bg-[#0d6e70] hover:bg-blue-700 disabled:bg-blue-300 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0 text-sm uppercase tracking-wider"
+                    >
+                      {loading
+                        ? <><Spinner /><span>Signing Up…</span></>
+                        : <><Sparkles className="w-5 h-5" /><span>Register & Request Activation</span></>}
+                    </button>
+                    
+                    <p className="text-center text-xs text-gray-500 mt-2">
+                      Already have an account?{' '}
+                      <button type="button" onClick={() => switchTab('login')} className="text-[#0d6e70] font-black hover:underline">Sign in</button>
+                    </p>
                   </div>
-
-                  {/* WhatsApp CTA Button */}
-                  <a
-                    href="https://wa.me/917080811235"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl transition-all duration-300 hover:shadow-xl hover:shadow-green-500/25 hover:-translate-y-0.5 active:translate-y-0"
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 32 32" fill="currentColor">
-                      <path d="M16 0C7.163 0 0 7.163 0 16c0 2.837.74 5.5 2.035 7.817L0 32l8.385-2.002A15.94 15.94 0 0016 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm0 29.333a13.28 13.28 0 01-6.771-1.854l-.487-.29-4.979 1.188 1.243-4.854-.318-.5A13.261 13.261 0 012.667 16C2.667 8.636 8.636 2.667 16 2.667S29.333 8.636 29.333 16 23.364 29.333 16 29.333zm7.27-9.87c-.397-.199-2.348-1.158-2.712-1.29-.364-.133-.63-.199-.895.199-.265.398-.897 1.03-.979 1.042-.131.015-.266-.051-.398-.116-1.725-.863-3.056-2.272-3.844-3.944-.131-.265-.002-.406.097-.538.19-.256.396-.538.595-.811.2-.273.266-.463.398-.729.133-.265.066-.497-.033-.696-.1-.199-.895-2.16-1.226-2.956-.322-.775-.65-.672-.895-.685-.23-.013-.497-.015-.762-.015-.266 0-.696.1-.1.06 1.524-.795 3.39-.795 4.914 0 1.125.597 1.855 1.756 1.855 3.012 0 1.653-.996 3.283-2.61 4.19z"/>
-                    </svg>
-                    <span>Send Screenshot on WhatsApp</span>
-                  </a>
-
-                  <p className="text-center text-sm text-gray-500">
-                    Already have an account?{' '}
-                    <button type="button" onClick={() => switchTab('login')} className="text-[#0d6e70] font-bold hover:underline">Sign in</button>
-                  </p>
-                </div>
+                </form>
               )}
 
               {/* ══════════════════════════════════════════════════════════
