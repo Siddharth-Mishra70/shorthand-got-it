@@ -999,12 +999,24 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         setIsEditingUser(true);
         try {
             let validUntil = undefined;
+            let resetJoining = false;
+            
+            const originalUser = users.find(u => u.email === editFormData.email);
+            const isCurrentlyInactiveOrExpired = originalUser && (originalUser.status === 'inactive' || isSubscriptionExpired(originalUser));
+            const statusChangingToActive = editFormData.status === 'active' && originalUser && originalUser.status !== 'active';
+
             if (editFormData.validityPeriod === '29_days') {
                 const expiry = new Date();
                 expiry.setDate(expiry.getDate() + 29);
                 validUntil = expiry.toISOString();
+                resetJoining = true;
             } else if (editFormData.validityPeriod === 'unlimited') {
-                validUntil = null;
+                validUntil = '9999-12-31T23:59:59Z';
+            } else if (statusChangingToActive && isCurrentlyInactiveOrExpired) {
+                const expiry = new Date();
+                expiry.setDate(expiry.getDate() + 29);
+                validUntil = expiry.toISOString();
+                resetJoining = true;
             }
 
             const updatePayload = {
@@ -1019,6 +1031,11 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             };
             if (validUntil !== undefined) {
                 updatePayload.valid_until = validUntil;
+            }
+            if (resetJoining) {
+                const now = new Date();
+                updatePayload.created_at = now.toISOString();
+                updatePayload.joinedDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
             }
 
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
@@ -1102,10 +1119,13 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             const updatePayload = { status: newStatus };
             if (newStatus === 'active') {
                 const user = users.find(u => u.email === email);
-                if (user && isSubscriptionExpired(user)) {
+                if (user) {
+                    const now = new Date();
                     const expiry = new Date();
                     expiry.setDate(expiry.getDate() + 29);
                     updatePayload.valid_until = expiry.toISOString();
+                    updatePayload.created_at = now.toISOString();
+                    updatePayload.joinedDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                 }
             }
 

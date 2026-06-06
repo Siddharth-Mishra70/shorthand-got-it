@@ -245,10 +245,17 @@ const AdminUserManagement = () => {
     try {
       const user = users.find(u => u.id === userId);
       const updatePayload = { status: newStatus };
-      if (newStatus === 'active' && user && isSubscriptionExpired(user)) {
-        const expiry = new Date();
-        expiry.setDate(expiry.getDate() + 29);
-        updatePayload.valid_until = expiry.toISOString();
+      if (newStatus === 'active' && user) {
+        const isExpired = isSubscriptionExpired(user);
+        const isCurrentlyBlocked = user.status === 'inactive';
+        if (isExpired || isCurrentlyBlocked) {
+          const now = new Date();
+          const expiry = new Date();
+          expiry.setDate(expiry.getDate() + 29);
+          updatePayload.valid_until = expiry.toISOString();
+          updatePayload.created_at = now.toISOString();
+          updatePayload.joinedDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
       }
 
       const { error: updateErr } = await supabase
