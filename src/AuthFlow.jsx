@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { 
   Mail, Lock, User, Phone, AlertCircle, 
   ArrowRight, ShieldCheck, Clock, Loader2, Sparkles, 
@@ -106,7 +106,15 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
         return;
       }
 
-      if (userRecord.valid_until && new Date(userRecord.valid_until) < new Date()) {
+      const validUntil = userRecord.valid_until || (() => {
+        if (userRecord.created_at) {
+          const d = new Date(userRecord.created_at);
+          d.setDate(d.getDate() + 29);
+          return d.toISOString();
+        }
+        return null;
+      })();
+      if (validUntil && new Date(validUntil) < new Date()) {
         await supabase.auth.signOut();
         setError('Your account has expired. Please renew your subscription to continue.');
         return;

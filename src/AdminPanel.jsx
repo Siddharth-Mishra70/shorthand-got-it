@@ -17,6 +17,26 @@ const STATE_EXAMS = [
     'Tamil Nadu', 'Andhra Pradesh', 'Telangana', 'Kerala', 'Himachal Pradesh'
 ];
 
+const isUserActive = (u) => {
+    if (!u) return false;
+    const status = (u.status || 'active').toLowerCase();
+    if (status !== 'active') return false;
+    
+    let expirationDate = null;
+    if (u.valid_until) {
+        expirationDate = new Date(u.valid_until);
+    } else if (u.created_at) {
+        const created = new Date(u.created_at);
+        created.setDate(created.getDate() + 29);
+        expirationDate = created;
+    }
+    
+    if (expirationDate && expirationDate < new Date()) {
+        return false;
+    }
+    return true;
+};
+
 const MODULE_TYPES = [
     { key: 'highcourt', label: 'High Court Formatting', icon: Scale, color: 'from-blue-600 to-blue-800', bg: 'bg-blue-50', text: 'text-blue-700' },
     { key: 'pitman', label: 'Pitman Exercise', icon: Edit2, color: 'from-purple-600 to-purple-800', bg: 'bg-purple-50', text: 'text-purple-700' },
@@ -954,6 +974,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             gender: u.gender || '',
             status: u.status || 'active',
             enrolledCourses: Array.isArray(u.enrolled_courses) ? u.enrolled_courses : [],
+            validityPeriod: 'keep',
         });
         setShowEditModal(true);
     };
@@ -962,6 +983,15 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         e.preventDefault();
         setIsEditingUser(true);
         try {
+            let validUntil = undefined;
+            if (editFormData.validityPeriod === '29_days') {
+                const expiry = new Date();
+                expiry.setDate(expiry.getDate() + 29);
+                validUntil = expiry.toISOString();
+            } else if (editFormData.validityPeriod === 'unlimited') {
+                validUntil = null;
+            }
+
             const updatePayload = {
                 first_name: editFormData.firstName.trim(),
                 last_name: editFormData.lastName.trim(),
@@ -972,6 +1002,9 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 status: editFormData.status,
                 enrolled_courses: editFormData.enrolledCourses,
             };
+            if (validUntil !== undefined) {
+                updatePayload.valid_until = validUntil;
+            }
 
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
                 const { error } = await supabase
@@ -1038,24 +1071,34 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         }
     };
 
-    const handleToggleStudentStatus = async (email, currentStatus) => {
+    const handleToggleStudentStatus = async (email, isCurrentlyActive) => {
         if (!email) {
             alert('Cannot toggle status: This user does not have a valid email.');
             return;
         }
-        const newStatus = (currentStatus || 'active').toLowerCase() === 'active' ? 'inactive' : 'active';
+        const newStatus = isCurrentlyActive ? 'inactive' : 'active';
         
         try {
+            const updatePayload = { status: newStatus };
+            if (newStatus === 'active') {
+                const user = users.find(u => u.email === email);
+                if (user && user.valid_until && new Date(user.valid_until) < new Date()) {
+                    const expiry = new Date();
+                    expiry.setDate(expiry.getDate() + 29);
+                    updatePayload.valid_until = expiry.toISOString();
+                }
+            }
+
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
                 const { error } = await supabase
                     .from('users')
-                    .update({ status: newStatus })
+                    .update(updatePayload)
                     .eq('email', email);
                 if (error) throw error;
             }
 
             const updatedUsers = users.map(u => 
-                u.email === email ? { ...u, status: newStatus } : u
+                u.email === email ? { ...u, ...updatePayload } : u
             );
             setUsers(updatedUsers);
             localStorage.setItem('auth_users', JSON.stringify(updatedUsers));
@@ -1108,7 +1151,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 }
             }
 
-            let validUntil = null;
+            let validUntil = '9999-12-31T23:59:59Z';
             if (addFormData.validityPeriod === '29_days') {
                 const expiry = new Date();
                 expiry.setDate(expiry.getDate() + 29);
@@ -2371,12 +2414,20 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                     <label className="block text-sm font-bold text-gray-700 mb-1">City</label>
                                     <input value={editFormData.city} onChange={e => setEditFormData({...editFormData, city: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500" />
                                 </div>
-                                <div className="md:col-span-2">
+                                <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1">Account Status</label>
                                     <select value={editFormData.status} onChange={e => setEditFormData({...editFormData, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500">
                                         <option value="active">Active</option>
                                         <option value="pending">Pending</option>
                                         <option value="inactive">Blocked</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Subscription / Expiry</label>
+                                    <select value={editFormData.validityPeriod} onChange={e => setEditFormData({...editFormData, validityPeriod: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500 bg-white">
+                                        <option value="keep">Keep Current Expiration</option>
+                                        <option value="29_days">Extend 29 Days (from today)</option>
+                                        <option value="unlimited">Unlimited / Lifetime Access</option>
                                     </select>
                                 </div>
                             </div>
@@ -2471,7 +2522,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                     const phone = (u.phone || '').toLowerCase();
                                     const email = (u.email || '').toLowerCase();
                                     return fullName.includes(term) || phone.includes(term) || email.includes(term);
-                                });
+                                }).sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
 
                                 if (filtered.length === 0) return (
                                     <tr><td colSpan="10" className="text-center py-20">
@@ -2504,19 +2555,19 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                                     <div className="flex items-center space-x-2">
                                                         <button 
                                                             type="button"
-                                                            onClick={() => handleToggleStudentStatus(u.email, u.status)}
+                                                            onClick={() => handleToggleStudentStatus(u.email, isUserActive(u))}
                                                             className={`relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                                                (u.status || 'active').toLowerCase() === 'active' ? 'bg-green-500' : 'bg-gray-300'
+                                                                isUserActive(u) ? 'bg-green-500' : 'bg-gray-300'
                                                             }`}
                                                         >
                                                             <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                                                (u.status || 'active').toLowerCase() === 'active' ? 'translate-x-4' : 'translate-x-0'
+                                                                isUserActive(u) ? 'translate-x-4' : 'translate-x-0'
                                                             }`} />
                                                         </button>
                                                         <span className={`text-[10px] font-black uppercase tracking-tighter ${
-                                                            (u.status || 'active').toLowerCase() === 'active' ? 'text-green-600' : 'text-gray-400'
+                                                            isUserActive(u) ? 'text-green-600' : 'text-gray-400'
                                                         }`}>
-                                                            {(u.status || 'active').toLowerCase() === 'active' ? 'Active' : 'Inactive'}
+                                                            {isUserActive(u) ? 'Active' : 'Inactive'}
                                                         </span>
                                                     </div>
                                                 </td>

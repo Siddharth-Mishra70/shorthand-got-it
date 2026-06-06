@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import {
   GraduationCap,
@@ -106,7 +106,11 @@ const cleanPath = (path) => {
   return p;
 };
 
-const getViewFromPath = (path) => {
+const getViewFromPath = (pathOrHash) => {
+  let path = pathOrHash || '';
+  if (path.includes('#')) {
+    path = path.split('#')[1] || '';
+  }
   const p = cleanPath(path);
   if (!p || p === '/') return 'landing';
   if (p === '/login' || p === '/register' || p === '/signup') return 'auth';
@@ -175,7 +179,7 @@ function App() {
 
     const [currentView, setCurrentView] = useState(() => {
         if (typeof window === 'undefined') return 'landing';
-        const path = window.location.pathname;
+        const path = window.location.hash ? window.location.hash.slice(1) : window.location.pathname;
         const viewFromPath = getViewFromPath(path);
         
         const currentUserStr = localStorage.getItem('currentUser');
@@ -210,7 +214,7 @@ function App() {
     // ── Popstate Listener ─────────────────────────────────────
     useEffect(() => {
         const handlePopState = () => {
-            const path = window.location.pathname;
+            const path = window.location.hash ? window.location.hash.slice(1) : window.location.pathname;
             const viewFromPath = getViewFromPath(path);
             
             const protectedViews = ['dashboard', 'arena-kc', 'arena-comp', 'arena-state', 'arena-audio', 'formatting', 'pitman', 'results', 'admin'];
@@ -327,8 +331,18 @@ function App() {
 
                     if (error || !userRecord || userRecord.status === 'inactive') {
                         handleLogout();
-                    } else if (userRecord.valid_until && new Date(userRecord.valid_until) < new Date()) {
-                        handleLogout();
+                    } else {
+                        const validUntil = userRecord.valid_until || (() => {
+                            if (userRecord.created_at) {
+                                const d = new Date(userRecord.created_at);
+                                d.setDate(d.getDate() + 29);
+                                return d.toISOString();
+                            }
+                            return null;
+                        })();
+                        if (validUntil && new Date(validUntil) < new Date()) {
+                            handleLogout();
+                        }
                     }
                 } catch (err) {
                     console.error('Session verification failed:', err);

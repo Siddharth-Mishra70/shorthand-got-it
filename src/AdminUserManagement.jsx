@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users, Search, RefreshCw, CheckCircle2, Clock, XCircle,
   ChevronDown, Loader2, AlertCircle, UserCheck, ShieldAlert,
@@ -22,6 +22,26 @@ const StatusBadge = ({ status }) => {
       {cfg.label}
     </span>
   );
+};
+
+const getComputedStatus = (u) => {
+  if (!u) return 'pending';
+  const status = (u.status || 'pending').toLowerCase();
+  if (status === 'inactive') return 'inactive';
+  
+  let expirationDate = null;
+  if (u.valid_until) {
+    expirationDate = new Date(u.valid_until);
+  } else if (u.created_at) {
+    const created = new Date(u.created_at);
+    created.setDate(created.getDate() + 29);
+    expirationDate = created;
+  }
+  
+  if (expirationDate && expirationDate < new Date()) {
+    return 'inactive';
+  }
+  return status;
 };
 
 // ─── Status Dropdown for each row ─────────────────────────────────────────
@@ -190,7 +210,7 @@ const AdminUserManagement = () => {
         .from('users')
         .select('id, first_name, last_name, name, email, phone, status, role, joinedDate, created_at, gender, state, city, enrolled_courses')
         .eq('role', 'student')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
 
       if (fetchErr) throw fetchErr;
       setUsers(data || []);
@@ -208,15 +228,23 @@ const AdminUserManagement = () => {
   const handleStatusUpdate = async (userId, newStatus) => {
     setUpdatingId(userId);
     try {
+      const user = users.find(u => u.id === userId);
+      const updatePayload = { status: newStatus };
+      if (newStatus === 'active' && user && user.valid_until && new Date(user.valid_until) < new Date()) {
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + 29);
+        updatePayload.valid_until = expiry.toISOString();
+      }
+
       const { error: updateErr } = await supabase
         .from('users')
-        .update({ status: newStatus })
+        .update(updatePayload)
         .eq('id', userId);
 
       if (updateErr) throw updateErr;
 
       setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, status: newStatus } : u))
+        prev.map((u) => (u.id === userId ? { ...u, ...updatePayload } : u))
       );
 
       const cfg = STATUS_CONFIG[newStatus];
@@ -287,9 +315,9 @@ const AdminUserManagement = () => {
       fullName.toLowerCase().includes(search) ||
       (u.email || '').toLowerCase().includes(search) ||
       (u.phone || '').includes(search);
-    const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || getComputedStatus(u) === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }).sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
 
   // Reset page when filters change
   useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter]);
@@ -304,9 +332,9 @@ const AdminUserManagement = () => {
   // ─── Stats ───────────────────────────────────────────────────────────────
   const stats = {
     total:    users.length,
-    active:   users.filter((u) => u.status === 'active').length,
-    pending:  users.filter((u) => u.status === 'pending').length,
-    inactive: users.filter((u) => u.status === 'inactive').length,
+    active:   users.filter((u) => getComputedStatus(u) === 'active').length,
+    pending:  users.filter((u) => getComputedStatus(u) === 'pending').length,
+    inactive: users.filter((u) => getComputedStatus(u) === 'inactive').length,
   };
 
   const displayName = (u) =>
@@ -633,14 +661,14 @@ const AdminUserManagement = () => {
 
                   {/* Status Badge */}
                   <td className="px-6 py-4 whitespace-nowrap sticky right-[120px] bg-white group-hover:bg-blue-50/20 transition-colors z-10 hidden md:table-cell shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.05)] border-l border-gray-50">
-                    <StatusBadge status={u.status || 'pending'} />
+                    <StatusBadge status={getComputedStatus(u)} />
                   </td>
 
                   {/* Actions */}
                   <td className="px-6 py-4 flex items-center gap-2 whitespace-nowrap sticky right-0 bg-white group-hover:bg-blue-50/20 transition-colors z-10 md:shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.05)] shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.1)] border-l md:border-l-0 border-gray-50">
                     <StatusDropdown
                       userId={u.id}
-                      currentStatus={u.status || 'pending'}
+                      currentStatus={getComputedStatus(u)}
                       onUpdate={handleStatusUpdate}
                       isUpdating={updatingId === u.id}
                     />
