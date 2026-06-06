@@ -94,30 +94,32 @@ const AuthFlow = ({ onAuthSuccess, onBack }) => {
         throw new Error('Account record not found. Please contact support.');
       }
 
-      if (userRecord.status === 'pending') {
-        await supabase.auth.signOut();
-        setError('Your account is still pending Admin approval.');
-        return;
-      }
-
-      if (userRecord.status === 'inactive') {
-        await supabase.auth.signOut();
-        setError('Your account has been blocked. Please contact support.');
-        return;
-      }
-
-      const validUntil = userRecord.valid_until || (() => {
-        if (userRecord.created_at) {
-          const d = new Date(userRecord.created_at);
-          d.setDate(d.getDate() + 29);
-          return d.toISOString();
+      if (userRecord.role !== 'admin') {
+        if (userRecord.status === 'pending') {
+          await supabase.auth.signOut();
+          setError('Your account is still pending Admin approval.');
+          return;
         }
-        return null;
-      })();
-      if (validUntil && new Date(validUntil) < new Date()) {
-        await supabase.auth.signOut();
-        setError('Your account has expired. Please renew your subscription to continue.');
-        return;
+
+        if (userRecord.status === 'inactive') {
+          await supabase.auth.signOut();
+          setError('Your account has been blocked. Please contact support.');
+          return;
+        }
+
+        const validUntil = userRecord.valid_until || (() => {
+          if (userRecord.created_at) {
+            const d = new Date(userRecord.created_at);
+            d.setDate(d.getDate() + 29);
+            return d.toISOString();
+          }
+          return null;
+        })();
+        if (validUntil && new Date(validUntil) < new Date()) {
+          await supabase.auth.signOut();
+          setError('Your account has expired. Please renew your subscription to continue.');
+          return;
+        }
       }
 
       // Active — grant access

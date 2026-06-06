@@ -19,6 +19,7 @@ const STATE_EXAMS = [
 
 const isUserActive = (u) => {
     if (!u) return false;
+    if (u.role === 'admin') return true;
     const status = (u.status || 'active').toLowerCase();
     if (status !== 'active') return false;
     
@@ -39,6 +40,7 @@ const isUserActive = (u) => {
 
 const isSubscriptionExpired = (u) => {
     if (!u) return false;
+    if (u.role === 'admin') return false;
     if (u.valid_until) {
         return new Date(u.valid_until) < new Date();
     }
@@ -1087,6 +1089,11 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const handleToggleStudentStatus = async (email, isCurrentlyActive) => {
         if (!email) {
             alert('Cannot toggle status: This user does not have a valid email.');
+            return;
+        }
+        const targetUser = users.find(u => u.email === email);
+        if (targetUser && targetUser.role === 'admin') {
+            alert('Cannot modify System Admin status.');
             return;
         }
         const newStatus = isCurrentlyActive ? 'inactive' : 'active';
@@ -2565,30 +2572,38 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                                 <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">{u.gender || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{u.joinedDate || '-'}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap sticky right-[120px] bg-white group-hover:bg-red-50/30 z-10 hidden md:table-cell border-l border-gray-50">
-                                                    <div className="flex items-center space-x-2">
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => handleToggleStudentStatus(u.email, isUserActive(u))}
-                                                            className={`relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                                                isUserActive(u) ? 'bg-green-500' : 'bg-gray-300'
-                                                            }`}
-                                                        >
-                                                            <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                                                isUserActive(u) ? 'translate-x-4' : 'translate-x-0'
-                                                            }`} />
-                                                        </button>
-                                                        <span className={`text-[10px] font-black uppercase tracking-tighter ${
-                                                            isUserActive(u) ? 'text-green-600' : 'text-gray-400'
-                                                        }`}>
-                                                            {isUserActive(u) ? 'Active' : 'Inactive'}
-                                                        </span>
-                                                    </div>
+                                                    {u.role === 'admin' ? (
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter text-red-600 border border-red-200 bg-red-50 px-2.5 py-1 rounded-full">System Admin</span>
+                                                    ) : (
+                                                        <div className="flex items-center space-x-2">
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => handleToggleStudentStatus(u.email, isUserActive(u))}
+                                                                className={`relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                                                    isUserActive(u) ? 'bg-green-500' : 'bg-gray-300'
+                                                                }`}
+                                                            >
+                                                                <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                                                    isUserActive(u) ? 'translate-x-4' : 'translate-x-0'
+                                                                }`} />
+                                                            </button>
+                                                            <span className={`text-[10px] font-black uppercase tracking-tighter ${
+                                                                isUserActive(u) ? 'text-green-600' : 'text-gray-400'
+                                                            }`}>
+                                                                {isUserActive(u) ? 'Active' : 'Inactive'}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-red-50/30 z-10 border-l border-gray-50 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.05)]">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <button onClick={() => openEditModal(u)} className="p-2 text-gray-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all" title="Edit student"><Edit2 className="w-4 h-4" /></button>
-                                                        <button onClick={() => handleDeleteUser(u.email)} className="p-2 text-gray-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all" title="Delete student"><Trash2 className="w-4 h-4" /></button>
-                                                    </div>
+                                                    {u.role !== 'admin' ? (
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <button onClick={() => openEditModal(u)} className="p-2 text-gray-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all" title="Edit student"><Edit2 className="w-4 h-4" /></button>
+                                                            <button onClick={() => handleDeleteUser(u.email)} className="p-2 text-gray-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all" title="Delete student"><Trash2 className="w-4 h-4" /></button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-end gap-1 text-[10px] font-black text-gray-300 uppercase select-none pr-2">Permanent</div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}

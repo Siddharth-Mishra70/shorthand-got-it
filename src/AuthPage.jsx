@@ -183,27 +183,29 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
         throw new Error('Account record not found. Please contact support.');
       }
 
-      // 3. Status gate
-      if (foundUser.status === 'pending') {
-        await supabase.auth.signOut();
-        throw new Error('Your account is pending admin approval. Please wait.');
-      }
-      if (foundUser.status === 'inactive') {
-        await supabase.auth.signOut();
-        throw new Error('Your account has been deactivated. Please contact support.');
-      }
-
-      const validUntil = foundUser.valid_until || (() => {
-        if (foundUser.created_at) {
-          const d = new Date(foundUser.created_at);
-          d.setDate(d.getDate() + 29);
-          return d.toISOString();
+      // 3. Status gate (Admins are permanently active and exempt)
+      if (foundUser.role !== 'admin') {
+        if (foundUser.status === 'pending') {
+          await supabase.auth.signOut();
+          throw new Error('Your account is pending admin approval. Please wait.');
         }
-        return null;
-      })();
-      if (validUntil && new Date(validUntil) < new Date()) {
-        await supabase.auth.signOut();
-        throw new Error('Your account has expired. Please renew your subscription to continue.');
+        if (foundUser.status === 'inactive') {
+          await supabase.auth.signOut();
+          throw new Error('Your account has been deactivated. Please contact support.');
+        }
+
+        const validUntil = foundUser.valid_until || (() => {
+          if (foundUser.created_at) {
+            const d = new Date(foundUser.created_at);
+            d.setDate(d.getDate() + 29);
+            return d.toISOString();
+          }
+          return null;
+        })();
+        if (validUntil && new Date(validUntil) < new Date()) {
+          await supabase.auth.signOut();
+          throw new Error('Your account has expired. Please renew your subscription to continue.');
+        }
       }
 
       // 4. Active — proceed

@@ -26,6 +26,7 @@ const StatusBadge = ({ status }) => {
 
 const getComputedStatus = (u) => {
   if (!u) return 'pending';
+  if (u.role === 'admin') return 'active';
   const status = (u.status || 'pending').toLowerCase();
   if (status === 'inactive') return 'inactive';
   
@@ -46,6 +47,7 @@ const getComputedStatus = (u) => {
 
 const isSubscriptionExpired = (u) => {
   if (!u) return false;
+  if (u.role === 'admin') return false;
   if (u.valid_until) {
     return new Date(u.valid_until) < new Date();
   }

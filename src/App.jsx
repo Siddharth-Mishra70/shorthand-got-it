@@ -329,7 +329,12 @@ function App() {
                         .eq('email', user.email)
                         .maybeSingle();
 
-                    if (error || !userRecord || userRecord.status === 'inactive') {
+                    if (error || !userRecord) {
+                        handleLogout();
+                    } else if (userRecord.role === 'admin') {
+                        // Admins are permanently active and exempt from status/expiry gates
+                        return;
+                    } else if (userRecord.status === 'inactive') {
                         handleLogout();
                     } else {
                         const validUntil = userRecord.valid_until || (() => {
