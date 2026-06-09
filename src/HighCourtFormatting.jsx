@@ -726,7 +726,7 @@ ORAL ORDER
                             onChange={(e) => setSelectedDuration(Number(e.target.value))}
                             disabled={isSubmitting || submitted}
                         >
-                            {Array.from({length: 11}, (_, i) => i + 5).map(m => (
+                            {Array.from({length: 10}, (_, i) => (i + 1) * 5).map(m => (
                                 <option key={m} value={m} className="bg-white text-gray-900">{m} Min</option>
                             ))}
                         </select>

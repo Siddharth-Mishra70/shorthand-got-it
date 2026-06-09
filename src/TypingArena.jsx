@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Volume2, FastForward, Clock, Activity, CheckCircle2, Share2, X, FileCheck, TrendingUp, Headphones, ArrowLeft, Maximize, Minimize, Sparkles, Upload, Music, FileText, Search } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { saveTestResult } from './lib/saveTestResult';
@@ -989,7 +989,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     onChange={(e) => setSelectedDuration(Number(e.target.value))}
                                     disabled={isStarted}
                                 >
-                                    {Array.from({length: 11}, (_, i) => i + 5).map(m => (
+                                    {Array.from({length: 10}, (_, i) => (i + 1) * 5).map(m => (
                                         <option key={m} value={m} className="bg-white text-gray-900">{m} Min</option>
                                     ))}
                                 </select>
