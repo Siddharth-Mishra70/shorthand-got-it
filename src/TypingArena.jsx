@@ -514,6 +514,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                 userId: resolvedUserId,
                 studentName: resolvedUserName,
                 exerciseId: resolvedExerciseId,
+                exerciseTitle: selectedExercise?.title,
                 exerciseCategory: category,
                 wpm: stats.wpm,
                 accuracy: stats.accuracy,

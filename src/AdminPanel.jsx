@@ -682,7 +682,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         return {
                             ...test,
                             studentName: studentNameValue, // Specific key name 'studentName'
-                            exercise_title: exMap[test.exercise_id] || test.exercise_id || 'Unknown Test'
+                            exercise_title: exMap[test.exercise_id] || test.mistakes_data?.exercise_title || test.exercise_id || 'Unknown Test'
                         };
                     });
 
@@ -693,7 +693,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     // Fail-safe if users table is completely empty but results exist
                     setAllResults(resultsInDb.map(r => ({
                         ...r,
-                        studentAuthName: r.student_name || r.mistakes_data?.student_name || 'Unknown Student'
+                        studentAuthName: r.student_name || r.mistakes_data?.student_name || 'Unknown Student',
+                        exercise_title: exMap[r.exercise_id] || r.mistakes_data?.exercise_title || r.exercise_id || 'Unknown Test'
                     })));
                 }
             } catch (err) {

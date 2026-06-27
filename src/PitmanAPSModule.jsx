@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Activity, CheckCircle2, Share2, X, FileCheck, ArrowLeft, Eye, Clock, Maximize, Minimize, TrendingUp, Search } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { saveTestResult } from './lib/saveTestResult';
@@ -200,6 +200,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
                 userId: userSess.id || '00000000-0000-0000-0000-000000000000',
                 studentName: userSess.name || 'Student',
                 exerciseId: selectedExercise.id, // Using real UUID now
+                exerciseTitle: selectedExercise.title,
                 exerciseCategory: 'Pitman APS',
                 wpm: stats.wpm,
                 accuracy: stats.accuracy,

@@ -32,13 +32,21 @@ export async function saveTestResult(supabase, params) {
     return { error: 'Not Logged In' };
   }
 
-  // Determine Naming
+  // Determine Naming and UUID sanity
   const userId = params.userId || currentUser.id || '00000000-0000-0000-0000-000000000000';
   const studentName = params.studentName || currentUser.name || 'Student';
 
+  const isValidUuid = (id) => {
+    if (!id || typeof id !== 'string') return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  };
+
+  const exerciseTitle = params.exerciseTitle || params.exercise_title || (!isValidUuid(params.exerciseId) ? params.exerciseId : 'Unknown Practice');
+  const exerciseId = params.exerciseId && isValidUuid(params.exerciseId) ? params.exerciseId : null;
+
   const row = {
     user_id:        userId,
-    exercise_id:    params.exerciseId || null,
+    exercise_id:    exerciseId,
     wpm:            Math.round(params.wpm || 0),
     accuracy:       parseFloat((params.accuracy || 0).toFixed(2)),
     total_mistakes: params.totalMistakes ?? params.mistakesCount ?? 0,
@@ -47,6 +55,7 @@ export async function saveTestResult(supabase, params) {
       original_text: params.originalText ?? '',
       student_name: studentName,
       category: params.exerciseCategory || 'General', // Store category here for safely
+      exercise_title: exerciseTitle,
       ...(params.extraMistakesData || {})
     }
   };
@@ -56,11 +65,23 @@ export async function saveTestResult(supabase, params) {
 
   try {
     if (supabase && !supabase.supabaseUrl.includes('placeholder')) {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('test_results')
         .insert(row)
         .select()
         .single();
+
+      if (error && error.code === '23503' && row.exercise_id !== null) {
+        console.warn("[saveTestResult] Foreign key constraint violation on exercise_id. Retrying insert with exercise_id = null");
+        row.exercise_id = null;
+        const retryResult = await supabase
+          .from('test_results')
+          .insert(row)
+          .select()
+          .single();
+        data = retryResult.data;
+        error = retryResult.error;
+      }
 
       if (error) {
         console.error("SUPABASE ASLI ERROR:", JSON.stringify(error, null, 2));

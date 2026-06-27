@@ -315,7 +315,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
         // 2. Fetch original_text from mistakes_data or exercises table
         let originalText = row.mistakes_data?.original_text ?? '';
         let originalHtml = null;
-        let exerciseTitle = row.exercise_id ?? '—';
+        let exerciseTitle = row.mistakes_data?.exercise_title || row.exercise_id || '—';
 
         // If no original text in mistakes_data, try fetching from exercises table (UUID check)
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.exercise_id);
@@ -421,6 +421,9 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
       .then(async (rows) => {
         // Enrich with exercise titles from Supabase
         const enriched = await Promise.all(rows.map(async (r) => {
+          if (r.mistakes_data?.exercise_title) {
+            return { ...r, exerciseTitle: r.mistakes_data.exercise_title };
+          }
           if (!r.exercise_id || r.exercise_id.startsWith('kc-') || r.exercise_id.startsWith('ssc-')) {
             return { ...r, exerciseTitle: r.exercise_id ?? 'Exercise' };
           }

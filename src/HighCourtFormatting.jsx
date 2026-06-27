@@ -471,6 +471,7 @@ ORAL ORDER
                     attemptedText: resultText,
                     originalText: originalBase,
                     exerciseId: selectedTestId,
+                    exerciseTitle: selectedTest?.title,
                     exerciseCategory: 'formatting',
                     userId: user?.id,
                     studentName: user?.name,
