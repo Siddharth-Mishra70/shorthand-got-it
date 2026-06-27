@@ -56,6 +56,14 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
             setTimeLeft(selectedDuration * 60);
         }
     }, [selectedDuration, isStarted]);
+
+    useEffect(() => {
+        if (selectedExercise) {
+            if (selectedExercise.category === 'audio') {
+                setSelectedDuration(selectedExercise.duration || 10);
+            }
+        }
+    }, [selectedExercise]);
     const [wpm, setWpm] = useState(0);
     const [accuracy, setAccuracy] = useState(100);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -137,17 +145,31 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
 
                 if (!exError && dbExercises && dbExercises.length > 0) {
                     // Map Supabase rows → component exercise shape
-                    const mapped = dbExercises.map(ex => ({
-                        id: ex.id,                       // UUID (used for DB save)
-                        title: ex.title,
-                        category: ex.category,           // Important for grouping
-                        job_title: ex.job_title,
-                        test_type: ex.test_type,
-                        created_at: ex.created_at,
-                        lines: (ex.original_text || '')
-                            .split('\n')
-                            .filter(l => l.trim() !== '')
-                    }));
+                    const mapped = dbExercises.map(ex => {
+                        let rawText = ex.original_text || '';
+                        let durationVal = null;
+                        if (rawText.trim().startsWith('{')) {
+                            try {
+                                const parsed = JSON.parse(rawText);
+                                if (parsed.plain || parsed.text) {
+                                    rawText = parsed.plain || parsed.text;
+                                    durationVal = parsed.duration || null;
+                                }
+                            } catch(e) {}
+                        }
+                        return {
+                            id: ex.id,                       // UUID (used for DB save)
+                            title: ex.title,
+                            category: ex.category,           // Important for grouping
+                            job_title: ex.job_title,
+                            test_type: ex.test_type,
+                            created_at: ex.created_at,
+                            duration: durationVal,
+                            lines: rawText
+                                .split('\n')
+                                .filter(l => l.trim() !== '')
+                        };
+                    });
 
                     const stored = localStorage.getItem('admin_kailash_data_list');
                     let localKc = [];
@@ -183,17 +205,31 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                     let localAudio = [];
                     if (storedAudio) {
                         const list = JSON.parse(storedAudio);
-                        localAudio = list.map((item, idx) => ({
-                            id: item.id || `audio-local-${idx + 1}`,
-                            title: item.title || `Audio Dictation #${list.length - idx}`,
-                            category: 'audio',
-                            audio: item.audio,
-                            state: item.state,
-                            job_title: item.job_title,
-                            test_type: item.test_type,
-                            created_at: item.created_at,
-                            lines: (item.text || item.original_text || '').split('\n').filter(line => line.trim() !== '')
-                        }));
+                        localAudio = list.map((item, idx) => {
+                            let rawText = item.text || item.original_text || '';
+                            let durationVal = null;
+                            if (rawText.trim().startsWith('{')) {
+                                try {
+                                    const parsed = JSON.parse(rawText);
+                                    if (parsed.plain || parsed.text) {
+                                        rawText = parsed.plain || parsed.text;
+                                        durationVal = parsed.duration || null;
+                                    }
+                                } catch(e) {}
+                            }
+                            return {
+                                id: item.id || `audio-local-${idx + 1}`,
+                                title: item.title || `Audio Dictation #${list.length - idx}`,
+                                category: 'audio',
+                                audio: item.audio,
+                                state: item.state,
+                                job_title: item.job_title,
+                                test_type: item.test_type,
+                                created_at: item.created_at,
+                                duration: durationVal,
+                                lines: rawText.split('\n').filter(line => line.trim() !== '')
+                            };
+                        });
                     }
 
                     const combinedRaw = [...mapped.map(m => {
@@ -983,16 +1019,22 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                 ))}
                             </select>
                             <div className="flex items-center space-x-2 ml-2 border-l border-blue-400/30 pl-2 hidden lg:flex">
-                                <select
-                                    className="bg-blue-800/50 text-white text-[11px] font-black px-2 py-1.5 rounded-lg outline-none border border-blue-700/50 focus:border-blue-400"
-                                    value={selectedDuration}
-                                    onChange={(e) => setSelectedDuration(Number(e.target.value))}
-                                    disabled={isStarted}
-                                >
-                                    {Array.from({length: 10}, (_, i) => (i + 1) * 5).map(m => (
-                                        <option key={m} value={m} className="bg-white text-gray-900">{m} Min</option>
-                                    ))}
-                                </select>
+                                {selectedExercise?.category === 'audio' ? (
+                                    <div className="bg-blue-800/50 text-white text-[11px] font-black px-3 py-1.5 rounded-lg border border-blue-700/50 select-none">
+                                        {selectedDuration} Min
+                                    </div>
+                                ) : (
+                                    <select
+                                        className="bg-blue-800/50 text-white text-[11px] font-black px-2 py-1.5 rounded-lg outline-none border border-blue-700/50 focus:border-blue-400"
+                                        value={selectedDuration}
+                                        onChange={(e) => setSelectedDuration(Number(e.target.value))}
+                                        disabled={isStarted}
+                                    >
+                                        {Array.from({length: 10}, (_, i) => (i + 1) * 5).map(m => (
+                                            <option key={m} value={m} className="bg-white text-gray-900">{m} Min</option>
+                                        ))}
+                                    </select>
+                                )}
                                 <select
                                     className="bg-blue-800/50 text-white text-[11px] font-black px-2 py-1.5 rounded-lg outline-none border border-blue-700/50 focus:border-blue-400"
                                     value={targetWpm}

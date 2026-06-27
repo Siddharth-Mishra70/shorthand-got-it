@@ -112,7 +112,7 @@ const ModuleCard = ({ mod, onClick }) => {
     );
 };
 
-const UploadForm = ({ title, setTitle, text, setText, pdf, setPdf, onFileSelect, onSave, onCancel, jobTitle, setJobTitle, testType, setTestType, saving, accept = ".pdf,image/*", textLabel = "Practice Text", fileLabel = "File Upload (Optional)", isEdit = false }) => (
+const UploadForm = ({ title, setTitle, text, setText, pdf, setPdf, onFileSelect, onSave, onCancel, jobTitle, setJobTitle, testType, setTestType, saving, accept = ".pdf,image/*", textLabel = "Practice Text", fileLabel = "File Upload (Optional)", isEdit = false, duration, setDuration }) => (
     <div className="bg-white p-6 rounded-xl shadow border border-gray-200 mb-6 animate-in slide-in-from-top-2">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
             <div>
@@ -132,7 +132,7 @@ const UploadForm = ({ title, setTitle, text, setText, pdf, setPdf, onFileSelect,
                 </label>
             </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+        <div className={`grid grid-cols-1 ${accept && accept.includes('audio') ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-5 mb-5`}>
             <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Job Title / Exam</label>
                 <input type="text" value={jobTitle || ''} onChange={e => setJobTitle(e.target.value)} placeholder="e.g. Stenographer Gr. C" className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
@@ -141,6 +141,20 @@ const UploadForm = ({ title, setTitle, text, setText, pdf, setPdf, onFileSelect,
                 <label className="block text-sm font-bold text-gray-700 mb-2">Test Type Section</label>
                 <input type="text" value={testType || ''} onChange={e => setTestType(e.target.value)} placeholder="e.g. Skill Test, Mock Test" className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
             </div>
+            {accept && accept.includes('audio') && (
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Timer Duration</label>
+                    <select
+                        value={duration || 10}
+                        onChange={e => setDuration(Number(e.target.value))}
+                        className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500 bg-white"
+                    >
+                        {Array.from({ length: 10 }, (_, i) => (i + 1) * 5).map(m => (
+                            <option key={m} value={m}>{m} Min</option>
+                        ))}
+                    </select>
+                </div>
+            )}
         </div>
         <div className="mb-5">
             <label className="block text-sm font-bold text-gray-700 mb-2">{textLabel} <span className="text-red-500">*</span></label>
@@ -520,11 +534,13 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [audioState, setAudioState] = useState('');
     const [pendingAudioFile, setPendingAudioFile] = useState(null);
     const [audioSuccess, setAudioSuccess] = useState(false);
+    const [audioDuration, setAudioDuration] = useState(10);
     const [audioTests, setAudioTests] = useState(() => {
         const saved = localStorage.getItem('admin_published_audio_list');
         if (saved) return JSON.parse(saved);
         return [];
     });
+
 
     // Dynamic User Data
     const [users, setUsers] = useState(() => JSON.parse(localStorage.getItem('auth_users') || '[]'));
@@ -720,7 +736,17 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         setQuickTitle(item.title || '');
         setGlobalJobTitle(item.job_title || '');
         setGlobalTestType(item.test_type || '');
-        setQuickText(item.original_text || item.text || '');
+        let rawText = item.original_text || item.text || '';
+        let durationVal = 10;
+        if (moduleKey === 'audio' && rawText.trim().startsWith('{')) {
+            try {
+                const parsed = JSON.parse(rawText);
+                rawText = parsed.plain || parsed.text || '';
+                durationVal = parsed.duration || 10;
+            } catch(e) {}
+        }
+        setQuickText(rawText);
+        setAudioDuration(durationVal);
         setQuickFile(null); // We don't load dataURLs back into state usually, just show "current file" in the UI if we want
         setEditingQuickId(item.id);
         const isHc = moduleKey === 'highcourt';
@@ -744,13 +770,22 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const existingItem = isEdit ? allLocalTests.find(t => t.id === testId) : null;
 
         const isHc = quickModule === 'highcourt';
+        const isAudio = quickModule === 'audio';
         const qHtml = isHc ? (quickHcEditorRef.current?.innerHTML || '') : '';
         const qTextStripped = isHc ? (quickHcEditorRef.current?.innerText || quickText) : quickText;
+
+        const finalOriginalText = isAudio ? JSON.stringify({
+            __audio: true,
+            plain: quickText,
+            duration: audioDuration,
+            job_title: globalJobTitle || '',
+            test_type: globalTestType || ''
+        }) : (isHc ? qTextStripped : quickText);
 
         const newItem = {
             id: testId,
             title: quickTitle.trim() || `${QUICK_MODULES.find(m => m.key === quickModule)?.label} — ${new Date().toLocaleDateString()}`,
-            original_text: isHc ? qTextStripped : quickText,
+            original_text: finalOriginalText,
             formatted_html: qHtml,
             pdf: quickFile || existingItem?.pdf || existingItem?.image_url,
             audio: quickModule === 'audio' ? (quickFile || existingItem?.audio || existingItem?.audio_url) : undefined,
@@ -792,10 +827,9 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
             try {
                 // Only send columns confirmed to exist in Supabase schema
-                const hcEncoded = isHc ? JSON.stringify({ __hc: true, plain: qTextStripped, html: qHtml, job_title: globalJobTitle || '', test_type: globalTestType || '' }) : null;
                 const dbPayload = {
                     title: newItem.title,
-                    original_text: isHc ? hcEncoded : quickText,
+                    original_text: newItem.original_text,
                     category: quickModule === 'audio' ? 'Audio Dictation' : quickModule,
                     audio_url: quickModule === 'audio' ? newItem.audio : undefined,
                     image_url: quickModule === 'pitman' ? newItem.pdf : undefined
@@ -822,6 +856,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 setQuickTitle(''); resetGlobalDocs();
                 setQuickText('');
                 setQuickFile(null);
+                setAudioDuration(10);
                 if (quickHcEditorRef.current) quickHcEditorRef.current.innerHTML = '';
             }, 1200);
         }, 600);
@@ -837,10 +872,19 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const existingItems = stateExams[key] || [];
         const existingItem = isEdit ? existingItems.find(i => i.id === testId) : null;
 
+        const isAudio = stateSubModule === 'audio';
+        const finalOriginalText = isAudio ? JSON.stringify({
+            __audio: true,
+            plain: stateUploadText,
+            duration: audioDuration,
+            job_title: globalJobTitle || '',
+            test_type: globalTestType || ''
+        }) : stateUploadText;
+
         const newItem = {
             id: testId,
             title: stateUploadTitle,
-            original_text: stateUploadText,
+            original_text: finalOriginalText,
             pdf: stateUploadPdf,
             state: selectedState,
             type: stateSubModule,
@@ -897,6 +941,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         setIsAddingStateContent(false);
         setStateUploadSaving(false);
         setEditingStateId(null);
+        setAudioDuration(10);
     };
 
     const handleEditStateItem = (id, key) => {
@@ -905,7 +950,17 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         setStateUploadTitle(item.title || '');
         setGlobalJobTitle(item.job_title || '');
         setGlobalTestType(item.test_type || '');
-        setStateUploadText(item.original_text || item.text || '');
+        let rawText = item.original_text || item.text || '';
+        let durationVal = 10;
+        if (stateSubModule === 'audio' && rawText.trim().startsWith('{')) {
+            try {
+                const parsed = JSON.parse(rawText);
+                rawText = parsed.plain || parsed.text || '';
+                durationVal = parsed.duration || 10;
+            } catch(e) {}
+        }
+        setStateUploadText(rawText);
+        setAudioDuration(durationVal);
         setStateUploadPdf(item.pdf || null);
         setEditingStateId(id);
         setIsAddingStateContent(true);
@@ -1252,6 +1307,13 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const newStateVal = audioState === 'None' ? null : (audioState || null);
         
         let finalAudioUrl = pendingAudio;
+        const encodedText = JSON.stringify({
+            __audio: true,
+            plain: pendingAudioText,
+            duration: audioDuration,
+            job_title: globalJobTitle || '',
+            test_type: globalTestType || ''
+        });
         
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
@@ -1279,7 +1341,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     title: audioTitle,
                     audio_url: finalAudioUrl,
                     category: 'Audio Dictation',
-                    original_text: pendingAudioText
+                    original_text: encodedText
                 };
 
                 if (isEdit) {
@@ -1301,7 +1363,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 title: audioTitle, 
                 job_title: globalJobTitle,
                 test_type: globalTestType, 
-                original_text: pendingAudioText, 
+                original_text: encodedText, 
                 audio: finalAudioUrl, // maintain internal property name for array rendering
                 category: 'audio', 
                 state: newStateVal, 
@@ -1340,7 +1402,17 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         setAudioTitle(test.title || '');
         setGlobalJobTitle(test.job_title || '');
         setGlobalTestType(test.test_type || '');
-        setPendingAudioText(test.original_text || test.text || '');
+        let rawText = test.original_text || test.text || '';
+        let durationVal = 10;
+        if (rawText.trim().startsWith('{')) {
+            try {
+                const parsed = JSON.parse(rawText);
+                rawText = parsed.plain || parsed.text || '';
+                durationVal = parsed.duration || 10;
+            } catch(e) {}
+        }
+        setPendingAudioText(rawText);
+        setAudioDuration(durationVal);
         setPendingAudio(test.audio_url || test.audio || test.pdf || null);
         setPendingAudioFile(null);
         setAudioState(test.state || 'None');
@@ -2065,7 +2137,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         <button onClick={() => setActiveModule('home')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
                         <h2 className="text-2xl font-bold text-gray-800">Audio Dictation Management</h2>
                         <button onClick={() => {
-                            if (isAddingAudio) { setIsAddingAudio(false); setEditingAudioId(null); setAudioTitle(''); resetGlobalDocs(); setPendingAudio(null); setPendingAudioFile(null); setPendingAudioText(''); setAudioState(''); }
+                            if (isAddingAudio) { setIsAddingAudio(false); setEditingAudioId(null); setAudioTitle(''); resetGlobalDocs(); setPendingAudio(null); setPendingAudioFile(null); setPendingAudioText(''); setAudioState(''); setAudioDuration(10); }
                             else { setIsAddingAudio(true); setEditingAudioId(null); }
                         }} className="ml-auto bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-red-800 transition-colors shadow">
                             {isAddingAudio && !editingAudioId ? <><X className="w-4 h-4 mr-1" />Cancel</> : <><Plus className="w-4 h-4 mr-1" />Add New</>}
@@ -2095,16 +2167,28 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                     </select>
                                 </div>
                             </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Job Title / Exam (Optional)</label>
-                                        <input type="text" value={globalJobTitle || ''} onChange={e => setGlobalJobTitle(e.target.value)} placeholder="e.g. Stenographer Gr. C" className="w-full p-3 p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Test Type Section (Optional)</label>
-                                        <input type="text" value={globalTestType || ''} onChange={e => setGlobalTestType(e.target.value)} placeholder="e.g. Mock Test, Skill Test" className="w-full p-3 p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
-                                    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Job Title / Exam (Optional)</label>
+                                    <input type="text" value={globalJobTitle || ''} onChange={e => setGlobalJobTitle(e.target.value)} placeholder="e.g. Stenographer Gr. C" className="w-full p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Test Type Section (Optional)</label>
+                                    <input type="text" value={globalTestType || ''} onChange={e => setGlobalTestType(e.target.value)} placeholder="e.g. Mock Test, Skill Test" className="w-full p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Timer Duration</label>
+                                    <select
+                                        value={audioDuration}
+                                        onChange={e => setAudioDuration(Number(e.target.value))}
+                                        className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500 bg-white text-sm"
+                                    >
+                                        {Array.from({ length: 10 }, (_, i) => (i + 1) * 5).map(m => (
+                                            <option key={m} value={m}>{m} Min</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
                             
                             <div className="mb-4">
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Transcription Text (Solution & Accuracy)</label>
@@ -2241,10 +2325,12 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             text={stateUploadText} setText={setStateUploadText}
                             pdf={stateUploadPdf} setPdf={setStateUploadPdf}
                             onSave={handleSaveStateContent}
-                            onCancel={() => { setIsAddingStateContent(false); setEditingStateId(null); setStateUploadTitle(''); resetGlobalDocs(); setStateUploadText(''); setStateUploadPdf(null); }}
+                            onCancel={() => { setIsAddingStateContent(false); setEditingStateId(null); setStateUploadTitle(''); resetGlobalDocs(); setStateUploadText(''); setStateUploadPdf(null); setAudioDuration(10); }}
                             saving={stateUploadSaving}
                             accept={acceptMap[stateSubModule]}
                             textLabel={stateSubModule === 'audio' ? 'Dictation Transcription Text' : 'Content Text'}
+                            duration={audioDuration}
+                            setDuration={setAudioDuration}
                         />
                     )}
                     <TestList tests={stateItems} onDelete={(id) => handleDeleteStateItem(stateKey, id)} onEdit={(id) => handleEditStateItem(id, stateKey)} emptyMsg={`No ${subLabel} content uploaded for ${selectedState} yet.`} />
@@ -3167,7 +3253,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                     {/* File upload */}
                                     <div className="mb-4">
                                         
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
+                                <div className={`grid grid-cols-1 ${quickModule === 'audio' ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-5 mb-4`}>
                                     <div>
                                         <label className="block text-sm font-bold text-gray-700 mb-2">Job Title / Exam (Optional)</label>
                                         <input type="text" value={globalJobTitle || ''} onChange={e => setGlobalJobTitle(e.target.value)} placeholder="e.g. Stenographer Gr. C" className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
@@ -3176,6 +3262,20 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                         <label className="block text-sm font-bold text-gray-700 mb-2">Test Type Section (Optional)</label>
                                         <input type="text" value={globalTestType || ''} onChange={e => setGlobalTestType(e.target.value)} placeholder="e.g. Mock Test, Skill Test" className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white" />
                                     </div>
+                                    {quickModule === 'audio' && (
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">Timer Duration</label>
+                                            <select
+                                                value={audioDuration}
+                                                onChange={e => setAudioDuration(Number(e.target.value))}
+                                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500 bg-white"
+                                            >
+                                                {Array.from({ length: 10 }, (_, i) => (i + 1) * 5).map(m => (
+                                                    <option key={m} value={m}>{m} Min</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
                                 </div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1.5">
                                             {quickModule === 'audio' ? 'Audio File' : 'PDF / Image'}
@@ -3329,7 +3429,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 {!quickSuccess && (
                     <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 shrink-0 flex items-center space-x-3">
                         <button
-                            onClick={() => { setQuickOpen(false); setEditingQuickId(null); }}
+                            onClick={() => { setQuickOpen(false); setEditingQuickId(null); setAudioDuration(10); }}
                             className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
                         >
                             Cancel
