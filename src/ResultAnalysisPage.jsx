@@ -73,50 +73,55 @@ const AnimatedNumber = ({ value, duration = 1000 }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Stat Card with animation
 // ─────────────────────────────────────────────────────────────────────────────
-const StatCard = ({ icon: Icon, value, label, valueColor, bg, border, suffix = '' }) => (
-  <div className={`flex flex-col items-center justify-center p-4 rounded-2xl border print:rounded-lg print:p-3 transition-transform hover:scale-105 ${bg} ${border}`}>
-    <Icon className="w-5 h-5 mb-2 print:w-4 print:h-4" style={{ color: valueColor }} />
-    <span className="text-2xl font-black print:text-xl" style={{ color: valueColor }}>
+const StatCard = ({ icon: Icon, value, label, valueColor, suffix = '' }) => (
+  <div className="bg-white flex flex-col items-center justify-center p-5 rounded-2xl border border-slate-100 shadow-sm print:rounded-lg print:p-3 transition-all hover:-translate-y-1 hover:shadow-md group">
+    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110" style={{ background: valueColor + '10' }}>
+      <Icon className="w-5 h-5 print:w-4 print:h-4" style={{ color: valueColor }} />
+    </div>
+    <span className="text-2xl font-black text-slate-800 print:text-xl">
       <AnimatedNumber value={typeof value === 'string' ? parseFloat(value) || value : value} />
-      {suffix}
+      <span className="text-sm opacity-70 ml-0.5">{suffix}</span>
     </span>
-    <span className="text-xs font-semibold text-gray-500 text-center leading-tight mt-0.5">{label}</span>
+    <span className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-widest mt-1">{label}</span>
   </div>
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mistake List
 // ─────────────────────────────────────────────────────────────────────────────
-const MistakeList = ({ title, icon: Icon, iconColor, bg, border, items, columns = 1 }) => (
-  <div className={`rounded-2xl border print:rounded-lg overflow-hidden ${border}`}>
-    <div className={`flex items-center space-x-2 px-4 py-3 border-b print:py-2 ${bg} ${border}`}>
-      <Icon className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />
-      <h4 className="font-black text-gray-800 text-sm">{title}</h4>
+const MistakeList = ({ title, icon: Icon, iconColor, items, columns = 1 }) => (
+  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm print:rounded-lg overflow-hidden flex flex-col">
+    <div className="flex items-center space-x-3 px-5 py-4 border-b border-slate-100 print:py-2">
+      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: iconColor + '15' }}>
+        <Icon className="w-4 h-4 flex-shrink-0" style={{ color: iconColor }} />
+      </div>
+      <h4 className="font-bold text-slate-700 text-sm tracking-tight">{title}</h4>
       <span
-        className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
-        style={{ background: iconColor + '20', color: iconColor }}
+        className="ml-auto text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest"
+        style={{ background: iconColor + '10', color: iconColor }}
       >
-        {items.length}
+        {items.length} Errors
       </span>
     </div>
-    <div className="p-3 max-h-52 overflow-y-auto print:overflow-visible print:max-h-none">
+    <div className="p-5 max-h-64 overflow-y-auto print:overflow-visible print:max-h-none flex-1 bg-slate-50/30">
       {items.length === 0 ? (
-        <div className="flex items-center justify-center py-4 text-gray-400 text-xs font-semibold">
-          <CheckCircle2 className="w-4 h-4 mr-1.5 text-green-400" /> No errors in this category
+        <div className="flex flex-col items-center justify-center py-8 text-slate-400 text-sm font-medium">
+          <CheckCircle2 className="w-8 h-8 mb-2 text-green-400 opacity-50" />
+          <span>No errors in this category</span>
         </div>
       ) : columns === 2 ? (
         <div>
-          <div className="grid grid-cols-2 gap-1 mb-1.5">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Typed (Wrong)</span>
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Correct</span>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Typed (Wrong)</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Correct</span>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             {items.map((item, i) => (
-              <div key={i} className="grid grid-cols-2 gap-1">
-                <span className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-red-50 text-red-700 border border-red-100 line-through decoration-red-400">
+              <div key={i} className="grid grid-cols-2 gap-3">
+                <span className="text-[13px] font-semibold px-3 py-2 rounded-xl bg-red-50/80 text-red-700 border border-red-100/50 line-through decoration-red-300 shadow-sm">
                   {item.typed}
                 </span>
-                <span className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-100">
+                <span className="text-[13px] font-semibold px-3 py-2 rounded-xl bg-green-50/80 text-green-700 border border-green-100/50 shadow-sm">
                   {item.correct}
                 </span>
               </div>
@@ -124,12 +129,12 @@ const MistakeList = ({ title, icon: Icon, iconColor, bg, border, items, columns 
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {items.map((word, i) => (
             <span
               key={i}
-              className="text-xs font-bold px-2.5 py-1.5 rounded-lg"
-              style={{ background: iconColor + '15', color: iconColor, border: `1px solid ${iconColor}30` }}
+              className="text-[13px] font-semibold px-3 py-1.5 rounded-xl border shadow-sm"
+              style={{ background: iconColor + '08', color: iconColor, borderColor: iconColor + '20' }}
             >
               {word}
             </span>
@@ -217,14 +222,14 @@ const HighlightedComparison = ({ originalText, attemptedText }) => {
   const typedWords = (attemptedText || '').trim().split(/\s+/);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm leading-10 text-[17px] font-medium font-mono text-gray-800 break-words mb-4">
+    <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-100 leading-[2.5] text-[17px] font-medium font-sans text-slate-700 break-words mb-4">
       {origWords.map((origWord, index) => {
         const typedWord = typedWords[index];
 
         // 1. Missing Word
         if (typedWord === undefined) {
           return (
-            <span key={index} className="inline-block bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded mr-1 shadow-sm border border-amber-200" title={`Missing Word: ${origWord}`}>
+            <span key={index} className="inline-block border-b-2 border-amber-400 bg-amber-50/50 text-amber-700 px-1 mx-0.5 rounded-sm" title={`Missing Word: ${origWord}`}>
               {origWord}
             </span>
           );
@@ -233,7 +238,7 @@ const HighlightedComparison = ({ originalText, attemptedText }) => {
         // 2. Exact Match
         if (origWord === typedWord) {
           return (
-            <span key={index} className="inline-block text-gray-700 px-1 mr-1">
+            <span key={index} className="inline-block text-slate-600 px-1 mx-0.5">
               {typedWord}
             </span>
           );
@@ -245,7 +250,7 @@ const HighlightedComparison = ({ originalText, attemptedText }) => {
 
         if (cleanOrig === cleanTyped) {
           return (
-            <span key={index} className="inline-block bg-blue-50 text-[#0d6e70] font-bold px-2 py-0.5 rounded mr-1 shadow-sm border border-blue-200" title={`Formatting/Case. Expected: ${origWord}`}>
+            <span key={index} className="inline-block border-b-2 border-blue-400 bg-blue-50/50 text-blue-700 px-1 mx-0.5 rounded-sm" title={`Formatting/Case. Expected: ${origWord}`}>
               {typedWord}
             </span>
           );
@@ -253,7 +258,7 @@ const HighlightedComparison = ({ originalText, attemptedText }) => {
 
         // 4. Full Mistake (Wrong spelling)
         return (
-          <span key={index} className="inline-block bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded mr-1 shadow-sm border border-red-200 line-through decoration-red-400" title={`Wrong. Expected: ${origWord}`}>
+          <span key={index} className="inline-block border-b-2 border-red-400 bg-red-50/50 text-red-700 line-through decoration-red-400 px-1 mx-0.5 rounded-sm" title={`Wrong. Expected: ${origWord}`}>
             {typedWord}
           </span>
         );
@@ -261,7 +266,7 @@ const HighlightedComparison = ({ originalText, attemptedText }) => {
 
       {/* 5. Extra Words */}
       {typedWords.slice(origWords.length).map((extraWord, idx) => (
-        <span key={`extra-${idx}`} className="inline-block bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded mr-1 shadow-sm border border-purple-200" title="Extra Word">
+        <span key={`extra-${idx}`} className="inline-block border-b-2 border-purple-400 bg-purple-50/50 text-purple-700 px-1 mx-0.5 rounded-sm" title="Extra Word">
           {extraWord}
         </span>
       ))}
@@ -307,7 +312,7 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
     if (!currentAttemptId) return;
     setLoading(true);
 
-    fetchTestResult(supabase, currentAttemptId)
+    fetchTestResult(supabase, currentAttemptId, user?.id)
       .then(async (row) => {
         // 1. Extract attempted_text from mistakes_data JSONB
         const attemptedText = row.mistakes_data?.attempted_text ?? row.attempted_text ?? '';
@@ -404,6 +409,14 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
           attemptedHtml:    row.mistakes_data?.html_content ?? null,
           formattingMistakes: formattingMistakes,
           formattingErrors:   formattingErrors,
+          // ── Section-wise metrics from mistakes_data ─────────────
+          sectionName:      row.mistakes_data?.section_name ?? row.mistakes_data?.category ?? '—',
+          testName:         row.mistakes_data?.test_name ?? exerciseTitle,
+          correctWords:     row.mistakes_data?.correct_words ?? null,
+          incorrectWords:   row.mistakes_data?.incorrect_words ?? null,
+          missedWords:      row.mistakes_data?.missed_words ?? null,
+          timeTaken:        row.mistakes_data?.time_taken ?? '—',
+          resultStatus:     row.mistakes_data?.result_status ?? '—',
         });
       })
       .catch((err) => {
@@ -507,23 +520,20 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
     : accuracyNum >= 60 ? { label: 'Average', color: '#d97706', bg: '#fef3c7' }
     : { label: 'Needs Practice', color: '#dc2626', bg: '#fee2e2' };
 
-    const accBg = accuracyNum >= 80 ? 'bg-green-50' : accuracyNum >= 60 ? 'bg-amber-50' : 'bg-red-50';
-    const accBorder = accuracyNum >= 80 ? 'border-green-100' : accuracyNum >= 60 ? 'border-amber-100' : 'border-red-100';
-
     const stats = [
-        { icon: Hash,         value: data.totalWords,     label: 'Total Words',       valueColor: '#0d6e70', bg: 'bg-blue-50',   border: 'border-blue-100' },
-        { icon: FileText,     value: data.userWords,       label: 'Words Typed',       valueColor: '#0369a1', bg: 'bg-sky-50',    border: 'border-sky-100' },
-        { icon: XCircle,      value: data.totalMistakes,   label: 'Total Mistakes',    valueColor: '#dc2626', bg: 'bg-red-50',    border: 'border-red-100' },
-        { icon: AlertTriangle,value: data.capitalMistakes, label: 'Capital Errors',    valueColor: '#d97706', bg: 'bg-amber-50',  border: 'border-amber-100' },
-        { icon: Type,         value: data.spellingMistakes,label: 'Spelling Errors',   valueColor: '#7c3aed', bg: 'bg-purple-50', border: 'border-purple-100' },
-        { icon: TrendingUp,   value: data.accuracy,        label: 'Accuracy',          valueColor: accColor,  bg: accBg,         border: accBorder, suffix: '%' },
+        { icon: Hash,         value: data.totalWords,     label: 'Total Words',       valueColor: '#0d6e70' },
+        { icon: FileText,     value: data.userWords,       label: 'Words Typed',       valueColor: '#0369a1' },
+        { icon: XCircle,      value: data.totalMistakes,   label: 'Total Mistakes',    valueColor: '#dc2626' },
+        { icon: AlertTriangle,value: data.capitalMistakes, label: 'Capital Errors',    valueColor: '#d97706' },
+        { icon: Type,         value: data.spellingMistakes,label: 'Spelling Errors',   valueColor: '#7c3aed' },
+        { icon: TrendingUp,   value: data.accuracy,        label: 'Accuracy',          valueColor: accColor, suffix: '%' },
     ];
 
   const mistakeSections = [
-    { title: 'Missing Words',           icon: MinusCircle,   iconColor: '#dc2626', bg: 'bg-red-50',    border: 'border-red-100',    items: data.missingWords,   columns: 1 },
-    { title: 'Extra Words',             icon: PlusCircle,    iconColor: '#16a34a', bg: 'bg-green-50',  border: 'border-green-100',  items: data.extraWords,     columns: 1 },
-    { title: 'Spelling Mistakes',       icon: Type,          iconColor: '#7c3aed', bg: 'bg-purple-50', border: 'border-purple-100', items: data.spellingErrors, columns: 2 },
-    { title: 'Capitalisation Mistakes', icon: AlertTriangle, iconColor: '#d97706', bg: 'bg-amber-50',  border: 'border-amber-100',  items: data.capitalErrors,  columns: 2 },
+    { title: 'Missing Words',           icon: MinusCircle,   iconColor: '#dc2626', items: data.missingWords,   columns: 1 },
+    { title: 'Extra Words',             icon: PlusCircle,    iconColor: '#16a34a', items: data.extraWords,     columns: 1 },
+    { title: 'Spelling Mistakes',       icon: Type,          iconColor: '#7c3aed', items: data.spellingErrors, columns: 2 },
+    { title: 'Capitalisation Mistakes', icon: AlertTriangle, iconColor: '#d97706', items: data.capitalErrors,  columns: 2 },
   ];
 
   const tabs = [
@@ -601,8 +611,8 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
       >
         {/* ── Gradient Header ────────────────────────────────── */}
         <div
-          className="px-8 py-8 print:py-6 relative overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #07414e 0%, #0d6e70 60%, #0891b2 100%)' }}
+          className="px-8 py-10 print:py-6 relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #09505a 0%, #0d6e70 100%)' }}
         >
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-blue-300/10 rounded-full blur-3xl pointer-events-none" />
@@ -676,24 +686,24 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
                   {/* Stats Grid 2x2 */}
                   <div className="sm:col-span-8 grid grid-cols-2 gap-3">
                     {[
-                      { icon: Hash,         label: 'Total Words',    value: data.totalWords,      color: '#0d6e70', bg: '#eff6ff', description: 'Maximum possible' },
-                      { icon: FileText,     label: 'Words Typed',    value: data.userWords,       color: '#0369a1', bg: '#f0f9ff', description: 'Your input length' },
-                      { icon: XCircle,      label: 'Total Mistakes', value: data.totalMistakes,   color: '#dc2626', bg: '#fef2f2', description: 'Errors detected' },
-                      { icon: Zap,          label: 'Typing Speed',   value: (data.wpm ?? (parseFloat(data.speed) || 0)), color: '#7c3aed', bg: '#faf5ff', description: 'Words per minute', suffix: ' WPM' },
-                    ].map(({ icon: Icon, label, value, color, bg, description, suffix = '' }) => (
-                      <div key={label} className="rounded-3xl border border-gray-100 p-5 flex flex-col justify-between transition-all hover:shadow-md" style={{ background: bg }}>
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: color + '15' }}>
-                                <Icon className="w-5 h-5" style={{ color }} />
+                      { icon: Hash,         label: 'Total Words',    value: data.totalWords,      color: '#0d6e70', description: 'Maximum possible' },
+                      { icon: FileText,     label: 'Words Typed',    value: data.userWords,       color: '#0369a1', description: 'Your input length' },
+                      { icon: XCircle,      label: 'Total Mistakes', value: data.totalMistakes,   color: '#dc2626', description: 'Errors detected' },
+                      { icon: Zap,          label: 'Typing Speed',   value: (data.wpm ?? (parseFloat(data.speed) || 0)), color: '#7c3aed', description: 'Words per minute', suffix: ' WPM' },
+                    ].map(({ icon: Icon, label, value, color, description, suffix = '' }) => (
+                      <div key={label} className="bg-white rounded-3xl border border-slate-100 p-6 flex flex-col justify-between transition-all shadow-sm hover:shadow-md group">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: color + '10' }}>
+                                <Icon className="w-6 h-6" style={{ color }} />
                             </div>
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{description}</span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">{description}</span>
                         </div>
                         <div>
-                          <p className="text-3xl font-black leading-tight tracking-tight" style={{ color }}>
+                          <p className="text-3xl font-black leading-none tracking-tight text-slate-800">
                             <AnimatedNumber value={value} />
-                            <span className="text-sm ml-0.5 opacity-70">{suffix}</span>
+                            <span className="text-sm ml-0.5 opacity-60 text-slate-500 font-bold">{suffix}</span>
                           </p>
-                          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{label}</p>
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-2">{label}</p>
                         </div>
                       </div>
                     ))}
@@ -732,6 +742,46 @@ const ResultAnalysisPage = ({ data: propData, attemptId, onBack, user, onNavigat
                   </div>
                 </div>
               </div>
+
+              {/* ── Section-wise Performance Detail ──────────────────── */}
+              {(data.correctWords !== null || data.timeTaken !== '—') && (
+                <div>
+                  <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[#0d6e70]" /> Section Performance Detail
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Correct Words',   value: data.correctWords   ?? '—', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+                      { label: 'Incorrect Words',  value: data.incorrectWords ?? '—', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                      { label: 'Missed Words',     value: data.missedWords    ?? '—', color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+                      { label: 'Time Taken',       value: data.timeTaken      ?? '—', color: '#0369a1', bg: '#eff6ff', border: '#bfdbfe' },
+                    ].map(({ label, value, color, bg, border }) => (
+                      <div key={label} className="rounded-2xl border p-5 flex flex-col items-center text-center" style={{ background: bg, borderColor: border }}>
+                        <p className="text-2xl font-black" style={{ color }}>{value}</p>
+                        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mt-1">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    {data.sectionName && data.sectionName !== '—' && (
+                      <span className="px-3 py-1 rounded-full bg-blue-50 text-[#0d6e70] text-xs font-black border border-blue-100">
+                        📚 Section: {data.sectionName}
+                      </span>
+                    )}
+                    {data.resultStatus && data.resultStatus !== '—' && (
+                      <span className={`px-3 py-1 rounded-full text-xs font-black border ${
+                        data.resultStatus === 'Passed'
+                          ? 'bg-green-50 text-green-700 border-green-200'
+                          : data.resultStatus === 'Completed'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-red-50 text-red-700 border-red-200'
+                      }`}>
+                        {data.resultStatus === 'Passed' ? '✅' : data.resultStatus === 'Completed' ? '🔵' : '❌'} {data.resultStatus}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* ── Mistake Breakdown ─────────────────────────────── */}
               <div>

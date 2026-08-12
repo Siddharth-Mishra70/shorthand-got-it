@@ -175,6 +175,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
     };
 
     const handleSubmit = async () => {
+        if (hasSubmitted) return; // Prevent duplicate submissions
         setIsStarted(false);
         // Properly split reference text filtering empty tokens from multi-space/newline joins
         const refWords = selectedExercise.lines.join(' ').split(/\s+/).filter(w => w !== '');
@@ -190,6 +191,7 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
         });
         const deduction = fullMistakes + (halfMistakes * 0.5);
         const timeElapsedMin = (timerPreset - timeLeft) / 60 || 1;
+        const timeTakenSec = timerPreset - timeLeft;
         const wpmVal = Math.max(0, Math.round((typedWords.length - deduction) / timeElapsedMin));
         const accVal = refWords.length > 0 ? Math.max(0, Math.min(100, Math.round(((refWords.length - deduction) / refWords.length) * 100))) : 100;
         const stats = { wpm: wpmVal, accuracy: accVal, fullMistakes, halfMistakes, totalWords: typedWords.length, totalRefWords: refWords.length };
@@ -199,16 +201,20 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
             const { attemptId: newId } = await saveTestResult(supabase, {
                 userId: userSess.id || '00000000-0000-0000-0000-000000000000',
                 studentName: userSess.name || 'Student',
-                exerciseId: selectedExercise.id, // Using real UUID now
+                exerciseId: selectedExercise.id,
                 exerciseTitle: selectedExercise.title,
                 exerciseCategory: 'Pitman APS',
+                sectionName: selectedExercise.title,
+                testName: selectedExercise.title,
                 wpm: stats.wpm,
                 accuracy: stats.accuracy,
                 attemptedText: inputText,
-                originalText: mockReferenceText,
+                originalText: refWords.join(' '),
+                timeTakenSeconds: timeTakenSec,
                 totalMistakes: Math.ceil(deduction)
             });
             setAttemptId(newId);
+            if (onTestComplete) onTestComplete(newId);
         } finally { setIsSaving(false); }
     };
 

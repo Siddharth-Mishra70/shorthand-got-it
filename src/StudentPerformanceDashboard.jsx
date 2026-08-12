@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 import { fetchAllResults } from './lib/saveTestResult';
 import { 
@@ -412,6 +412,115 @@ const StudentPerformanceDashboard = ({ user, onBack, onViewResult, onTakeTest })
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. TEST HISTORY SECTION */}
+                {!loading && results.length > 0 && (
+                    <div className="mt-16 space-y-8 animate-in fade-in duration-1000">
+                        <div className="flex items-center gap-6">
+                            <div className="h-px bg-gray-200 flex-1" />
+                            <h2 className="text-sm font-black text-gray-400 uppercase tracking-[0.4em] px-4 flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-[#0d6e70]" /> Recent Test History
+                            </h2>
+                            <div className="h-px bg-gray-200 flex-1" />
+                        </div>
+
+                        <div className="bg-white rounded-[3rem] p-8 border border-gray-100 shadow-xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse min-w-[700px]">                                     <thead>
+                                        <tr className="border-b border-gray-100">
+                                            <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest pl-4">Date</th>
+                                            <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Module & Test</th>
+                                            <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Accuracy</th>
+                                            <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Speed</th>
+                                            <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Words</th>
+                                            <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Time</th>
+                                            <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
+                                            <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right pr-4">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {results.slice(0, 50).map((result) => {
+                                            let cat = result.mistakes_data?.category || result.category || result.exercise_category;
+                                            
+                                            // Normalizing category text for display
+                                            if (!cat) {
+                                                const exId = String(result.exercise_id || '').toLowerCase();
+                                                if (exId.includes('formatting') || exId.includes('hc-')) cat = 'Formatting';
+                                                else if (exId.includes('pitman') || exId.includes('aps')) cat = 'Pitman';
+                                                else if (exId.includes('kc-') || exId.includes('vol')) cat = 'Kailash Chandra';
+                                                else if (exId.includes('state')) cat = 'State Exam';
+                                                else cat = 'Test';
+                                            }
+
+                                            const title = result.mistakes_data?.exercise_title || result.exercise_id || 'Practice Test';
+                                            const date = new Date(result.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                                            const acc = result.accuracy || 0;
+                                            const accColor = acc >= 80 ? 'text-green-700 bg-green-50 border-green-100' : acc >= 60 ? 'text-amber-700 bg-amber-50 border-amber-100' : 'text-rose-700 bg-rose-50 border-rose-100';
+                                            const resultStatus = result.mistakes_data?.result_status;
+                                            const timeTaken = result.mistakes_data?.time_taken;
+                                            const correctWords = result.mistakes_data?.correct_words;
+                                            const totalWords = result.mistakes_data?.total_words;
+                                            
+                                            return (
+                                                <tr key={result.id} className="hover:bg-gray-50/50 transition-colors group">
+                                                    <td className="py-5 pl-4 whitespace-nowrap">
+                                                        <span className="text-xs font-bold text-gray-500 bg-white px-3 py-1.5 rounded-xl border border-gray-100 shadow-sm">{date}</span>
+                                                    </td>
+                                                    <td className="py-5">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-sm font-black text-gray-900 truncate max-w-[200px] sm:max-w-[350px]">{title}</span>
+                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{cat}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-5 text-center">
+                                                        <span className={`inline-block px-3 py-1.5 rounded-xl text-xs font-black border shadow-sm ${accColor}`}>
+                                                            {acc.toFixed(1)}%
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-5 text-center">
+                                                        <span className="text-sm font-black text-gray-700">{(result.wpm && result.wpm > 0) ? `${result.wpm} WPM` : '--'}</span>
+                                                    </td>
+                                                    <td className="py-5 text-center">
+                                                        {correctWords != null && totalWords != null ? (
+                                                            <span className="text-xs font-black text-gray-700">
+                                                                <span className="text-green-600">{correctWords}</span>/{totalWords}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-sm font-bold text-gray-400">—</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-5 text-center">
+                                                        <span className="text-xs font-black text-blue-600">{timeTaken || '—'}</span>
+                                                    </td>
+                                                    <td className="py-5 text-center">
+                                                        {resultStatus ? (
+                                                            <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
+                                                                resultStatus === 'Passed' ? 'bg-green-50 text-green-700' :
+                                                                resultStatus === 'Completed' ? 'bg-blue-50 text-blue-700' :
+                                                                'bg-rose-50 text-rose-700'
+                                                            }`}>{resultStatus}</span>
+                                                        ) : (
+                                                            <span className="text-gray-300">—</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-5 pr-4 text-right">
+                                                        <button 
+                                                            onClick={() => onViewResult(result.id)}
+                                                            className="text-[10px] font-black text-[#0d6e70] uppercase tracking-widest px-4 py-2.5 rounded-xl bg-blue-50 hover:bg-[#0d6e70] hover:text-white transition-all shadow-sm"
+                                                        >
+                                                            View Report
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )}

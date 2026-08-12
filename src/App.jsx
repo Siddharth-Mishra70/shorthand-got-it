@@ -13,6 +13,7 @@ import {
   User,
   BarChart2,
   CheckCircle,
+  Lock,
 } from 'lucide-react';
 
 import TypingArena from './TypingArena';
@@ -32,6 +33,7 @@ import StudentPerformanceDashboard from './StudentPerformanceDashboard';
 import MobilePracticeSection from './MobilePracticeSection';
 import FAQSection from './FAQSection';
 import ErrorBoundary from './ErrorBoundary';
+import { verifyTestAccess } from './lib/saveTestResult';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dashboard Sub-components
@@ -50,33 +52,65 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
   </div>
 );
 
-const CircularCourseCard = ({ title, type, isPremium, onTakeTest }) => (
-  <div className="flex flex-col items-center group w-full max-w-[280px]">
-    <div className="relative w-full aspect-square rounded-full bg-white shadow-xl flex flex-col justify-center items-center text-center p-6 border-4 border-transparent group-hover:border-[#0d6e70] transition-all duration-300">
-      <div className="absolute top-2 right-2 sm:top-4 sm:right-4">
-        <span
-          className={`px-3 py-1 text-[10px] sm:text-xs font-black rounded-full shadow-sm ${
-            isPremium ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-          }`}
-        >
-          {isPremium ? 'PAID' : 'FREE'}
-        </span>
+const CircularCourseCard = ({ title, type, isPremium, courseId, user, onTakeTest }) => {
+  const access = verifyTestAccess(user, courseId);
+  const isLocked = !access.allowed;
+
+  return (
+    <div className="flex flex-col items-center group w-full max-w-[280px]">
+      <div className={`relative w-full aspect-square rounded-full bg-white shadow-xl flex flex-col justify-center items-center text-center p-6 border-4 border-transparent transition-all duration-300 ${
+        isLocked ? 'opacity-75 grayscale-[30%]' : 'group-hover:border-[#0d6e70]'
+      }`}>
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4">
+          {isLocked ? (
+            <span className="px-3 py-1 text-[10px] sm:text-xs font-black rounded-full shadow-sm bg-red-100 text-red-700 flex items-center gap-1">
+              <Lock className="w-3 h-3" />
+              {user && user.status === 'inactive' ? 'INACTIVE' :
+               user && user.valid_until && new Date(user.valid_until) < new Date() ? 'EXPIRED' :
+               'LOCKED'}
+            </span>
+          ) : (
+            <span className={`px-3 py-1 text-[10px] sm:text-xs font-black rounded-full shadow-sm ${
+              isPremium ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+            }`}>
+              {isPremium ? 'PAID' : 'FREE'}
+            </span>
+          )}
+        </div>
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
+          {isLocked ? <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" /> : <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-[#0d6e70]" />}
+        </div>
+        <h3 className="font-extrabold text-gray-800 text-xs sm:text-sm leading-tight mb-1 px-2">{title}</h3>
+        <p className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest">{type}</p>
+        {isLocked && (
+          <p className="text-[9px] text-red-500 font-bold mt-1 px-1 leading-tight">
+            {access.reason?.substring(0, 60)}{access.reason?.length > 60 ? '...' : ''}
+          </p>
+        )}
       </div>
-      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3">
-        <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-[#0d6e70]" />
-      </div>
-      <h3 className="font-extrabold text-gray-800 text-xs sm:text-sm leading-tight mb-1 px-2">{title}</h3>
-      <p className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest">{type}</p>
+      <button
+        onClick={() => {
+          if (isLocked) {
+            alert(`🔒 ${access.reason}`);
+            return;
+          }
+          onTakeTest();
+        }}
+        className={`mt-6 w-full sm:w-auto px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center justify-center space-x-2 ${
+          isLocked
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'bg-[#0d6e70] hover:bg-blue-800 text-white'
+        }`}
+      >
+        {isLocked ? (
+          <><Lock className="w-4 h-4" /><span>Locked</span></>
+        ) : (
+          <><PlayCircle className="w-4 h-4" /><span>Take Test</span></>
+        )}
+      </button>
     </div>
-    <button
-      onClick={onTakeTest}
-      className="mt-6 w-full sm:w-auto bg-[#0d6e70] hover:bg-blue-800 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center justify-center space-x-2"
-    >
-      <PlayCircle className="w-4 h-4" />
-      <span>Take Test</span>
-    </button>
-  </div>
-);
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Protected Route Wrapper
@@ -265,7 +299,8 @@ function App() {
   ];
 
   const enrolled = user?.enrolled_courses || [];
-  const courses = user?.role === 'admin' ? allCourses : allCourses.filter(c => enrolled.includes(c.id));
+  // Show ALL courses on the dashboard — lock state is handled per-card by verifyTestAccess
+  const courses = allCourses;
 
   const currentViewData = courses.find((c) => c.view === currentView);
 
@@ -762,6 +797,8 @@ function App() {
                           title={course.title}
                           type={course.type}
                           isPremium={course.isPremium}
+                          courseId={course.id}
+                          user={user}
                           onTakeTest={() => setCurrentView(course.view)}
                         />
                       ))}

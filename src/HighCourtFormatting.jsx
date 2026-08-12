@@ -463,9 +463,12 @@ ORAL ORDER
                 accuracy = analysis.summary.accuracy;
                 totalMistakes = analysis.summary.totalMistakes;
 
+                // Calculate time taken
+                const timeTakenSec = (selectedDuration * 60) - timeLeft;
+
                 // 2. Save via Utility to Primary DB (test_results)
                 const result = await saveTestResult(supabase, {
-                    wpm: 0, // Formatting test - not timed
+                    wpm: 0, // Formatting test - not timed by WPM
                     accuracy: accuracy,
                     totalMistakes: totalMistakes, 
                     attemptedText: resultText,
@@ -473,8 +476,11 @@ ORAL ORDER
                     exerciseId: selectedTestId,
                     exerciseTitle: selectedTest?.title,
                     exerciseCategory: 'formatting',
+                    sectionName: 'High Court Formatting',
+                    testName: selectedTest?.title,
+                    timeTakenSeconds: timeTakenSec,
                     userId: user?.id,
-                    studentName: user?.name,
+                    studentName: user?.name || user?.first_name,
                     // Attach HTML for the admin to check formatting specifically
                     extraMistakesData: { 
                         html_content: htmlContent,

@@ -510,17 +510,22 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
         } catch {}
 
         try {
+            const timeTakenSec = (selectedDuration * 60) - timeLeft;
             const { attemptId: newId } = await saveTestResult(supabase, {
                 userId: resolvedUserId,
                 studentName: resolvedUserName,
                 exerciseId: resolvedExerciseId,
                 exerciseTitle: selectedExercise?.title,
-                exerciseCategory: category,
+                exerciseCategory: category || selectedExercise?.category,
+                sectionName: selectedExercise?.title || category,
+                testName: selectedExercise?.title,
                 wpm: stats.wpm,
                 accuracy: stats.accuracy,
                 attemptedText: inputText,
                 originalText: mockReferenceText,
-                mistakesCount: stats.fullMistakes + Math.ceil(stats.halfMistakes * 0.5)
+                timeTakenSeconds: timeTakenSec,
+                mistakesCount: stats.fullMistakes + Math.ceil(stats.halfMistakes * 0.5),
+                totalMistakes: stats.fullMistakes + Math.ceil(stats.halfMistakes * 0.5)
             });
             setAttemptId(newId);
             
@@ -1206,8 +1211,8 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                         )}
                                     </div>
 
-                                    {/* Massive Transcription Field */}
-                                    <div className="flex flex-col h-[60vh] md:h-full md:flex-1 bg-white border-2 border-gray-200 rounded-[2rem] p-4 md:p-8 shadow-xl shadow-blue-900/5">
+                                    {/* Massive Transcription Field - Large comfortable pad for audio dictation */}
+                                    <div className="flex flex-col bg-white border-2 border-gray-200 rounded-[2rem] p-4 md:p-6 shadow-xl shadow-blue-900/5" style={{ minHeight: '500px', flex: '1 1 auto' }}>
                                         
                                         <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3 h-10 md:h-12 shrink-0">
                                             <div className="flex items-center space-x-2">
@@ -1223,12 +1228,15 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                         <div className={`flex-1 border-2 rounded-xl p-2 md:p-4 shadow-sm flex flex-col min-h-0 transition-all duration-500 ${isTestActive ? 'bg-white border-gray-200' : 'bg-gray-100 border-gray-300 grayscale opacity-60'}`}>
                                             <textarea
                                                 ref={textareaRef}
-                                                className={`flex-1 w-full h-full bg-transparent text-xl leading-relaxed text-gray-900 outline-none resize-none placeholder-gray-400 font-bold scroll-custom p-8 ${!isTestActive ? 'cursor-not-allowed select-none' : ''}`}
-                                                placeholder={isTestActive ? "Listen to the audio and transcribe here..." : "Click 'START TEST' above to begin the countdown..."}
+                                                className={`w-full bg-transparent text-xl leading-relaxed text-gray-900 outline-none resize-none placeholder-gray-400 font-bold p-4 md:p-6 custom-scrollbar ${
+                                                    !isTestActive ? 'cursor-not-allowed select-none opacity-60' : 'focus:ring-2 focus:ring-[#0d6e70]/30'
+                                                }`}
+                                                style={{ minHeight: '380px', flex: '1 1 auto' }}
+                                                placeholder={isTestActive ? '🎙️ Listen carefully and type what you hear here...\n\nTip: Use proper punctuation and capitalization as dictated.' : "Click 'START TEST' above to begin the 5-second countdown..."}
                                                 value={inputText}
                                                 onChange={handleInputChange}
-                                                onCopy={(e) => { e.preventDefault(); alert("Copying is disabled!"); }}
-                                                onPaste={(e) => { e.preventDefault(); alert("Pasting is disabled!"); }}
+                                                onCopy={(e) => { e.preventDefault(); alert('Copying is disabled during a dictation test!'); }}
+                                                onPaste={(e) => { e.preventDefault(); alert('Pasting is disabled during a dictation test!'); }}
                                                 onContextMenu={(e) => { e.preventDefault(); }}
                                                 disabled={!isTestActive || timeLeft === 0}
                                                 autoComplete="off"

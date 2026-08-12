@@ -1,4 +1,5 @@
-﻿import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { supabase } from './supabaseClient';
 import {
   Download,
   CheckCircle2,
@@ -34,9 +35,52 @@ const LiveDemoInteractive = ({ onRegister }) => {
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
 
+  const [demoText, setDemoText] = useState(DEFAULT_TEXT);
+  const [demoAudio, setDemoAudio] = useState(null);
+  const [isLoadingDemo, setIsLoadingDemo] = useState(true);
+
   const textareaRef = useRef(null);
 
-  // Focus removed to prevent auto-scrolling on load
+  // FETCH RECENT AUDIO
+  useEffect(() => {
+    const fetchRecentAudio = async () => {
+      try {
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        
+        const { data, error } = await supabase
+          .from('exercises')
+          .select('*')
+          .eq('category', 'audio')
+          .eq('is_hidden', false)
+          .gte('created_at', twentyFourHoursAgo)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (!error && data && data.length > 0) {
+          const ex = data[0];
+          setDemoAudio(ex.audio_url || ex.audio); 
+
+          let rawText = ex.original_text || '';
+          if (rawText.trim().startsWith('{')) {
+              try {
+                  const parsed = JSON.parse(rawText);
+                  if (parsed.plain || parsed.text) {
+                      rawText = parsed.plain || parsed.text;
+                  }
+              } catch(e) {}
+          }
+          if (rawText) {
+             setDemoText(rawText.trim());
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch demo:", err);
+      } finally {
+        setIsLoadingDemo(false);
+      }
+    };
+    fetchRecentAudio();
+  }, []);
 
   const handleStartTyping = (e) => {
     if (!startTime) {
@@ -68,8 +112,8 @@ const LiveDemoInteractive = ({ onRegister }) => {
   const analysis = useMemo(() => {
     if (!showResult) return null;
     const durationSec = startTime && endTime ? (endTime - startTime) / 1000 : 0;
-    return generateDetailedAnalysis(DEFAULT_TEXT, typedText, { durationSec });
-  }, [showResult, typedText, startTime, endTime]);
+    return generateDetailedAnalysis(demoText, typedText, { durationSec });
+  }, [showResult, typedText, startTime, endTime, demoText]);
 
   const stats = analysis ? [
     { value: analysis.summary.totalWords, label: 'Total Words', color: '#0d6e70', bg: 'bg-blue-50' },
@@ -133,14 +177,27 @@ const LiveDemoInteractive = ({ onRegister }) => {
                 <div className="group relative">
                   <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-10 group-hover:opacity-20 transition duration-1000 group-hover:duration-200"></div>
                   <div className="relative rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/30 p-8">
-                    <div className="flex items-center space-x-2 mb-4">
-                      <div className="bg-blue-600 p-1.5 rounded-lg">
-                        <Type className="w-4 h-4 text-white" />
+                    <div className="flex items-center space-x-2 mb-4 justify-between">
+                      <div className="flex items-center space-x-2">
+                          <div className="bg-blue-600 p-1.5 rounded-lg">
+                            <Type className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="text-xs font-black text-blue-900 uppercase tracking-wider">Original Dictation Passage</span>
                       </div>
-                      <span className="text-xs font-black text-blue-900 uppercase tracking-wider">Original Dictation Passage</span>
+                      {demoAudio && (
+                          <div className="flex items-center space-x-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse shadow-sm">
+                              <Zap className="w-3 h-3" />
+                              <span>24H Free Audio Trial</span>
+                          </div>
+                      )}
                     </div>
+                    {demoAudio && (
+                        <div className="mb-4">
+                            <audio controls src={demoAudio} controlsList="nodownload noplaybackrate" className="w-full h-12" />
+                        </div>
+                    )}
                     <p className="text-xl text-gray-700 leading-relaxed font-serif italic select-none">
-                      "{DEFAULT_TEXT}"
+                      "{demoText}"
                     </p>
                   </div>
                 </div>
@@ -156,7 +213,7 @@ const LiveDemoInteractive = ({ onRegister }) => {
                   />
                   <div className="absolute bottom-4 right-4 flex items-center space-x-4">
                     <span className="text-xs font-bold text-gray-400 bg-white px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                      {typedText.trim().split(/\s+/).filter(Boolean).length} / {DEFAULT_TEXT.split(' ').length} Words
+                      {typedText.trim().split(/\s+/).filter(Boolean).length} / {demoText.split(/\s+/).filter(Boolean).length} Words
                     </span>
                   </div>
                 </div>
@@ -196,7 +253,7 @@ const LiveDemoInteractive = ({ onRegister }) => {
                       <span className="text-sm font-black text-gray-800 uppercase tracking-tight">Original Paragraph</span>
                     </div>
                     <div className="p-8 text-sm sm:text-base text-gray-600 leading-8 font-mono max-h-[300px] overflow-y-auto custom-scrollbar">
-                      {DEFAULT_TEXT}
+                      {demoText}
                     </div>
                   </div>
 

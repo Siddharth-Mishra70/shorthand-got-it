@@ -12,12 +12,10 @@ const LOCAL_STORAGE_KEY = 'shorthandians_local_results';
  *   wpm            – integer
  *   accuracy       – float
  *   total_mistakes – integer
- *   mistakes_data  – jsonb  { attempted_text: string, ...future fields }
+ *   mistakes_data  – jsonb  { attempted_text: string, ...section fields }
  *   created_at     – timestamptz
  */
 export async function saveTestResult(supabase, params) {
-  const { wpm, accuracy, attemptedText, mistakesCount } = params;
-
   // 1. Auth Check - Safely get user from localStorage
   let currentUser = null;
   try {
@@ -44,18 +42,58 @@ export async function saveTestResult(supabase, params) {
   const exerciseTitle = params.exerciseTitle || params.exercise_title || (!isValidUuid(params.exerciseId) ? params.exerciseId : 'Unknown Practice');
   const exerciseId = params.exerciseId && isValidUuid(params.exerciseId) ? params.exerciseId : null;
 
+  // ── Section Metrics (enriched for section-wise result tracking) ──────────
+  const refText = params.originalText || '';
+  const typedText = params.attemptedText || '';
+  const refWords = refText.trim().split(/\s+/).filter(w => w !== '');
+  const typedWords = typedText.trim().split(/\s+/).filter(w => w !== '');
+
+  let correctWords = 0;
+  let incorrectWords = 0;
+  let missedWords = 0;
+
+  refWords.forEach((refWord, i) => {
+    const typedWord = typedWords[i];
+    if (!typedWord) { missedWords++; return; }
+    if (typedWord === refWord) { correctWords++; }
+    else { incorrectWords++; }
+  });
+  if (typedWords.length > refWords.length) {
+    incorrectWords += typedWords.length - refWords.length;
+  }
+
+  // Time taken
+  const timeTakenSeconds = params.timeTakenSeconds ?? 0;
+  const timeTakenDisplay = timeTakenSeconds > 0
+    ? `${Math.floor(timeTakenSeconds / 60)}m ${timeTakenSeconds % 60}s`
+    : (params.timeTakenDisplay || '');
+
+  const totalMistakesCalc = params.totalMistakes ?? params.mistakesCount ?? (incorrectWords + missedWords);
+  const scorePercent = params.score ?? parseFloat((params.accuracy || 0).toFixed(2));
+
   const row = {
     user_id:        userId,
     exercise_id:    exerciseId,
     wpm:            Math.round(params.wpm || 0),
     accuracy:       parseFloat((params.accuracy || 0).toFixed(2)),
-    total_mistakes: params.totalMistakes ?? params.mistakesCount ?? 0,
+    total_mistakes: totalMistakesCalc,
     mistakes_data: {
-      attempted_text: attemptedText ?? '',
-      original_text: params.originalText ?? '',
-      student_name: studentName,
-      category: params.exerciseCategory || 'General', // Store category here for safely
-      exercise_title: exerciseTitle,
+      attempted_text:   typedText,
+      original_text:    refText,
+      student_name:     studentName,
+      category:         params.exerciseCategory || 'General',
+      exercise_title:   exerciseTitle,
+      // ── Section-wise performance fields ─────────────────────────
+      section_name:     params.sectionName || params.exerciseCategory || 'General',
+      test_name:        params.testName || exerciseTitle,
+      total_words:      refWords.length,
+      correct_words:    correctWords,
+      incorrect_words:  incorrectWords,
+      missed_words:     missedWords,
+      time_taken:       timeTakenDisplay,
+      time_taken_sec:   timeTakenSeconds,
+      score:            scorePercent,
+      result_status:    params.resultStatus || (scorePercent >= 80 ? 'Passed' : scorePercent >= 50 ? 'Completed' : 'Failed'),
       ...(params.extraMistakesData || {})
     }
   };
@@ -112,21 +150,35 @@ export async function saveTestResult(supabase, params) {
  * fetchTestResult
  * ─────────────────────────────────────────────────────────────────────────────
  * Fetches a single result by attemptId from Supabase OR LocalStorage.
+ * SECURITY: currentUserId enforces student-level result isolation.
  */
-export async function fetchTestResult(supabase, attemptId) {
+export async function fetchTestResult(supabase, attemptId, currentUserId = null) {
   if (!attemptId) throw new Error('fetchTestResult: attemptId is required.');
 
-  // If it's a locally-saved result, skip Supabase entirely
   const isLocal = String(attemptId).startsWith('local_');
 
   if (!isLocal) {
     try {
       if (supabase && !supabase.supabaseUrl.includes('placeholder')) {
-        const { data, error } = await supabase
+        let query = supabase
           .from('test_results')
           .select('*')
-          .eq('id', attemptId)
-          .single();
+          .eq('id', attemptId);
+
+        // ── SECURITY: Enforce student-level result isolation ──────
+        if (currentUserId) {
+          const { data: userRecord } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', currentUserId)
+            .maybeSingle();
+          
+          if (!userRecord || userRecord.role !== 'admin') {
+            query = query.eq('user_id', currentUserId);
+          }
+        }
+
+        const { data, error } = await query.single();
         if (!error && data) return data;
       }
     } catch (err) {
@@ -134,12 +186,20 @@ export async function fetchTestResult(supabase, attemptId) {
     }
   }
 
-  // Local lookup — check both keys for compatibility
+  // Local lookup
   const localKeys = ['stn_local_results', 'shorthandians_local_results'];
   for (const key of localKeys) {
     const local = JSON.parse(localStorage.getItem(key) || '[]');
     const match = local.find(r => r.id === attemptId);
-    if (match) return match;
+    if (match) {
+      if (currentUserId && match.user_id && match.user_id !== currentUserId) {
+        const cu = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (cu.role !== 'admin') {
+          throw new Error('Access denied: You do not have permission to view this result.');
+        }
+      }
+      return match;
+    }
   }
 
   throw new Error('Result not found in Database or LocalStorage.');
@@ -149,11 +209,11 @@ export async function fetchTestResult(supabase, attemptId) {
  * fetchAllResults
  * ─────────────────────────────────────────────────────────────────────────────
  * Combines results from Supabase and LocalStorage, sorted newest-first.
+ * SECURITY: userId filter is always applied on Supabase query.
  */
 export async function fetchAllResults(supabase, userId) {
   let results = [];
 
-  // 1. Try Supabase
   try {
     if (supabase && !supabase.supabaseUrl.includes('placeholder')) {
       const { data, error } = await supabase
@@ -167,7 +227,6 @@ export async function fetchAllResults(supabase, userId) {
     console.warn('[fetchAllResults] Supabase unreachable.');
   }
 
-  // 2. Merge with Local Results
   const local1 = JSON.parse(localStorage.getItem('shorthandians_local_results') || '[]');
   const local2 = JSON.parse(localStorage.getItem('stn_local_results') || '[]');
   const local = [...local1, ...local2];
@@ -180,3 +239,27 @@ export async function fetchAllResults(supabase, userId) {
 
   return combined;
 }
+
+/**
+ * verifyTestAccess
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Subscription access control helper.
+ * Determines if a user has access to a specific course/module.
+ */
+export const verifyTestAccess = (user, courseId) => {
+  if (user?.role === 'admin') return { allowed: true };
+  
+  const freeModules = ['audio-dict', 'kailash-chandra', 'comprehension'];
+  if (freeModules.includes(courseId)) return { allowed: true };
+  
+  const enrolled = user?.enrolled_courses || [];
+  if (enrolled.includes(courseId)) {
+    return { allowed: true };
+  }
+  
+  return { 
+    allowed: false, 
+    reason: 'Subscription Required', 
+    message: 'This module is locked. Please upgrade to a premium subscription to access this content.' 
+  };
+};

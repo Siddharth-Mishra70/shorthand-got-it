@@ -4,7 +4,7 @@ import {
     Settings, LogOut, Search, Plus, Trash2, Keyboard, CheckCircle, Save, Loader2, FileUp,
     BookOpen, Edit2, Edit3, Map, ArrowLeft, ChevronRight, Globe, Upload, X, Zap, ChevronDown,
     Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, RefreshCw, History,
-    MessageSquare, Mail, ShieldCheck, UserPlus
+    MessageSquare, Mail, ShieldCheck, UserPlus, Download
 } from 'lucide-react';
 import AdminUserManagement from './AdminUserManagement';
 import DetailedAnalysisPanel from './DetailedAnalysisPanel';
@@ -650,10 +650,11 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             setLoadingResults(true);
             try {
                 // 1. Fetch BOTH tables separately (bypass Failing Silently native join)
+                const adminClient = serviceRoleClient || supabase;
                 const [{ data: resultsInDb }, { data: usersInDb }, { data: exRecords }] = await Promise.all([
-                    supabase.from('test_results').select('*').order('created_at', { ascending: false }),
-                    supabase.from('users').select('*'),
-                    supabase.from('exercises').select('id, title').is('is_hidden', false)
+                    adminClient.from('test_results').select('*').order('created_at', { ascending: false }),
+                    adminClient.from('users').select('*'),
+                    adminClient.from('exercises').select('id, title').is('is_hidden', false)
                 ]);
 
                 // Update Student Management list state independently
@@ -672,8 +673,10 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         
                         let studentNameValue = 'Unknown Student';
                         if (foundUser) {
-                            studentNameValue = foundUser.name || `${foundUser.first_name || ''} ${foundUser.last_name || ''}`.trim();
-                        } else if (fallbackName) {
+                            studentNameValue = (foundUser.name || `${foundUser.first_name || ''} ${foundUser.last_name || ''}`).trim();
+                        }
+                        
+                        if (!studentNameValue && fallbackName) {
                             studentNameValue = fallbackName;
                         }
 
@@ -2790,7 +2793,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
 
         return (
             <div className="space-y-6">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-1">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-1 print:hidden">
                     <div className="flex items-center gap-3">
                         <div className="p-3 bg-red-50 rounded-2xl border border-red-100 shadow-sm">
                             <BarChart2 className="w-6 h-6 text-red-700" />
@@ -2826,7 +2829,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 </div>
 
                 {/* Date Selection Tabs */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-4 no-scrollbar px-1">
+                <div className="flex items-center gap-2 overflow-x-auto pb-4 no-scrollbar px-1 print:hidden">
                     {dateGroups.map(date => (
                         <button
                             key={date}
@@ -2842,7 +2845,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     ))}
                 </div>
 
-                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden min-h-[600px] flex flex-col">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden min-h-[600px] flex flex-col print:hidden">
                     <div className="flex-1">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50/40 border-b border-gray-50">
@@ -2895,7 +2898,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                                     {res.exercise_title}
                                                 </p>
                                                 <span className="text-[9px] font-black text-gray-300 uppercase mt-1 tracking-tighter">
-                                                    {res.exercise_category || 'N/A'} MODE
+                                                    {res.mistakes_data?.section_name || res.exercise_category || 'N/A'} MODE
                                                 </span>
                                             </div>
                                         </td>
@@ -2910,7 +2913,23 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                                     <span className="text-sm font-black text-green-600 leading-none">{res.accuracy}%</span>
                                                     <span className="text-[8px] font-black text-green-600/40 uppercase tracking-tighter">ACC</span>
                                                 </div>
+                                                {res.mistakes_data?.time_taken && (
+                                                    <>
+                                                        <div className="w-px h-6 bg-gray-200"></div>
+                                                        <div className="flex flex-col items-center px-1">
+                                                            <span className="text-xs font-black text-blue-600 leading-none">{res.mistakes_data.time_taken}</span>
+                                                            <span className="text-[8px] font-black text-blue-600/40 uppercase tracking-tighter">TIME</span>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
+                                            {res.mistakes_data?.result_status && (
+                                                <span className={`mt-1.5 inline-block text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                                                    res.mistakes_data.result_status === 'Passed' ? 'bg-green-100 text-green-700' :
+                                                    res.mistakes_data.result_status === 'Completed' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-red-100 text-red-700'
+                                                }`}>{res.mistakes_data.result_status}</span>
+                                            )}
                                         </td>
                                         <td className="px-8 py-6 whitespace-nowrap">
                                             <div className="flex flex-col items-end">
@@ -2981,18 +3000,27 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     </div>
                 </div>
 
-                {/* --- DETAILED ANALYSIS MODAL --- */}
                 {viewingResult && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-gray-900/60 backdrop-blur-md animate-in fade-in">
-                        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col relative">
-                            <button 
-                                onClick={() => setViewingResult(null)}
-                                className="absolute top-6 right-6 z-50 p-3 bg-white/80 hover:bg-red-50 text-gray-400 hover:text-red-700 rounded-2xl transition-all shadow-lg backdrop-blur"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-gray-900/60 backdrop-blur-md animate-in fade-in print:absolute print:inset-0 print:bg-white print:z-[9999] print:block">
+                        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col relative print:max-h-none print:shadow-none print:w-full print:p-0">
+                            <div className="absolute top-6 right-6 z-50 flex gap-3 print:hidden">
+                                <button 
+                                    onClick={() => window.print()}
+                                    className="p-3 bg-[#0d6e70] hover:bg-teal-700 text-white rounded-2xl transition-all shadow-lg backdrop-blur flex items-center justify-center"
+                                    title="Download PDF"
+                                >
+                                    <Download className="w-6 h-6" />
+                                </button>
+                                <button 
+                                    onClick={() => setViewingResult(null)}
+                                    className="p-3 bg-white/80 hover:bg-red-50 text-gray-400 hover:text-red-700 rounded-2xl transition-all shadow-lg backdrop-blur flex items-center justify-center"
+                                    title="Close"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
                             
-                            <div className="flex-1 overflow-y-auto p-4 md:p-10">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-10 print:overflow-visible">
                                 <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
                                     <div>
                                         <div className="flex items-center gap-2 mb-2">
@@ -3002,8 +3030,11 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                         </div>
                                         <h2 className="text-4xl font-black text-gray-900 tracking-tight">{viewingResult.studentAuthName}</h2>
                                         <p className="text-gray-500 font-bold mt-1">Exercise: <span className="text-red-700">{viewingResult.exercise_title}</span></p>
+                                        {viewingResult.mistakes_data?.section_name && (
+                                            <p className="text-gray-400 text-xs font-bold mt-1">Section: {viewingResult.mistakes_data.section_name}</p>
+                                        )}
                                     </div>
-                                    <div className="flex gap-4">
+                                    <div className="flex gap-4 flex-wrap">
                                         <div className="text-right">
                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Typing Speed</p>
                                             <p className="text-3xl font-black text-gray-900">{viewingResult.wpm} <span className="text-sm text-gray-400">WPM</span></p>
@@ -3013,14 +3044,41 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Accuracy</p>
                                             <p className="text-3xl font-black text-green-600">{viewingResult.accuracy}%</p>
                                         </div>
+                                        {viewingResult.mistakes_data?.time_taken && (
+                                            <>
+                                                <div className="w-px h-10 bg-gray-100 self-center"></div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Time Taken</p>
+                                                    <p className="text-2xl font-black text-blue-600">{viewingResult.mistakes_data.time_taken}</p>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
+                                {/* ── Section-wise Metrics ── */}
+                                {(viewingResult.mistakes_data?.correct_words != null || viewingResult.mistakes_data?.total_words != null) && (
+                                    <div className="mb-8 grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                        {[
+                                            { label: 'Total Words',    value: viewingResult.mistakes_data?.total_words    ?? '—', color: '#0d6e70', bg: '#f0fdfa' },
+                                            { label: 'Correct',        value: viewingResult.mistakes_data?.correct_words  ?? '—', color: '#16a34a', bg: '#f0fdf4' },
+                                            { label: 'Incorrect',      value: viewingResult.mistakes_data?.incorrect_words ?? '—', color: '#dc2626', bg: '#fef2f2' },
+                                            { label: 'Missed',         value: viewingResult.mistakes_data?.missed_words    ?? '—', color: '#d97706', bg: '#fffbeb' },
+                                            { label: 'Status',         value: viewingResult.mistakes_data?.result_status  ?? '—', color: viewingResult.mistakes_data?.result_status === 'Passed' ? '#16a34a' : '#dc2626', bg: '#f9fafb' },
+                                        ].map(({ label, value, color, bg }) => (
+                                            <div key={label} className="rounded-2xl p-4 flex flex-col items-center text-center border" style={{ background: bg, borderColor: color + '40' }}>
+                                                <p className="text-xl font-black" style={{ color }}>{value}</p>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">{label}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
                                 <DetailedAnalysisPanel 
-                                    originalText={viewingResult.original_text || viewingResult.text || ''}
-                                    originalHtml={viewingResult.exercise_id ? null : viewingResult.original_text} // formatting logic fallback
-                                    attemptedText={viewingResult.mistakes_data?.typedText || viewingResult.typed_text || ''}
-                                    attemptedHtml={viewingResult.mistakes_data?.htmlContent || viewingResult.html_content}
+                                    originalText={viewingResult.mistakes_data?.original_text || viewingResult.original_text || viewingResult.text || ''}
+                                    originalHtml={viewingResult.exercise_id ? null : viewingResult.original_text}
+                                    attemptedText={viewingResult.mistakes_data?.attempted_text || viewingResult.mistakes_data?.typedText || viewingResult.typed_text || ''}
+                                    attemptedHtml={viewingResult.mistakes_data?.html_content || viewingResult.mistakes_data?.htmlContent || viewingResult.html_content}
                                     durationSec={viewingResult.duration_sec}
                                     title="Student Test Analysis"
                                 />
@@ -3455,7 +3513,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     return (
         <>
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-            <header className="bg-white shadow-sm border-b z-10">
+            <header className="bg-white shadow-sm border-b z-10 print:hidden">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                     <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-red-700 rounded-lg flex justify-center items-center shadow-sm">
@@ -3476,7 +3534,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             </header>
 
             <div className="flex-1 w-full mx-auto flex flex-col md:flex-row overflow-hidden relative max-w-[1600px]">
-                <aside className="w-full md:w-60 bg-white md:border-r border-b md:border-b-0 py-6 px-4 flex flex-col shrink-0">
+                <aside className="w-full md:w-60 bg-white md:border-r border-b md:border-b-0 py-6 px-4 flex flex-col shrink-0 print:hidden">
                     <div className="px-4 mb-3 text-xs font-black text-gray-400 uppercase tracking-wider">Management</div>
                     <nav className="space-y-1 flex-1">
                         <SidebarItem icon={Users} label="Student Management" tabId="students" currentTab={currentTab} onClick={() => { setCurrentTab('students'); setActiveModule('home'); setSelectedState(null); setStateSubModule(null); }} />
