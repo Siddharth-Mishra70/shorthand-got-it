@@ -182,10 +182,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
       // 3. Status gate (Admins are permanently active and exempt)
       if (foundUser.role !== 'admin') {
-        if (foundUser.status === 'pending') {
-          await supabase.auth.signOut();
-          throw new Error('Your account is pending admin approval. Please wait.');
-        }
+
         if (foundUser.status === 'inactive') {
           await supabase.auth.signOut();
           throw new Error('Your account has been deactivated. Please contact support.');
@@ -506,11 +503,6 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
                     }
                   />
 
-                  {/* Admin approval notice */}
-                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-700 font-medium">
-                    <Clock className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-                    <span>Login is only available after your account is approved by an administrator.</span>
-                  </div>
 
                   <button
                     id="login-submit-btn"
