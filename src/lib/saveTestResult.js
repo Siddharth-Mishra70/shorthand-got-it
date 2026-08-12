@@ -101,6 +101,7 @@ export async function saveTestResult(supabase, params) {
   // 2. Log the Payload for Debugging
   console.log("Submitting Payload:", row);
 
+  let resultPayload = null;
   try {
     if (supabase && !supabase.supabaseUrl.includes('placeholder')) {
       let { data, error } = await supabase
@@ -128,7 +129,7 @@ export async function saveTestResult(supabase, params) {
 
       // 4. Success Catch
       console.log("[saveTestResult] SUCCESS:", data);
-      return { attemptId: data.id, ...data };
+      resultPayload = { attemptId: data.id, ...data };
     } else {
       throw new Error('Supabase client not initialized or using placeholders');
     }
@@ -142,8 +143,29 @@ export async function saveTestResult(supabase, params) {
     const localEntry = { ...row, id: attemptId, created_at: new Date().toISOString() };
     localData.push(localEntry);
     localStorage.setItem(localKey, JSON.stringify(localData.slice(-50)));
-    return { attemptId, localOnly: true };
+    resultPayload = { attemptId, localOnly: true };
   }
+  
+  // ── Track Free Trial Usage ──────────────────────────────────
+  const courseCategory = params.exerciseCategory || 'General';
+  const enrolled = currentUser.enrolled_courses || [];
+  
+  if (currentUser.role !== 'admin' && !enrolled.includes(courseCategory)) {
+    const usedTrials = currentUser.used_trials || [];
+    if (!usedTrials.includes(courseCategory)) {
+      usedTrials.push(courseCategory);
+      currentUser.used_trials = usedTrials;
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      
+      if (supabase && !supabase.supabaseUrl.includes('placeholder')) {
+        supabase.from('users').update({ used_trials: usedTrials }).eq('id', currentUser.id)
+          .then(() => console.log(`[saveTestResult] updated free trial for ${courseCategory}`))
+          .catch(err => console.error("Failed to update used_trials in DB", err));
+      }
+    }
+  }
+
+  return resultPayload;
 }
 
 /**
@@ -249,17 +271,19 @@ export async function fetchAllResults(supabase, userId) {
 export const verifyTestAccess = (user, courseId) => {
   if (user?.role === 'admin') return { allowed: true };
   
-  const freeModules = ['audio-dict', 'kailash-chandra', 'comprehension'];
-  if (freeModules.includes(courseId)) return { allowed: true };
-  
   const enrolled = user?.enrolled_courses || [];
   if (enrolled.includes(courseId)) {
     return { allowed: true };
   }
   
-  return { 
-    allowed: false, 
-    reason: 'Subscription Required', 
-    message: 'This module is locked. Please upgrade to a premium subscription to access this content.' 
-  };
+  const usedTrials = user?.used_trials || [];
+  if (usedTrials.includes(courseId)) {
+    return { 
+      allowed: false, 
+      reason: 'Free Trial Exhausted', 
+      message: 'You have used your one-time free trial for this module. Please purchase a subscription to continue.' 
+    };
+  }
+
+  return { allowed: true };
 };

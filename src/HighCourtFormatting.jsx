@@ -194,12 +194,23 @@ const HighCourtFormatting = ({ onBack, user, onTestComplete }) => {
 
             // 3. Final Deduplication (Security layer against "doubling" items in list)
             const seenIds = new Set();
-            const finalTests = allHcTests.filter(test => {
+            let finalTests = allHcTests.filter(test => {
                 const idStr = String(test.id);
                 if (seenIds.has(idStr)) return false;
                 seenIds.add(idStr);
                 return true;
             });
+            
+            // ── Free Trial 'Latest Test Only' Logic ──
+            try {
+                const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+                if (user && user.role !== 'admin') {
+                    const enrolled = user.enrolled_courses || [];
+                    if (!enrolled.includes('hc-formatting')) {
+                        if (finalTests.length > 0) finalTests = [finalTests[0]];
+                    }
+                }
+            } catch(e) {}
 
             setHcTests(finalTests);
             if (finalTests.length > 0) {

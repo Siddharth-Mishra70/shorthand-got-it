@@ -60,12 +60,23 @@ const PitmanAPSModule = ({ onBack, onTestComplete, category }) => {
             } catch(e) {}
 
             // 3. FINAL FILTER: Hide ALL "Test X" files
-            const finalized = mergedData.filter(ex => {
+            let finalized = mergedData.filter(ex => {
                 const title = (ex.title || '').toLowerCase().trim();
                 // ONLY hide generic 'test' files like "Test 1", "test 4", "dummy"
                 const isGenericTest = /^test\s\d+$/i.test(title) || /test\s*(one|two|three|four|five)/i.test(title) || title === 'test' || title.includes('dummy');
                 return !isGenericTest;
             });
+            
+            // ── Free Trial 'Latest Test Only' Logic ──
+            try {
+                const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+                if (user && user.role !== 'admin') {
+                    const enrolled = user.enrolled_courses || [];
+                    if (!enrolled.includes('pitman-ex')) {
+                        if (finalized.length > 0) finalized = [finalized[0]];
+                    }
+                }
+            } catch(e) {}
 
             setExercises(finalized);
             if (finalized.length > 0 && !selectedExercise) {

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Map, ChevronRight, Scale, Edit2, Headphones, BookOpen, FileText, Search, X } from 'lucide-react';
 
 const STATE_EXAMS = [
@@ -107,7 +107,18 @@ const StateExamModule = ({ onBack, onSelectTest, onNavigateCourse }) => {
     }, [searchQuery, activeDateTab]);
 
     // 3. View: List Tests
-    const tests = stateExams[`${selectedState}__${selectedModule.key}`] || [];
+    let tests = stateExams[`${selectedState}__${selectedModule.key}`] || [];
+    
+    // ── Free Trial 'Latest Test Only' Logic ──
+    try {
+        const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        if (user && user.role !== 'admin') {
+            const enrolled = user.enrolled_courses || [];
+            if (!enrolled.includes('state-exam')) {
+                if (tests.length > 0) tests = [tests[0]];
+            }
+        }
+    } catch(e) {}
 
     const filteredTests = React.useMemo(() => {
         if (!searchQuery.trim()) return tests;

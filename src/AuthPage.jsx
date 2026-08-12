@@ -118,15 +118,13 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   // ── Register state ────────────────────────────────────────────────────────
-  // regStep: 'form' | 'otp' | 'pending'
+  // regStep: 'form' | 'pending'
   const [regStep, setRegStep] = useState('form');
   const [regData, setRegData] = useState({
     firstName: '', lastName: '', state: '', city: '',
     gender: '', phone: '', email: '', password: '',
   });
   const [showRegPassword, setShowRegPassword] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [otpResendTimer, setOtpResendTimer] = useState(0);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const startResendTimer = () => {
@@ -144,7 +142,6 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
     setError('');
     setSuccess(false);
     setRegStep('form');
-    setOtpCode('');
     setForgotEmail('');
     setForgotSent(false);
   };
@@ -306,7 +303,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
       if (signUpErr) throw signUpErr;
 
-      // Insert pending profile into custom users table directly
+      // Insert active profile into custom users table directly with empty used_trials
       const { error: insertErr } = await supabase.from('users').insert([{
         first_name:  firstName.trim(),
         last_name:   lastName.trim(),
@@ -315,18 +312,33 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
         gender:      gender,
         phone:       phone.trim(),
         email:       trimmedEmail,
-        status:      'pending',
+        status:      'active',
         role:        'student',
+        used_trials: [],
         joinedDate:  new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         created_at:  new Date().toISOString(),
       }]);
 
       if (insertErr) throw insertErr;
 
-      // Immediately sign them out so their session is clean until approved
-      await supabase.auth.signOut();
+      // Log them in immediately
+      const userData = {
+        first_name:  firstName.trim(),
+        last_name:   lastName.trim(),
+        state:       state.trim(),
+        city:        city.trim(),
+        gender:      gender,
+        phone:       phone.trim(),
+        email:       trimmedEmail,
+        status:      'active',
+        role:        'student',
+        used_trials: [],
+        name:        `${firstName.trim()} ${lastName.trim()}`,
+      };
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      setSuccess(true);
+      setTimeout(() => onAuthSuccess(userData), 1000);
 
-      setRegStep('pending');
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.message || 'Registration failed. Please try again.');
@@ -396,7 +408,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
           <ArrowLeft className="w-4 h-4" /><span>Back to Home</span>
         </button>
 
-        <div className={`w-full transition-all duration-300 ${tab === 'register' && regStep === 'form' ? 'max-w-4xl' : 'max-w-md'}`}>
+        <div className={`w-full transition-all duration-300 ${tab === 'register' ? 'max-w-4xl' : 'max-w-md'}`}>
 
           {/* ── Pending Approval Screen ─────────────────────────────────── */}
           {tab === 'register' && regStep === 'pending' ? (
@@ -406,11 +418,11 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
               </div>
               <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full mb-4">
                 <CheckCircle className="w-3.5 h-3.5" />
-                <span>Email Verified Successfully!</span>
+                <span>Registration Submitted!</span>
               </div>
-              <h2 className="text-2xl font-black text-gray-900 mb-3">Account Created!</h2>
+              <h2 className="text-2xl font-black text-gray-900 mb-3">Account Pending Approval</h2>
               <p className="text-gray-500 text-sm leading-relaxed mb-6 max-w-sm">
-                Your email has been verified. Your account is now{' '}
+                Your account details have been received. Your account is now{' '}
                 <strong className="text-amber-600">pending admin approval</strong>.
                 You will be able to log in once an administrator activates your account.
               </p>

@@ -664,9 +664,28 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 if (exRecords) exRecords.forEach(e => exMap[e.id] = e.title);
 
                 // 2. Manual Merge in JavaScript (Explicitly requested find strategy)
-                if (resultsInDb && usersInDb) {
-                    const mergedResults = resultsInDb.map(test => {
-                        const foundUser = usersInDb.find(u => u.id === test.user_id);
+                let allFetchedResults = resultsInDb || [];
+                const local1 = JSON.parse(localStorage.getItem('shorthandians_local_results') || '[]');
+                const local2 = JSON.parse(localStorage.getItem('stn_local_results') || '[]');
+                allFetchedResults = [...allFetchedResults, ...local1, ...local2];
+                
+                // Deduplicate by ID
+                const seenRes = new Set();
+                allFetchedResults = allFetchedResults.filter(r => {
+                    if (seenRes.has(r.id)) return false;
+                    seenRes.add(r.id);
+                    return true;
+                });
+                
+                // Sort by date descending
+                allFetchedResults.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                const localUsers = JSON.parse(localStorage.getItem('auth_users') || '[]');
+                const allUsers = [...(usersInDb || []), ...localUsers];
+
+                if (allFetchedResults.length > 0) {
+                    const mergedResults = allFetchedResults.map(test => {
+                        const foundUser = allUsers.find(u => u.id === test.user_id);
                         
                         // Priority: Match found in DB (Name or First+Last) > Manual JSON data name > Redundant student_name > Unknown
                         const fallbackName = test.student_name || test.mistakes_data?.student_name;
@@ -692,13 +711,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     // Match the rendering logic name: we'll set studentAuthName to studentName for safety 
                     // AND set allResults.
                     setAllResults(mergedResults.map(m => ({ ...m, studentAuthName: m.studentName })));
-                } else if (resultsInDb) {
-                    // Fail-safe if users table is completely empty but results exist
-                    setAllResults(resultsInDb.map(r => ({
-                        ...r,
-                        studentAuthName: r.student_name || r.mistakes_data?.student_name || 'Unknown Student',
-                        exercise_title: exMap[r.exercise_id] || r.mistakes_data?.exercise_title || r.exercise_id || 'Unknown Test'
-                    })));
+                } else {
+                    setAllResults([]);
                 }
             } catch (err) {
                 console.error('[AdminResultSync] Manual merge failed:', err);

@@ -246,7 +246,35 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                     combinedRaw.forEach(item => {
                         if (item.id) uniqueMap.set(item.id, item);
                     });
-                    const combined = Array.from(uniqueMap.values());
+                    let combined = Array.from(uniqueMap.values());
+                    
+                    // ── Free Trial 'Latest Test Only' Logic ──
+                    try {
+                        const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+                        if (user && user.role !== 'admin') {
+                            const enrolled = user.enrolled_courses || [];
+                            const groups = {};
+                            combined.forEach(i => {
+                                const cat = i.category;
+                                if (!groups[cat]) groups[cat] = [];
+                                groups[cat].push(i);
+                            });
+                            combined = [];
+                            for (const cat in groups) {
+                                const courseIdMap = {
+                                    'audio': 'audio-dict',
+                                    'kailash': 'kailash-chandra',
+                                    'comprehension': 'comprehension'
+                                };
+                                const mappedCourseId = courseIdMap[cat] || cat;
+                                if (enrolled.includes(mappedCourseId)) {
+                                    combined.push(...groups[cat]);
+                                } else {
+                                    if (groups[cat].length > 0) combined.push(groups[cat][0]);
+                                }
+                            }
+                        }
+                    } catch(e) {}
                     
                     setAvailableExercises(combined);
 
