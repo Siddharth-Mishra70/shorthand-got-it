@@ -112,8 +112,12 @@ const ModuleCard = ({ mod, onClick }) => {
     );
 };
 
-const UploadForm = ({ title, setTitle, text, setText, pdf, setPdf, onFileSelect, onSave, onCancel, jobTitle, setJobTitle, testType, setTestType, saving, accept = ".pdf,image/*", textLabel = "Practice Text", fileLabel = "File Upload (Optional)", isEdit = false, duration, setDuration }) => (
+const UploadForm = ({ title, setTitle, isDemo, setIsDemo, text, setText, pdf, setPdf, onFileSelect, onSave, onCancel, jobTitle, setJobTitle, testType, setTestType, saving, accept = ".pdf,image/*", textLabel = "Practice Text", fileLabel = "File Upload (Optional)", isEdit = false, duration, setDuration }) => (
     <div className="bg-white p-6 rounded-xl shadow border border-gray-200 mb-6 animate-in slide-in-from-top-2">
+        <div className="mb-5 flex items-center bg-blue-50 border border-blue-100 p-3 rounded-lg">
+            <input type="checkbox" id="isDemoCheck" checked={!!isDemo} onChange={e => setIsDemo && setIsDemo(e.target.checked)} className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer" />
+            <label htmlFor="isDemoCheck" className="ml-3 block text-sm font-bold text-blue-900 cursor-pointer">Mark as Demo (Free for all users for 24 hours)</label>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
             <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Title <span className="text-red-500">*</span></label>
@@ -405,6 +409,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [quickModule, setQuickModule] = useState('');
     const [quickState, setQuickState] = useState('');
     const [quickTitle, setQuickTitle] = useState('');
+    const [quickIsDemo, setQuickIsDemo] = useState(false);
     const [quickText, setQuickText] = useState('');
     const [quickFile, setQuickFile] = useState(null);
     const [quickSaving, setQuickSaving] = useState(false);
@@ -465,6 +470,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     // KC / Kailash Chandra
     const [kcText, setKcText] = useState('');
     const [kcTitle, setKcTitle] = useState('');
+    const [kcIsDemo, setKcIsDemo] = useState(false);
     const [kcVolume, setKcVolume] = useState('Volume 1');
     const [kcSaved, setKcSaved] = useState(false);
     const [isAddingNewKc, setIsAddingNewKc] = useState(false);
@@ -478,6 +484,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     // Comprehension Section
     const [compId, setCompId] = useState(null);
     const [compTitle, setCompTitle] = useState('');
+    const [compIsDemo, setCompIsDemo] = useState(false);
     const [compText, setCompText] = useState('');
     const [compPdf, setCompPdf] = useState(null);
     const [isAddingComp, setIsAddingComp] = useState(false);
@@ -493,6 +500,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [isAddingHc, setIsAddingHc] = useState(false);
     const [editingHcId, setEditingHcId] = useState(null);
     const [hcTitle, setHcTitle] = useState('');
+    const [hcIsDemo, setHcIsDemo] = useState(false);
     const [hcText, setHcText] = useState('');
     const [hcFormattedHtml, setHcFormattedHtml] = useState('');
     const [hcPdf, setHcPdf] = useState(null);
@@ -510,6 +518,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [isAddingPitman, setIsAddingPitman] = useState(false);
     const [editingPitmanId, setEditingPitmanId] = useState(null);
     const [pitmanTitle, setPitmanTitle] = useState('');
+    const [pitmanIsDemo, setPitmanIsDemo] = useState(false);
     const [pitmanText, setPitmanText] = useState('');
     const [pitmanPdf, setPitmanPdf] = useState(null);
     const [rawPitmanFile, setRawPitmanFile] = useState(null);
@@ -531,6 +540,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [isAddingAudio, setIsAddingAudio] = useState(false);
     const [editingAudioId, setEditingAudioId] = useState(null);
     const [audioTitle, setAudioTitle] = useState('');
+    const [audioIsDemo, setAudioIsDemo] = useState(false);
     const [audioState, setAudioState] = useState('');
     const [pendingAudioFile, setPendingAudioFile] = useState(null);
     const [audioSuccess, setAudioSuccess] = useState(false);
@@ -594,6 +604,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         return saved ? JSON.parse(saved) : {};
     });
     const [stateUploadTitle, setStateUploadTitle] = useState('');
+    const [stateUploadIsDemo, setStateUploadIsDemo] = useState(false);
     const [stateUploadText, setStateUploadText] = useState('');
     const [stateUploadPdf, setStateUploadPdf] = useState(null);
     const [isAddingStateContent, setIsAddingStateContent] = useState(false);
@@ -846,6 +857,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             try {
                 // Only send columns confirmed to exist in Supabase schema
                 const dbPayload = {
+                    is_demo: audioIsDemo,
                     title: newItem.title,
                     original_text: newItem.original_text,
                     category: quickModule === 'audio' ? 'Audio Dictation' : quickModule,
@@ -1356,6 +1368,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
 
                 // 3. Save to DB using only confirmed schema columns
                 const dbPayload = {
+                    is_demo: pitmanIsDemo,
                     title: audioTitle,
                     audio_url: finalAudioUrl,
                     category: 'Audio Dictation',
@@ -1502,6 +1515,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 });
 
                 const dbPayload = {
+                    is_demo: hcIsDemo,
                     title: hcTitle,
                     original_text: encodedContent,
                     category: 'highcourt'
@@ -1627,6 +1641,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 }
 
                 const dbPayload = {
+                    is_demo: stateUploadIsDemo,
                     title: pitmanTitle,
                     job_title: globalJobTitle,
                     test_type: globalTestType,
@@ -1712,13 +1727,14 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             test_type: globalTestType,
             original_text: kcText, 
             category: 'kailash', 
+            is_demo: kcIsDemo,
             created_at: isEdit ? kailashTests.find(t => t.id === testId)?.created_at || new Date().toISOString() : new Date().toISOString() 
         };
         
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
                 if (isEdit) {
-                    const { error } = await supabase.from('exercises').update({ title: finalTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: kcText }).eq('id', testId);
+                    const { error } = await supabase.from('exercises').update({ title: finalTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: kcText, is_demo: kcIsDemo }).eq('id', testId);
                     if (error) throw error;
                 } else {
                     const { error } = await supabase.from('exercises').insert(newTest);
@@ -1856,7 +1872,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
 
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
-                const dbPayload = { title: compTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: compText, category: 'comprehension' };
+                const dbPayload = { is_demo: compIsDemo, title: compTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: compText, category: 'comprehension' };
                 if (isEdit) await supabase.from('exercises').update(dbPayload).eq('id', testId);
                 else await supabase.from('exercises').insert([{ id: testId, ...dbPayload }]);
             }
@@ -1961,6 +1977,10 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Title</label>
+                                    <div className="mb-4 flex items-center bg-blue-50 border border-blue-100 p-3 rounded-lg">
+                                        <input type="checkbox" id="demo_hc" checked={!!hcIsDemo} onChange={e => setHcIsDemo(e.target.checked)} className="w-5 h-5 text-blue-600 rounded cursor-pointer" />
+                                        <label htmlFor="demo_hc" className="ml-3 block text-sm font-bold text-blue-900 cursor-pointer">Mark as Demo (Free for 24 hours)</label>
+                                    </div>
                                     <input type="text" value={hcTitle} onChange={e => setHcTitle(e.target.value)} placeholder="e.g. Allahabad HC — Set 01" className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
                                 </div>
                                 <div>
@@ -2058,7 +2078,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     {isAddingPitman && (
                         <>
                             {editingPitmanId && <div className="mb-2 text-xs font-bold text-blue-600 bg-blue-50 py-2 px-3 rounded inline-block animate-in fade-in">✎ Editing Existing Pitman Test</div>}
-                            <UploadForm jobTitle={globalJobTitle} setJobTitle={setGlobalJobTitle} testType={globalTestType} setTestType={setGlobalTestType} isEdit={!!editingPitmanId} title={pitmanTitle} setTitle={setPitmanTitle} text={pitmanText} setText={setPitmanText} pdf={pitmanPdf} setPdf={setPitmanPdf} onFileSelect={setRawPitmanFile} onSave={handleSavePitmanData} onCancel={() => { setIsAddingPitman(false); setEditingPitmanId(null); setPitmanTitle(''); resetGlobalDocs(); setPitmanText(''); setPitmanPdf(null); setRawPitmanFile(null); }} saving={isUploadingPitman} textLabel="English Transcription Text (Solution)" fileLabel="Shorthand Image Upload (Required)" accept="image/*" />
+                            <UploadForm jobTitle={globalJobTitle} setJobTitle={setGlobalJobTitle} testType={globalTestType} setTestType={setGlobalTestType} isEdit={!!editingPitmanId} isDemo={pitmanIsDemo} setIsDemo={setPitmanIsDemo} title={pitmanTitle} setTitle={setPitmanTitle} text={pitmanText} setText={setPitmanText} pdf={pitmanPdf} setPdf={setPitmanPdf} onFileSelect={setRawPitmanFile} onSave={handleSavePitmanData} onCancel={() => { setIsAddingPitman(false); setEditingPitmanId(null); setPitmanTitle(''); setPitmanIsDemo(false); resetGlobalDocs(); setPitmanText(''); setPitmanPdf(null); setRawPitmanFile(null); }} saving={isUploadingPitman} textLabel="English Transcription Text (Solution)" fileLabel="Shorthand Image Upload (Required)" accept="image/*" />
                         </>
                     )}
                     <TestList tests={pitmanTests} onDelete={handleDeletePitman} onEdit={handleEditPitman} emptyMsg="No Pitman exercises uploaded yet." />
@@ -2098,6 +2118,10 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             </div>
                             <div className="mb-4">
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Exercise Title / Number</label>
+                                <div className="mb-4 col-span-full flex items-center bg-blue-50 border border-blue-100 p-3 rounded-lg">
+                                    <input type="checkbox" id="demo_kc" checked={!!kcIsDemo} onChange={e => setKcIsDemo(e.target.checked)} className="w-5 h-5 text-blue-600 rounded cursor-pointer" />
+                                    <label htmlFor="demo_kc" className="ml-3 block text-sm font-bold text-blue-900 cursor-pointer">Mark as Demo (Free for 24 hours)</label>
+                                </div>
                                 <input type="text" value={kcTitle} onChange={e => setKcTitle(e.target.value)} placeholder="e.g. Exercise 5" className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
                             </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
@@ -2141,7 +2165,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         </button>
                     </div>
                     {isAddingComp && (
-                        <UploadForm jobTitle={globalJobTitle} setJobTitle={setGlobalJobTitle} testType={globalTestType} setTestType={setGlobalTestType} isEdit={!!editingCompId} title={compTitle} setTitle={setCompTitle} text={compText} setText={setCompText} pdf={compPdf} setPdf={setCompPdf} onSave={handleSaveCompData} onCancel={() => { setIsAddingComp(false); setEditingCompId(null); setCompTitle(''); resetGlobalDocs(); setCompText(''); setCompPdf(null); }} saving={isSavingComp} />
+                        <UploadForm jobTitle={globalJobTitle} setJobTitle={setGlobalJobTitle} testType={globalTestType} setTestType={setGlobalTestType} isEdit={!!editingCompId} isDemo={compIsDemo} setIsDemo={setCompIsDemo} title={compTitle} setTitle={setCompTitle} text={compText} setText={setCompText} pdf={compPdf} setPdf={setCompPdf} onSave={handleSaveCompData} onCancel={() => { setIsAddingComp(false); setEditingCompId(null); setCompTitle(''); setCompIsDemo(false); resetGlobalDocs(); setCompText(''); setCompPdf(null); }} saving={isSavingComp} />
                     )}
                     <TestList tests={compTests} onDelete={handleDeleteComp} onEdit={handleEditComp} emptyMsg="No Comprehension exercises uploaded yet." />
                 </div>
@@ -2172,6 +2196,10 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     {isAddingAudio && (
                         <div className="bg-white p-6 rounded-xl shadow border border-gray-200 mb-6 animate-in slide-in-from-top-2">
                             {editingAudioId && <div className="mb-4 text-xs font-bold text-blue-600 bg-blue-50 py-2 px-3 rounded inline-block animate-in fade-in">✎ Editing Existing Audio Dictation</div>}
+                            <div className="mb-4 flex items-center bg-blue-50 border border-blue-100 p-3 rounded-lg">
+                                <input type="checkbox" id="demo_audio" checked={!!audioIsDemo} onChange={e => setAudioIsDemo(e.target.checked)} className="w-5 h-5 text-blue-600 rounded cursor-pointer" />
+                                <label htmlFor="demo_audio" className="ml-3 block text-sm font-bold text-blue-900 cursor-pointer">Mark as Demo (Free for 24 hours)</label>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Dictation Title / Tag</label>
@@ -2339,7 +2367,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         <UploadForm
                             jobTitle={globalJobTitle} setJobTitle={setGlobalJobTitle} testType={globalTestType} setTestType={setGlobalTestType}
                             isEdit={!!editingStateId}
-                            title={stateUploadTitle} setTitle={setStateUploadTitle}
+                            isDemo={stateUploadIsDemo} setIsDemo={setStateUploadIsDemo} title={stateUploadTitle} setTitle={setStateUploadTitle}
                             text={stateUploadText} setText={setStateUploadText}
                             pdf={stateUploadPdf} setPdf={setStateUploadPdf}
                             onSave={handleSaveStateContent}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Volume2, FastForward, Clock, Activity, CheckCircle2, Share2, X, FileCheck, TrendingUp, Headphones, ArrowLeft, Maximize, Minimize, Sparkles, Upload, Music, FileText, Search } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, FastForward, Clock, Activity, CheckCircle2, Share2, X, FileCheck, TrendingUp, Headphones, ArrowLeft, Maximize, Minimize, Sparkles, Upload, Music, FileText, Search, Lock } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { saveTestResult } from './lib/saveTestResult';
 
@@ -248,33 +248,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                     });
                     let combined = Array.from(uniqueMap.values());
                     
-                    // ── Free Trial 'Latest Test Only' Logic ──
-                    try {
-                        const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
-                        if (user && user.role !== 'admin') {
-                            const enrolled = user.enrolled_courses || [];
-                            const groups = {};
-                            combined.forEach(i => {
-                                const cat = i.category;
-                                if (!groups[cat]) groups[cat] = [];
-                                groups[cat].push(i);
-                            });
-                            combined = [];
-                            for (const cat in groups) {
-                                const courseIdMap = {
-                                    'audio': 'audio-dict',
-                                    'kailash': 'kailash-chandra',
-                                    'comprehension': 'comprehension'
-                                };
-                                const mappedCourseId = courseIdMap[cat] || cat;
-                                if (enrolled.includes(mappedCourseId)) {
-                                    combined.push(...groups[cat]);
-                                } else {
-                                    if (groups[cat].length > 0) combined.push(groups[cat][0]);
-                                }
-                            }
-                        }
-                    } catch(e) {}
+
                     
                     setAvailableExercises(combined);
 
@@ -930,10 +904,32 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     const globalIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
                                     const isAudio = test.category === 'audio';
                                     
+                                    // FOMO Lock Logic
+                                    const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+                                    let isLockedForUser = false;
+                                    let isFreeDemo = false;
+                                    if (user && user.role !== 'admin') {
+                                        const enrolled = user.enrolled_courses || [];
+                                        const courseIdMap = {
+                                            'audio': 'audio-dict',
+                                            'kailash': 'kailash-chandra',
+                                            'comprehension': 'comprehension'
+                                        };
+                                        const mappedCourseId = courseIdMap[test.category] || test.category;
+                                        if (!enrolled.includes(mappedCourseId)) {
+                                            isFreeDemo = test.is_demo === true && test.created_at && (new Date() - new Date(test.created_at)) <= (24 * 60 * 60 * 1000);
+                                            isLockedForUser = !isFreeDemo;
+                                        }
+                                    }
+                                    
                                     return (
                                         <div
                                             key={test.id}
                                             onClick={() => {
+                                                if (isLockedForUser) {
+                                                    alert('Paid Subscription Required. This test is locked for your account.');
+                                                    return;
+                                                }
                                                 const t = {...test};
                                                 if (t.category === 'audio') {
                                                     t.isAudioCourse = true;
@@ -946,39 +942,48 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                                 }
                                                 handleReset();
                                             }}
-                                            className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-[#0d6e70]/30 transition-all duration-200 cursor-pointer flex items-center gap-4 px-5 py-4 relative overflow-hidden"
+                                            className={`group rounded-2xl border transition-all duration-200 flex items-center gap-4 px-5 py-4 relative overflow-hidden ${isLockedForUser ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed' : 'bg-white border-gray-100 shadow-sm hover:shadow-lg hover:border-[#0d6e70]/30 cursor-pointer'}`}
                                         >
                                             {/* Left accent bar on hover */}
-                                            <div className="absolute left-0 top-0 h-full w-1 bg-[#0d6e70] scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-center rounded-l-2xl" />
+                                            {!isLockedForUser && <div className="absolute left-0 top-0 h-full w-1 bg-[#0d6e70] scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-center rounded-l-2xl" />}
 
                                             {/* Index badge */}
-                                            <div className="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-[#0d6e70] flex items-center justify-center shrink-0 transition-colors">
-                                                <span className="text-sm font-black text-[#0d6e70] group-hover:text-white transition-colors">{globalIdx}</span>
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${isLockedForUser ? 'bg-gray-200' : 'bg-blue-50 group-hover:bg-[#0d6e70]'}`}>
+                                                <span className={`text-sm font-black transition-colors ${isLockedForUser ? 'text-gray-500' : 'text-[#0d6e70] group-hover:text-white'}`}>{globalIdx}</span>
                                             </div>
 
                                             {/* Icon */}
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isAudio ? 'bg-amber-50' : 'bg-blue-50'}`}>
-                                                {isAudio ? <Headphones className="w-5 h-5 text-amber-500" /> : <FileText className="w-5 h-5 text-blue-500" />}
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isLockedForUser ? 'bg-gray-200' : isAudio ? 'bg-amber-50' : 'bg-blue-50'}`}>
+                                                {isLockedForUser ? <Lock className="w-5 h-5 text-gray-500" /> : isAudio ? <Headphones className="w-5 h-5 text-amber-500" /> : <FileText className="w-5 h-5 text-blue-500" />}
                                             </div>
 
                                             {/* Title + chips */}
                                             <div className="flex-1 min-w-0">
-                                                <h3 className="font-black text-gray-900 text-sm md:text-base group-hover:text-[#0d6e70] transition-colors truncate">{test.title}</h3>
+                                                <h3 className={`font-black text-sm md:text-base transition-colors truncate ${isLockedForUser ? 'text-gray-500' : 'text-gray-900 group-hover:text-[#0d6e70]'}`}>
+                                                    {test.title}
+                                                </h3>
                                                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isAudio ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
+                                                    {isFreeDemo && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700 animate-pulse">FREE DEMO (24H)</span>}
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isLockedForUser ? 'bg-gray-200 text-gray-500' : isAudio ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
                                                         {isAudio ? 'Audio Dictation' : test.category === 'comprehension' ? 'Comprehension' : 'Kailash Chandra'}
                                                     </span>
                                                     <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{wordCount} words</span>
                                                     <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{dateStr}</span>
-                                                    {test.job_title && <span className="text-[10px] font-bold bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">{test.job_title}</span>}
-                                                    {test.test_type && <span className="text-[10px] font-bold bg-green-50 text-green-600 px-2 py-0.5 rounded-full">{test.test_type}</span>}
+                                                    {test.job_title && <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{test.job_title}</span>}
+                                                    {test.test_type && <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{test.test_type}</span>}
                                                 </div>
                                             </div>
 
                                             {/* CTA */}
-                                            <button className="shrink-0 px-5 py-2.5 bg-[#f0fafa] text-[#0d6e70] group-hover:bg-[#0d6e70] group-hover:text-white rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-200 whitespace-nowrap">
-                                                Start →
-                                            </button>
+                                            {isLockedForUser ? (
+                                                <button className="shrink-0 px-4 py-2 bg-gray-200 text-gray-500 rounded-xl text-xs font-black uppercase tracking-wide cursor-not-allowed flex items-center gap-1">
+                                                    <Lock className="w-3.5 h-3.5" /> LOCKED
+                                                </button>
+                                            ) : (
+                                                <button className="shrink-0 px-5 py-2.5 bg-[#f0fafa] text-[#0d6e70] group-hover:bg-[#0d6e70] group-hover:text-white rounded-xl text-xs font-black uppercase tracking-wide transition-all duration-200 whitespace-nowrap">
+                                                    Start →
+                                                </button>
+                                            )}
                                         </div>
                                     );
                                 })}

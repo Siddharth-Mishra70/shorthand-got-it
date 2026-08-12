@@ -25,9 +25,7 @@ export async function saveTestResult(supabase, params) {
   }
 
   if (!currentUser || !currentUser.id) {
-    alert('Please login first to save results!');
-    console.error('[saveTestResult] AUTH_ERROR: No valid user in localStorage');
-    return { error: 'Not Logged In' };
+    console.warn('[saveTestResult] No valid user in localStorage. Falling back to guest mode (local save only).');
   }
 
   // Determine Naming and UUID sanity
@@ -146,24 +144,7 @@ export async function saveTestResult(supabase, params) {
     resultPayload = { attemptId, localOnly: true };
   }
   
-  // ── Track Free Trial Usage ──────────────────────────────────
-  const courseCategory = params.exerciseCategory || 'General';
-  const enrolled = currentUser.enrolled_courses || [];
-  
-  if (currentUser.role !== 'admin' && !enrolled.includes(courseCategory)) {
-    const usedTrials = currentUser.used_trials || [];
-    if (!usedTrials.includes(courseCategory)) {
-      usedTrials.push(courseCategory);
-      currentUser.used_trials = usedTrials;
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
-      
-      if (supabase && !supabase.supabaseUrl.includes('placeholder')) {
-        supabase.from('users').update({ used_trials: usedTrials }).eq('id', currentUser.id)
-          .then(() => console.log(`[saveTestResult] updated free trial for ${courseCategory}`))
-          .catch(err => console.error("Failed to update used_trials in DB", err));
-      }
-    }
-  }
+
 
   return resultPayload;
 }
@@ -262,28 +243,4 @@ export async function fetchAllResults(supabase, userId) {
   return combined;
 }
 
-/**
- * verifyTestAccess
- * ─────────────────────────────────────────────────────────────────────────────
- * Subscription access control helper.
- * Determines if a user has access to a specific course/module.
- */
-export const verifyTestAccess = (user, courseId) => {
-  if (user?.role === 'admin') return { allowed: true };
-  
-  const enrolled = user?.enrolled_courses || [];
-  if (enrolled.includes(courseId)) {
-    return { allowed: true };
-  }
-  
-  const usedTrials = user?.used_trials || [];
-  if (usedTrials.includes(courseId)) {
-    return { 
-      allowed: false, 
-      reason: 'Free Trial Exhausted', 
-      message: 'You have used your one-time free trial for this module. Please purchase a subscription to continue.' 
-    };
-  }
 
-  return { allowed: true };
-};
