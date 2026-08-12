@@ -286,7 +286,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
       if (existingEmail) throw new Error('An account with this email already exists.');
 
       // signUp — Supabase registers the credentials in Auth
-      const { error: signUpErr } = await supabase.auth.signUp({
+      const { data, error: signUpErr } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
         options: {
