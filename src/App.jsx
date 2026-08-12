@@ -70,10 +70,8 @@ const CircularCourseCard = ({ title, type, isPremium, courseId, user, onTakeTest
                'LOCKED'}
             </span>
           ) : (
-            <span className={`px-3 py-1 text-[10px] sm:text-xs font-black rounded-full shadow-sm ${
-              isPremium ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-            }`}>
-              {isPremium ? 'PAID' : 'FREE'}
+            <span className="px-3 py-1 text-[10px] sm:text-xs font-black rounded-full shadow-sm bg-amber-100 text-amber-700">
+              PAID
             </span>
           )}
         </div>

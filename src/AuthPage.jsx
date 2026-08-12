@@ -303,8 +303,11 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
       if (signUpErr) throw signUpErr;
 
+      const newUserId = data?.user?.id || crypto.randomUUID();
+
       // Insert active profile into custom users table directly with empty used_trials
       const { error: insertErr } = await supabase.from('users').insert([{
+        id:          newUserId,
         first_name:  firstName.trim(),
         last_name:   lastName.trim(),
         state:       state.trim(),
@@ -323,6 +326,7 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
 
       // Log them in immediately
       const userData = {
+        id:          newUserId,
         first_name:  firstName.trim(),
         last_name:   lastName.trim(),
         state:       state.trim(),
@@ -357,20 +361,20 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
       <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
 
-      <div className={`relative z-10 w-full transition-all duration-500 ${tab === 'register' ? 'max-w-4xl' : 'max-w-[480px]'}`}>
+      <div className={`relative z-10 w-full transition-all duration-700 flex flex-col ${tab === 'register' ? 'max-w-7xl w-[96vw] min-h-[92vh]' : 'max-w-[480px]'}`}>
         {/* Logo & Branding */}
-        <div className="text-center mb-8">
+        <div className={`text-center transition-all duration-500 ${tab === 'register' ? 'mb-4 mt-2' : 'mb-8'}`}>
           <button 
             onClick={onBack}
-            className="inline-flex items-center justify-center w-16 h-16 bg-white/10 hover:bg-white/20 rounded-2xl shadow-xl transition-all duration-300 cursor-pointer mb-4 backdrop-blur-sm border border-white/20"
+            className={`inline-flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-2xl shadow-xl transition-all duration-300 cursor-pointer backdrop-blur-sm border border-white/20 ${tab === 'register' ? 'w-12 h-12 mb-2' : 'w-16 h-16 mb-4'}`}
           >
-            <ArrowLeft className="w-8 h-8 text-white" />
+            <ArrowLeft className={`${tab === 'register' ? 'w-6 h-6' : 'w-8 h-8'} text-white`} />
           </button>
-          <h1 className="text-4xl font-black text-white tracking-tight mb-2">Shorthandians</h1>
-          <p className="text-blue-100 font-medium tracking-wide">Elite Stenography Academy</p>
+          <h1 className={`${tab === 'register' ? 'text-3xl' : 'text-4xl'} font-black text-white tracking-tight mb-1`}>Shorthandians</h1>
+          <p className="text-blue-100 font-medium tracking-wide text-sm">Elite Stenography Academy</p>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-10 transition-all duration-500">
+        <div className="bg-white rounded-[2.5rem] shadow-2xl p-6 md:p-8 flex-1 flex flex-col justify-center transition-all duration-500">
 
             <>
               {/* ── Header ────────────────────────────────────────────── */}
