@@ -351,103 +351,27 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
+         style={{ background: 'linear-gradient(135deg, #07414e 0%, #0d6e70 50%, #0891b2 100%)' }}>
+         
+      <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
 
-      {/* ── Left branding panel ─────────────────────────────────────────── */}
-      <div
-        className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #07414e 0%, #0d6e70 50%, #0891b2 100%)' }}
-      >
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-300/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10">
-          <button onClick={onBack} className="flex items-center space-x-2 text-white/70 hover:text-white transition-colors text-sm font-medium mb-14">
-            <ArrowLeft className="w-4 h-4" /><span>Back to Home</span>
+      <div className={`relative z-10 w-full transition-all duration-500 ${tab === 'register' ? 'max-w-4xl' : 'max-w-[480px]'}`}>
+        {/* Logo & Branding */}
+        <div className="text-center mb-8">
+          <button 
+            onClick={onBack}
+            className="inline-flex items-center justify-center w-16 h-16 bg-white/10 hover:bg-white/20 rounded-2xl shadow-xl transition-all duration-300 cursor-pointer mb-4 backdrop-blur-sm border border-white/20"
+          >
+            <ArrowLeft className="w-8 h-8 text-white" />
           </button>
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center font-black text-blue-900 text-2xl shadow-lg">S</div>
-            <span className="text-3xl font-black text-white tracking-tight">Shorthandians</span>
-          </div>
-          <p className="text-blue-200 text-lg leading-relaxed max-w-sm">
-            India's premier platform for SSC & High Court steno exam preparation.
-          </p>
+          <h1 className="text-4xl font-black text-white tracking-tight mb-2">Shorthandians</h1>
+          <p className="text-blue-100 font-medium tracking-wide">Elite Stenography Academy</p>
         </div>
 
-        <div className="relative z-10 space-y-5">
-          {[
-            { icon: '⚡', text: 'Real-time WPM tracking & speed analysis' },
-            { icon: '🎙️', text: 'Audio speed control from 0.7× to 1.2×' },
-            { icon: '⚖️', text: 'High Court formatting & Pitman exercises' },
-            { icon: '📊', text: 'Detailed accuracy reports after every test' },
-          ].map(({ icon, text }) => (
-            <div key={text} className="flex items-center space-x-4">
-              <span className="text-2xl">{icon}</span>
-              <span className="text-white/80 text-sm font-medium">{text}</span>
-            </div>
-          ))}
+        <div className="bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-10 transition-all duration-500">
 
-          <div className="pt-6 border-t border-white/15 mt-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-400 flex items-center justify-center font-black text-blue-900 text-sm shadow">AP</div>
-              <div>
-                <p className="text-white font-bold text-sm">Ayush Pandey</p>
-                <p className="text-blue-300 text-xs">Director, Shorthandians · Prayagraj</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Right form panel ─────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 overflow-y-auto">
-        <button
-          onClick={onBack}
-          className="lg:hidden flex items-center space-x-2 text-gray-500 hover:text-[#0d6e70] transition-colors text-sm font-medium mb-8 self-start"
-        >
-          <ArrowLeft className="w-4 h-4" /><span>Back to Home</span>
-        </button>
-
-        <div className={`w-full transition-all duration-300 ${tab === 'register' ? 'max-w-4xl' : 'max-w-md'}`}>
-
-          {/* ── Pending Approval Screen ─────────────────────────────────── */}
-          {tab === 'register' && regStep === 'pending' ? (
-            <div className="flex flex-col items-center text-center py-6">
-              <div className="w-24 h-24 bg-amber-50 rounded-full flex items-center justify-center mb-5 shadow-inner border-4 border-amber-200">
-                <ShieldCheck className="w-12 h-12 text-amber-500" />
-              </div>
-              <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full mb-4">
-                <CheckCircle className="w-3.5 h-3.5" />
-                <span>Registration Submitted!</span>
-              </div>
-              <h2 className="text-2xl font-black text-gray-900 mb-3">Account Pending Approval</h2>
-              <p className="text-gray-500 text-sm leading-relaxed mb-6 max-w-sm">
-                Your account details have been received. Your account is now{' '}
-                <strong className="text-amber-600">pending admin approval</strong>.
-                You will be able to log in once an administrator activates your account.
-              </p>
-
-              <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-5 text-left mb-6">
-                <p className="text-xs font-black text-amber-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> What happens next?
-                </p>
-                <ul className="text-sm text-amber-800 space-y-2 font-medium">
-                  <li className="flex items-start gap-2"><span className="mt-0.5">•</span>Admin reviews your registration details</li>
-                  <li className="flex items-start gap-2"><span className="mt-0.5">•</span>Your account status is updated to Active</li>
-                  <li className="flex items-start gap-2"><span className="mt-0.5">•</span>You can then log in with your email & password</li>
-                </ul>
-              </div>
-
-              <button
-                onClick={() => switchTab('login')}
-                className="w-full flex items-center justify-center space-x-2 bg-[#0d6e70] hover:bg-blue-700 text-white font-black py-4 rounded-xl transition-all hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
-              >
-                <BookOpen className="w-5 h-5" />
-                <span>Go to Login</span>
-              </button>
-            </div>
-
-          ) : (
             <>
               {/* ── Header ────────────────────────────────────────────── */}
               <div className="mb-8">
@@ -869,7 +793,6 @@ const AuthPage = ({ onAuthSuccess, onBack }) => {
               )}
 
             </>
-          )}
         </div>
       </div>
     </div>
