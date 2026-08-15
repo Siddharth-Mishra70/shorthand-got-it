@@ -944,6 +944,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     
                                     // FOMO Lock Logic
                                     const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+                                    const isFreeDemo = test.is_demo === true || test.category === 'demo_audio';
                                     let isLockedForUser = false;
 
                                     if (user && user.role !== 'admin') {
