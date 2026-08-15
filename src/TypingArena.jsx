@@ -234,9 +234,11 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
 
                     const combinedRaw = [...mapped.map(m => {
                         const dbEx = dbExercises.find(x => x.id === m.id);
-                        if (dbEx && (dbEx.category === 'audio' || dbEx.category === 'Audio Dictation')) {
+                        if (dbEx && (dbEx.category === 'audio' || dbEx.category === 'Audio Dictation' || dbEx.category === 'demo_audio')) {
                             m.audio = dbEx.audio_url || dbEx.audio;
-                            m.category = 'audio';
+                            if (dbEx.category !== 'demo_audio') {
+                                m.category = 'audio';
+                            }
                         }
                         return m;
                     }), ...localKc, ...localAudio, ...localComp];
@@ -333,8 +335,8 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
 
     // ── Grouping Logic ──────────────────────────────────────────
     const filteredList = React.useMemo(() => {
-        const currentCategory = selectedExercise?.category || (initialCourse === 'arena-audio' ? 'audio' : (initialCourse === 'arena-comp' ? 'comprehension' : 'kailash'));
-        const list = availableExercises.filter(e => e.category === currentCategory || (currentCategory === 'kailash' && e.id.startsWith('kc-')));
+        const currentCategory = selectedExercise?.category === 'demo_audio' ? 'audio' : (selectedExercise?.category || (initialCourse === 'arena-audio' ? 'audio' : (initialCourse === 'arena-comp' ? 'comprehension' : 'kailash')));
+        const list = availableExercises.filter(e => e.category === currentCategory || (currentCategory === 'audio' && e.category === 'demo_audio') || (currentCategory === 'kailash' && e.id.startsWith('kc-')));
         
         if (!searchQuery.trim()) return list;
         const q = searchQuery.toLowerCase();
@@ -902,7 +904,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     const wordCount = test.lines?.join(' ').split(/\s+/).filter(Boolean).length || 0;
                                     const dateStr = test.created_at ? new Date(test.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent';
                                     const globalIdx = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
-                                    const isAudio = test.category === 'audio';
+                                    const isAudio = test.category === 'audio' || test.category === 'demo_audio';
                                     
                                     // FOMO Lock Logic
                                     const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
@@ -912,12 +914,13 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                         const enrolled = user.enrolled_courses || [];
                                         const courseIdMap = {
                                             'audio': 'audio-dict',
+                                            'demo_audio': 'audio-dict',
                                             'kailash': 'kailash-chandra',
                                             'comprehension': 'comprehension'
                                         };
                                         const mappedCourseId = courseIdMap[test.category] || test.category;
                                         if (!enrolled.includes(mappedCourseId)) {
-                                            isFreeDemo = test.is_demo === true && test.created_at && (new Date() - new Date(test.created_at)) <= (24 * 60 * 60 * 1000);
+                                            isFreeDemo = test.category === 'demo_audio' || (test.is_demo === true && test.created_at && (new Date() - new Date(test.created_at)) <= (24 * 60 * 60 * 1000));
                                             isLockedForUser = !isFreeDemo;
                                         }
                                     }
@@ -931,13 +934,13 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                                     return;
                                                 }
                                                 const t = {...test};
-                                                if (t.category === 'audio') {
+                                                if (t.category === 'audio' || t.category === 'demo_audio') {
                                                     t.isAudioCourse = true;
                                                 }
                                                 setSelectedExercise(t);
                                                 setDbExerciseId(t.id.startsWith('kc-') ? null : t.id);
                                                 setViewMode('practice');
-                                                if (t.category === 'audio' && audioRef.current && t.audio) {
+                                                if ((t.category === 'audio' || t.category === 'demo_audio') && audioRef.current && t.audio) {
                                                     audioRef.current.src = t.audio;
                                                 }
                                                 handleReset();
