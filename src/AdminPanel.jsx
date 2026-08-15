@@ -112,12 +112,8 @@ const ModuleCard = ({ mod, onClick }) => {
     );
 };
 
-const UploadForm = ({ title, setTitle, isDemo, setIsDemo, text, setText, pdf, setPdf, onFileSelect, onSave, onCancel, jobTitle, setJobTitle, testType, setTestType, saving, accept = ".pdf,image/*", textLabel = "Practice Text", fileLabel = "File Upload (Optional)", isEdit = false, duration, setDuration }) => (
+const UploadForm = ({ title, setTitle, text, setText, pdf, setPdf, onFileSelect, onSave, onCancel, jobTitle, setJobTitle, testType, setTestType, saving, accept = ".pdf,image/*", textLabel = "Practice Text", fileLabel = "File Upload (Optional)", isEdit = false, duration, setDuration }) => (
     <div className="bg-white p-6 rounded-xl shadow border border-gray-200 mb-6 animate-in slide-in-from-top-2">
-        <div className="mb-5 flex items-center bg-blue-50 border border-blue-100 p-3 rounded-lg">
-            <input type="checkbox" id="isDemoCheck" checked={!!isDemo} onChange={e => setIsDemo && setIsDemo(e.target.checked)} className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer" />
-            <label htmlFor="isDemoCheck" className="ml-3 block text-sm font-bold text-blue-900 cursor-pointer">Mark as Demo (Free for all users for 24 hours)</label>
-        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
             <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Title <span className="text-red-500">*</span></label>
@@ -540,13 +536,19 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     const [isAddingAudio, setIsAddingAudio] = useState(false);
     const [editingAudioId, setEditingAudioId] = useState(null);
     const [audioTitle, setAudioTitle] = useState('');
-    const [audioIsDemo, setAudioIsDemo] = useState(false);
+    const [audioUploadSection, setAudioUploadSection] = useState('main');
+    const [activeAudioTab, setActiveAudioTab] = useState('main');
     const [audioState, setAudioState] = useState('');
     const [pendingAudioFile, setPendingAudioFile] = useState(null);
     const [audioSuccess, setAudioSuccess] = useState(false);
     const [audioDuration, setAudioDuration] = useState(10);
     const [audioTests, setAudioTests] = useState(() => {
         const saved = localStorage.getItem('admin_published_audio_list');
+        if (saved) return JSON.parse(saved);
+        return [];
+    });
+    const [demoAudioTests, setDemoAudioTests] = useState(() => {
+        const saved = localStorage.getItem('admin_demo_audio_list');
         if (saved) return JSON.parse(saved);
         return [];
     });
@@ -655,6 +657,13 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 const seenIds = new Set();
                 const cleanAud = aud.filter(a => { if (seenIds.has(a.id)) return false; seenIds.add(a.id); return true; });
                 setAudioTests(cleanAud.map(a => ({ ...a, audio: a.audio_url || a.audio })));
+            }
+
+            const { data: demoAud } = await supabase.from('exercises').select('*').eq('category', 'demo_audio').is('is_hidden', false).order('created_at', { ascending: false });
+            if (demoAud) {
+                const seenIds = new Set();
+                const cleanAud = demoAud.filter(a => { if (seenIds.has(a.id)) return false; seenIds.add(a.id); return true; });
+                setDemoAudioTests(cleanAud.map(a => ({ ...a, audio: a.audio_url || a.audio })));
             }
             
             // Sync Admin Test Results Page
@@ -1328,12 +1337,53 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         }
     };
 
+    const handleDeleteDemoAudio = async (id) => {
+        if (!window.confirm('Delete this Demo Audio? This will NOT remove it from the Main section.')) return;
+        try {
+            if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
+                const { error } = await supabase.from('exercises').update({ is_hidden: true }).eq('id', id);
+                if (error) throw error;
+            }
+            const updatedDemoTests = demoAudioTests.filter(t => t.id !== id);
+            setDemoAudioTests(updatedDemoTests);
+            localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests));
+        } catch (err) {
+            console.error('Demo audio delete failed:', err);
+            alert('Operation failed.');
+        }
+    };
+
+    const handleEditDemoAudio = (id) => {
+        const test = demoAudioTests.find(t => t.id === id);
+        if (!test) return;
+        setAudioTitle(test.title || '');
+        setGlobalJobTitle(test.job_title || '');
+        setGlobalTestType(test.test_type || '');
+        let rawText = test.original_text || test.text || '';
+        let durationVal = 10;
+        if (rawText.trim().startsWith('{')) {
+            try {
+                const parsed = JSON.parse(rawText);
+                rawText = parsed.plain || parsed.text || '';
+                durationVal = parsed.duration || 10;
+            } catch(e) {}
+        }
+        setPendingAudioText(rawText);
+        setAudioDuration(durationVal);
+        setPendingAudio(test.audio_url || test.audio || test.pdf || null);
+        setPendingAudioFile(null);
+        setAudioState(test.state || 'None');
+        setEditingAudioId(id);
+        setIsAddingAudio(true);
+    };
+
     const handleSaveAudioData = async () => {
         if (!audioTitle.trim() || (!pendingAudio && !pendingAudioFile)) { alert('Title and audio file are required.'); return; }
         
         setAudioPublishing(true);
         const isEdit = !!editingAudioId;
         const testId = isEdit ? editingAudioId : crypto.randomUUID();
+        const demoTestId = crypto.randomUUID();
         const newStateVal = audioState === 'None' ? null : (audioState || null);
         
         let finalAudioUrl = pendingAudio;
@@ -1347,31 +1397,18 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
-                // 1. Upload to Supabase Storage if brand new file
                 if (pendingAudioFile) {
                     const fileExt = pendingAudioFile.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-                    
-                    const { error: uploadError } = await supabase.storage
-                        .from('shorthand-media')
-                        .upload(`audio/${fileName}`, pendingAudioFile);
-                        
+                    const { error: uploadError } = await supabase.storage.from('shorthand-media').upload(`audio/${fileName}`, pendingAudioFile);
                     if (uploadError) throw uploadError;
-
-                    // 2. Get Public URL
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('shorthand-media')
-                        .getPublicUrl(`audio/${fileName}`);
-                        
+                    const { data: { publicUrl } } = supabase.storage.from('shorthand-media').getPublicUrl(`audio/${fileName}`);
                     finalAudioUrl = publicUrl;
                 }
 
-                // 3. Save to DB using only confirmed schema columns
                 const dbPayload = {
-                    is_demo: pitmanIsDemo,
                     title: audioTitle,
                     audio_url: finalAudioUrl,
-                    category: 'Audio Dictation',
                     original_text: encodedText
                 };
 
@@ -1379,43 +1416,65 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     const { error } = await supabase.from('exercises').update(dbPayload).eq('id', testId);
                     if (error) throw error;
                 } else {
-                    const { error } = await supabase.from('exercises').insert([{ id: testId, ...dbPayload }]);
-                    if (error) throw error;
+                    if (audioUploadSection === 'demo') {
+                        const mainPayload = { ...dbPayload, id: testId, category: 'Audio Dictation' };
+                        const demoPayload = { ...dbPayload, id: demoTestId, category: 'demo_audio' };
+                        const { error } = await supabase.from('exercises').insert([mainPayload, demoPayload]);
+                        if (error) throw error;
+                    } else {
+                        const { error } = await supabase.from('exercises').insert([{ id: testId, ...dbPayload, category: 'Audio Dictation' }]);
+                        if (error) throw error;
+                    }
                 }
             } else throw new Error('offline');
             
-            // Show Success Notification
             setAudioSuccess(true);
             setTimeout(() => setAudioSuccess(false), 3000);
 
-            // Local Mock UI Sync to prevent required refresh
             const newTest = { 
                 id: testId, 
                 title: audioTitle, 
                 job_title: globalJobTitle,
                 test_type: globalTestType, 
                 original_text: encodedText, 
-                audio: finalAudioUrl, // maintain internal property name for array rendering
-                category: 'audio', 
+                audio: finalAudioUrl,
                 state: newStateVal, 
-                created_at: isEdit ? audioTests.find(t => t.id === testId)?.created_at || new Date().toISOString() : new Date().toISOString() 
+                created_at: new Date().toISOString() 
             };
             
-            const updated = isEdit ? audioTests.map(t => t.id === testId ? newTest : t) : [newTest, ...audioTests];
-            setAudioTests(updated);
-            try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updated)); } catch {}
+            if (isEdit) {
+                const updatedAudioTests = audioTests.map(t => t.id === testId ? { ...t, ...newTest, created_at: t.created_at } : t);
+                setAudioTests(updatedAudioTests);
+                localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests));
+                
+                const updatedDemoTests = demoAudioTests.map(t => t.id === testId ? { ...t, ...newTest, created_at: t.created_at } : t);
+                setDemoAudioTests(updatedDemoTests);
+                localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests));
+            } else {
+                if (audioUploadSection === 'demo') {
+                    const updatedAudioTests = [{ ...newTest, category: 'audio' }, ...audioTests];
+                    setAudioTests(updatedAudioTests);
+                    localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests));
+                    
+                    const updatedDemoTests = [{ ...newTest, id: demoTestId, category: 'demo_audio' }, ...demoAudioTests];
+                    setDemoAudioTests(updatedDemoTests);
+                    localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests));
+                } else {
+                    const updatedAudioTests = [{ ...newTest, category: 'audio' }, ...audioTests];
+                    setAudioTests(updatedAudioTests);
+                    localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests));
+                }
+            }
             
             if (newStateVal) {
                 const key = `${newStateVal}__audio`;
                 const existing = stateExams[key] || [];
-                const newExams = { ...stateExams, [key]: isEdit ? existing.map(e => e.id === testId ? newTest : e) : [newTest, ...existing] };
-                saveStateExams(newExams);
+                saveStateExams({ ...stateExams, [key]: isEdit ? existing.map(e => e.id === testId ? newTest : e) : [newTest, ...existing] });
             }
         } catch (err) {
             console.error('Audio upload error:', err);
             alert('Failed to save audio completely. Detail: ' + err.message);
         } finally { 
-            // Reset state
             setAudioPublishing(false); 
             setIsAddingAudio(false); 
             setEditingAudioId(null);
@@ -1515,7 +1574,6 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 });
 
                 const dbPayload = {
-                    is_demo: hcIsDemo,
                     title: hcTitle,
                     original_text: encodedContent,
                     category: 'highcourt'
@@ -1641,7 +1699,6 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 }
 
                 const dbPayload = {
-                    is_demo: stateUploadIsDemo,
                     title: pitmanTitle,
                     job_title: globalJobTitle,
                     test_type: globalTestType,
@@ -1727,14 +1784,13 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             test_type: globalTestType,
             original_text: kcText, 
             category: 'kailash', 
-            is_demo: kcIsDemo,
             created_at: isEdit ? kailashTests.find(t => t.id === testId)?.created_at || new Date().toISOString() : new Date().toISOString() 
         };
         
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
                 if (isEdit) {
-                    const { error } = await supabase.from('exercises').update({ title: finalTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: kcText, is_demo: kcIsDemo }).eq('id', testId);
+                    const { error } = await supabase.from('exercises').update({ title: finalTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: kcText }).eq('id', testId);
                     if (error) throw error;
                 } else {
                     const { error } = await supabase.from('exercises').insert(newTest);
@@ -1872,7 +1928,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
 
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
-                const dbPayload = { is_demo: compIsDemo, title: compTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: compText, category: 'comprehension' };
+                const dbPayload = { title: compTitle, job_title: globalJobTitle, test_type: globalTestType, original_text: compText, category: 'comprehension' };
                 if (isEdit) await supabase.from('exercises').update(dbPayload).eq('id', testId);
                 else await supabase.from('exercises').insert([{ id: testId, ...dbPayload }]);
             }
@@ -1977,10 +2033,6 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Title</label>
-                                    <div className="mb-4 flex items-center bg-blue-50 border border-blue-100 p-3 rounded-lg">
-                                        <input type="checkbox" id="demo_hc" checked={!!hcIsDemo} onChange={e => setHcIsDemo(e.target.checked)} className="w-5 h-5 text-blue-600 rounded cursor-pointer" />
-                                        <label htmlFor="demo_hc" className="ml-3 block text-sm font-bold text-blue-900 cursor-pointer">Mark as Demo (Free for 24 hours)</label>
-                                    </div>
                                     <input type="text" value={hcTitle} onChange={e => setHcTitle(e.target.value)} placeholder="e.g. Allahabad HC — Set 01" className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
                                 </div>
                                 <div>
@@ -2118,10 +2170,6 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                             </div>
                             <div className="mb-4">
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Exercise Title / Number</label>
-                                <div className="mb-4 col-span-full flex items-center bg-blue-50 border border-blue-100 p-3 rounded-lg">
-                                    <input type="checkbox" id="demo_kc" checked={!!kcIsDemo} onChange={e => setKcIsDemo(e.target.checked)} className="w-5 h-5 text-blue-600 rounded cursor-pointer" />
-                                    <label htmlFor="demo_kc" className="ml-3 block text-sm font-bold text-blue-900 cursor-pointer">Mark as Demo (Free for 24 hours)</label>
-                                </div>
                                 <input type="text" value={kcTitle} onChange={e => setKcTitle(e.target.value)} placeholder="e.g. Exercise 5" className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500" />
                             </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
@@ -2196,10 +2244,22 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     {isAddingAudio && (
                         <div className="bg-white p-6 rounded-xl shadow border border-gray-200 mb-6 animate-in slide-in-from-top-2">
                             {editingAudioId && <div className="mb-4 text-xs font-bold text-blue-600 bg-blue-50 py-2 px-3 rounded inline-block animate-in fade-in">✎ Editing Existing Audio Dictation</div>}
-                            <div className="mb-4 flex items-center bg-blue-50 border border-blue-100 p-3 rounded-lg">
-                                <input type="checkbox" id="demo_audio" checked={!!audioIsDemo} onChange={e => setAudioIsDemo(e.target.checked)} className="w-5 h-5 text-blue-600 rounded cursor-pointer" />
-                                <label htmlFor="demo_audio" className="ml-3 block text-sm font-bold text-blue-900 cursor-pointer">Mark as Demo (Free for 24 hours)</label>
-                            </div>
+                            
+                            {!editingAudioId && (
+                                <div className="mb-4">
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Upload Destination</label>
+                                    <div className="flex space-x-4">
+                                        <label className="flex items-center cursor-pointer">
+                                            <input type="radio" value="main" checked={audioUploadSection === 'main'} onChange={(e) => setAudioUploadSection(e.target.value)} className="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300" />
+                                            <span className="ml-2 text-sm text-gray-700 font-medium">Main Section</span>
+                                        </label>
+                                        <label className="flex items-center cursor-pointer">
+                                            <input type="radio" value="demo" checked={audioUploadSection === 'demo'} onChange={(e) => setAudioUploadSection(e.target.value)} className="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300" />
+                                            <span className="ml-2 text-sm text-gray-700 font-medium">Demo Section (Also saves to Main)</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Dictation Title / Tag</label>
@@ -2269,7 +2329,38 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                         </div>
                     )}
                     
-                    <TestList tests={audioTests} onDelete={handleDeleteAudio} onEdit={handleEditAudio} emptyMsg="No Audio Dictations uploaded yet." />
+                    {!isAddingAudio && (
+                        <div className="mt-2">
+                            <div className="flex bg-gray-100 p-1 rounded-xl w-max mb-4">
+                                <button
+                                    onClick={() => setActiveAudioTab('main')}
+                                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                                        activeAudioTab === 'main'
+                                            ? 'bg-white text-gray-800 shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    Main Dictations
+                                </button>
+                                <button
+                                    onClick={() => setActiveAudioTab('demo')}
+                                    className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                                        activeAudioTab === 'demo'
+                                            ? 'bg-white text-gray-800 shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    Demo Dictations
+                                </button>
+                            </div>
+                            
+                            {activeAudioTab === 'main' ? (
+                                <TestList tests={audioTests} onDelete={handleDeleteAudio} onEdit={handleEditAudio} emptyMsg="No Main Audio Dictations uploaded yet." />
+                            ) : (
+                                <TestList tests={demoAudioTests} onDelete={handleDeleteDemoAudio} onEdit={handleEditDemoAudio} emptyMsg="No Demo Audio Dictations uploaded yet." />
+                            )}
+                        </div>
+                    )}
                 </div>
             );
         }

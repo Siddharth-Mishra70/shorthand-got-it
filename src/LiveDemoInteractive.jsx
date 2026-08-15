@@ -45,14 +45,11 @@ const LiveDemoInteractive = ({ onRegister }) => {
   useEffect(() => {
     const fetchRecentAudio = async () => {
       try {
-        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        
         const { data, error } = await supabase
           .from('exercises')
           .select('*')
-          .eq('category', 'audio')
+          .eq('category', 'demo_audio')
           .eq('is_hidden', false)
-          .gte('created_at', twentyFourHoursAgo)
           .order('created_at', { ascending: false })
           .limit(1);
 
