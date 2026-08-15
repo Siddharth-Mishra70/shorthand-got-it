@@ -1346,7 +1346,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             }
             const updatedDemoTests = demoAudioTests.filter(t => t.id !== id);
             setDemoAudioTests(updatedDemoTests);
-            localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests));
+            try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch(e) {}
         } catch (err) {
             console.error('Demo audio delete failed:', err);
             alert('Operation failed.');
@@ -1445,24 +1445,24 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             if (isEdit) {
                 const updatedAudioTests = audioTests.map(t => t.id === testId ? { ...t, ...newTest, created_at: t.created_at } : t);
                 setAudioTests(updatedAudioTests);
-                localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests));
+                try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
                 
                 const updatedDemoTests = demoAudioTests.map(t => t.id === testId ? { ...t, ...newTest, created_at: t.created_at } : t);
                 setDemoAudioTests(updatedDemoTests);
-                localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests));
+                try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch (e) {}
             } else {
                 if (audioUploadSection === 'demo') {
                     const updatedAudioTests = [{ ...newTest, category: 'audio' }, ...audioTests];
                     setAudioTests(updatedAudioTests);
-                    localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests));
+                    try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
                     
                     const updatedDemoTests = [{ ...newTest, id: demoTestId, category: 'demo_audio' }, ...demoAudioTests];
                     setDemoAudioTests(updatedDemoTests);
-                    localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests));
+                    try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch (e) {}
                 } else {
                     const updatedAudioTests = [{ ...newTest, category: 'audio' }, ...audioTests];
                     setAudioTests(updatedAudioTests);
-                    localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests));
+                    try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
                 }
             }
             
@@ -1525,7 +1525,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
             // Success: Update state
             const updatedAudioTests = audioTests.filter(t => t.id !== id);
             setAudioTests(updatedAudioTests); 
-            localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests));
+            try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
             
             const test = audioTests.find(t => t.id === id);
             if (test && test.state) {
