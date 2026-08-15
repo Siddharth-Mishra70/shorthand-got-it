@@ -1409,7 +1409,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 const dbPayload = {
                     title: audioTitle,
                     audio_url: finalAudioUrl,
-                    original_text: encodedText
+                    original_text: encodedText,
+                    is_hidden: false
                 };
 
                 if (isEdit) {
@@ -1419,10 +1420,12 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     if (audioUploadSection === 'demo') {
                         const mainPayload = { ...dbPayload, id: testId, category: 'Audio Dictation' };
                         const demoPayload = { ...dbPayload, id: demoTestId, category: 'demo_audio' };
-                        const { error } = await supabase.from('exercises').insert([mainPayload, demoPayload]);
-                        if (error) throw error;
+                        const { error: err1 } = await supabase.from('exercises').insert(mainPayload);
+                        if (err1) throw err1;
+                        const { error: err2 } = await supabase.from('exercises').insert(demoPayload);
+                        if (err2) throw err2;
                     } else {
-                        const { error } = await supabase.from('exercises').insert([{ id: testId, ...dbPayload, category: 'Audio Dictation' }]);
+                        const { error } = await supabase.from('exercises').insert({ id: testId, ...dbPayload, category: 'Audio Dictation' });
                         if (error) throw error;
                     }
                 }
