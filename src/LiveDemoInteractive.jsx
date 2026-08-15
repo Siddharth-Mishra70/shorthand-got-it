@@ -49,7 +49,7 @@ const LiveDemoInteractive = ({ onRegister }) => {
           .from('exercises')
           .select('*')
           .eq('category', 'demo_audio')
-          .eq('is_hidden', false)
+          .neq('is_hidden', true)
           .order('created_at', { ascending: false })
           .limit(1);
 

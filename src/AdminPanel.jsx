@@ -631,27 +631,27 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     React.useEffect(() => {
         const syncData = async () => {
             if (!supabase || supabase.supabaseUrl?.includes('placeholder')) return;
-            const { data: hc } = await supabase.from('exercises').select('*').eq('category', 'highcourt').is('is_hidden', false).order('created_at', { ascending: false });
+            const { data: hc } = await supabase.from('exercises').select('*').eq('category', 'highcourt').neq('is_hidden', true).order('created_at', { ascending: false });
             if (hc) {
                 const seen = new Set();
                 setHcTests(hc.filter(i => { if (seen.has(i.id)) return false; seen.add(i.id); return true; }));
             }
-            const { data: pit } = await supabase.from('exercises').select('*').ilike('category', '%pitman%').is('is_hidden', false).order('created_at', { ascending: false });
+            const { data: pit } = await supabase.from('exercises').select('*').ilike('category', '%pitman%').neq('is_hidden', true).order('created_at', { ascending: false });
             if (pit) {
                 const seen = new Set();
                 setPitmanTests(pit.filter(i => { if (seen.has(i.id)) return false; seen.add(i.id); return true; }));
             }
-            const { data: kc } = await supabase.from('exercises').select('*').eq('category', 'kailash').is('is_hidden', false).order('created_at', { ascending: false });
+            const { data: kc } = await supabase.from('exercises').select('*').eq('category', 'kailash').neq('is_hidden', true).order('created_at', { ascending: false });
             if (kc) {
                 const seen = new Set();
                 setKailashTests(kc.filter(i => { if (seen.has(i.id)) return false; seen.add(i.id); return true; }));
             }
-            const { data: comp } = await supabase.from('exercises').select('*').eq('category', 'comprehension').is('is_hidden', false).order('created_at', { ascending: false });
+            const { data: comp } = await supabase.from('exercises').select('*').eq('category', 'comprehension').neq('is_hidden', true).order('created_at', { ascending: false });
             if (comp) {
                 const seen = new Set();
                 setCompTests(comp.filter(i => { if (seen.has(i.id)) return false; seen.add(i.id); return true; }));
             }
-            const { data: aud } = await supabase.from('exercises').select('*').in('category', ['audio', 'Audio Dictation']).is('is_hidden', false).order('created_at', { ascending: false });
+            const { data: aud } = await supabase.from('exercises').select('*').in('category', ['audio', 'Audio Dictation']).neq('is_hidden', true).order('created_at', { ascending: false });
             if (aud) {
                 // Deduplicate and map audio
                 const seenIds = new Set();
@@ -659,7 +659,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 setAudioTests(cleanAud.map(a => ({ ...a, audio: a.audio_url || a.audio })));
             }
 
-            const { data: demoAud } = await supabase.from('exercises').select('*').eq('category', 'demo_audio').is('is_hidden', false).order('created_at', { ascending: false });
+            const { data: demoAud } = await supabase.from('exercises').select('*').eq('category', 'demo_audio').neq('is_hidden', true).order('created_at', { ascending: false });
             if (demoAud) {
                 const seenIds = new Set();
                 const cleanAud = demoAud.filter(a => { if (seenIds.has(a.id)) return false; seenIds.add(a.id); return true; });
@@ -1384,6 +1384,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         setPendingAudio(test.audio_url || test.audio || test.pdf || null);
         setPendingAudioFile(null);
         setAudioState(test.state || 'None');
+        setAudioUploadSection('demo');
         setEditingAudioId(id);
         setIsAddingAudio(true);
     };
@@ -1394,8 +1395,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         setAudioPublishing(true);
         const isEdit = !!editingAudioId;
         const testId = isEdit ? editingAudioId : crypto.randomUUID();
-        const demoTestId = crypto.randomUUID();
         const newStateVal = audioState === 'None' ? null : (audioState || null);
+        const targetCategory = audioUploadSection === 'demo' ? 'demo_audio' : 'Audio Dictation';
         
         let finalAudioUrl = pendingAudio;
         const encodedText = JSON.stringify({
@@ -1421,6 +1422,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     title: audioTitle,
                     audio_url: finalAudioUrl,
                     original_text: encodedText,
+                    category: targetCategory,
                     is_hidden: false
                 };
 
@@ -1428,14 +1430,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     const { error } = await supabase.from('exercises').update(dbPayload).eq('id', testId);
                     if (error) throw error;
                 } else {
-                    if (audioUploadSection === 'demo') {
-                        const demoPayload = { ...dbPayload, id: testId, category: 'demo_audio' };
-                        const { error } = await supabase.from('exercises').insert(demoPayload);
-                        if (error) throw error;
-                    } else {
-                        const { error } = await supabase.from('exercises').insert({ id: testId, ...dbPayload, category: 'Audio Dictation' });
-                        if (error) throw error;
-                    }
+                    const { error } = await supabase.from('exercises').insert({ id: testId, ...dbPayload });
+                    if (error) throw error;
                 }
             } else throw new Error('offline');
             
@@ -1449,28 +1445,25 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 test_type: globalTestType, 
                 original_text: encodedText, 
                 audio: finalAudioUrl,
+                category: targetCategory,
                 state: newStateVal, 
                 created_at: new Date().toISOString() 
             };
             
-            if (isEdit) {
-                const updatedAudioTests = audioTests.map(t => t.id === testId ? { ...t, ...newTest, created_at: t.created_at } : t);
-                setAudioTests(updatedAudioTests);
-                try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
-                
-                const updatedDemoTests = demoAudioTests.map(t => t.id === testId ? { ...t, ...newTest, created_at: t.created_at } : t);
+            if (audioUploadSection === 'demo') {
+                const updatedDemoTests = isEdit 
+                    ? demoAudioTests.map(t => t.id === testId ? { ...t, ...newTest } : t)
+                    : [{ ...newTest }, ...demoAudioTests];
                 setDemoAudioTests(updatedDemoTests);
+                setAudioTests(audioTests.filter(t => t.id !== testId));
                 try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch (e) {}
             } else {
-                if (audioUploadSection === 'demo') {
-                    const updatedDemoTests = [{ ...newTest, category: 'demo_audio' }, ...demoAudioTests];
-                    setDemoAudioTests(updatedDemoTests);
-                    try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch (e) {}
-                } else {
-                    const updatedAudioTests = [{ ...newTest, category: 'audio' }, ...audioTests];
-                    setAudioTests(updatedAudioTests);
-                    try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
-                }
+                const updatedAudioTests = isEdit
+                    ? audioTests.map(t => t.id === testId ? { ...t, ...newTest } : t)
+                    : [{ ...newTest, category: 'audio' }, ...audioTests];
+                setAudioTests(updatedAudioTests);
+                setDemoAudioTests(demoAudioTests.filter(t => t.id !== testId));
+                try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
             }
             
             if (newStateVal) {
@@ -1513,6 +1506,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         setPendingAudio(test.audio_url || test.audio || test.pdf || null);
         setPendingAudioFile(null);
         setAudioState(test.state || 'None');
+        setAudioUploadSection('main');
         setEditingAudioId(id);
         setIsAddingAudio(true);
     };

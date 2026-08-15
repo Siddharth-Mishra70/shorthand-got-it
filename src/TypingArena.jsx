@@ -140,7 +140,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                 const { data: dbExercises, error: exError } = await supabase
                     .from('exercises')
                     .select('*')
-                    .eq('is_hidden', false)
+                    .neq('is_hidden', true)
                     .order('created_at', { ascending: false });
 
                 if (!exError && dbExercises && dbExercises.length > 0) {
@@ -220,7 +220,38 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                             return {
                                 id: item.id || `audio-local-${idx + 1}`,
                                 title: item.title || `Audio Dictation #${list.length - idx}`,
-                                category: 'audio',
+                                category: item.category || 'audio',
+                                audio: item.audio,
+                                state: item.state,
+                                job_title: item.job_title,
+                                test_type: item.test_type,
+                                created_at: item.created_at,
+                                duration: durationVal,
+                                lines: rawText.split('\n').filter(line => line.trim() !== '')
+                            };
+                        });
+                    }
+
+                    const storedDemoAudio = localStorage.getItem('admin_demo_audio_list');
+                    let localDemoAudio = [];
+                    if (storedDemoAudio) {
+                        const list = JSON.parse(storedDemoAudio);
+                        localDemoAudio = list.map((item, idx) => {
+                            let rawText = item.text || item.original_text || '';
+                            let durationVal = null;
+                            if (rawText.trim().startsWith('{')) {
+                                try {
+                                    const parsed = JSON.parse(rawText);
+                                    if (parsed.plain || parsed.text) {
+                                        rawText = parsed.plain || parsed.text;
+                                        durationVal = parsed.duration || null;
+                                    }
+                                } catch(e) {}
+                            }
+                            return {
+                                id: item.id || `demo-audio-local-${idx + 1}`,
+                                title: item.title || `Demo Audio #${list.length - idx}`,
+                                category: 'demo_audio',
                                 audio: item.audio,
                                 state: item.state,
                                 job_title: item.job_title,
@@ -236,17 +267,22 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                         const dbEx = dbExercises.find(x => x.id === m.id);
                         if (dbEx && (dbEx.category === 'audio' || dbEx.category === 'Audio Dictation' || dbEx.category === 'demo_audio')) {
                             m.audio = dbEx.audio_url || dbEx.audio;
-                            if (dbEx.category !== 'demo_audio') {
-                                m.category = 'audio';
-                            }
                         }
                         return m;
-                    }), ...localKc, ...localAudio, ...localComp];
+                    }), ...localKc, ...localAudio, ...localDemoAudio, ...localComp];
 
-                    // DEDUPLICATE by ID before setting state to avoid "duplicate key" react error
+                    // DEDUPLICATE by ID - preserve demo_audio category if present
                     const uniqueMap = new Map();
                     combinedRaw.forEach(item => {
-                        if (item.id) uniqueMap.set(item.id, item);
+                        if (item.id) {
+                            if (uniqueMap.has(item.id)) {
+                                const existing = uniqueMap.get(item.id);
+                                if (existing.category === 'demo_audio' || item.category === 'demo_audio') {
+                                    item.category = 'demo_audio';
+                                }
+                            }
+                            uniqueMap.set(item.id, item);
+                        }
                     });
                     let combined = Array.from(uniqueMap.values());
                     
@@ -295,13 +331,13 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
         const isCompView = targetCourseId === 'comprehension' || targetCourseId === 'arena-comp';
         
         if (isAudioView || selectedExercise?.id === 'audio-dict') {
-            const audios = availableExercises.filter(e => e.category === 'audio');
+            const audios = availableExercises.filter(e => e.category === 'audio' || e.category === 'Audio Dictation' || e.category === 'demo_audio');
             if (audios.length > 0) {
                 const target = audios[0];
                 if (selectedExercise?.id !== target.id) {
                     target.isAudioCourse = true;
                     setSelectedExercise(target);
-                    setDbExerciseId(target.id.startsWith('audio-local') ? null : target.id);
+                    setDbExerciseId(target.id.startsWith('audio-local') || target.id.startsWith('demo-audio-local') ? null : target.id);
                     handleReset();
                 }
             }
@@ -320,7 +356,7 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
             if (found && selectedExercise?.id !== found.id) {
                 setSelectedExercise(found);
                 setDbExerciseId(found?.id && !found.id.startsWith('kc-') && !found.id.startsWith('ssc-') ? found.id : null);
-                if (found.category === 'audio') {
+                if (found.category === 'audio' || found.category === 'demo_audio') {
                     found.isAudioCourse = true;
                 }
                 handleReset();
@@ -910,18 +946,25 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
                                     let isLockedForUser = false;
                                     let isFreeDemo = false;
-                                    if (user && user.role !== 'admin') {
+
+                                    if (test.category === 'demo_audio' || test.is_demo === true || (test.title && test.title.toLowerCase().includes('demo'))) {
+                                        isFreeDemo = true;
+                                    }
+
+                                    if (isFreeDemo) {
+                                        isLockedForUser = false;
+                                    } else if (user && user.role !== 'admin') {
                                         const enrolled = user.enrolled_courses || [];
                                         const courseIdMap = {
                                             'audio': 'audio-dict',
+                                            'Audio Dictation': 'audio-dict',
                                             'demo_audio': 'audio-dict',
                                             'kailash': 'kailash-chandra',
                                             'comprehension': 'comprehension'
                                         };
                                         const mappedCourseId = courseIdMap[test.category] || test.category;
                                         if (!enrolled.includes(mappedCourseId)) {
-                                            isFreeDemo = test.category === 'demo_audio' || (test.is_demo === true && test.created_at && (new Date() - new Date(test.created_at)) <= (24 * 60 * 60 * 1000));
-                                            isLockedForUser = !isFreeDemo;
+                                            isLockedForUser = true;
                                         }
                                     }
                                     
