@@ -945,15 +945,8 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                     // FOMO Lock Logic
                                     const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
                                     let isLockedForUser = false;
-                                    let isFreeDemo = false;
 
-                                    if (test.category === 'demo_audio' || test.is_demo === true || (test.title && test.title.toLowerCase().includes('demo'))) {
-                                        isFreeDemo = true;
-                                    }
-
-                                    if (isFreeDemo) {
-                                        isLockedForUser = false;
-                                    } else if (user && user.role !== 'admin') {
+                                    if (user && user.role !== 'admin') {
                                         const enrolled = user.enrolled_courses || [];
                                         const courseIdMap = {
                                             'audio': 'audio-dict',
@@ -966,6 +959,8 @@ const TypingArena = ({ initialCourse = 'kc-1', onTestComplete, courses, onNaviga
                                         if (!enrolled.includes(mappedCourseId)) {
                                             isLockedForUser = true;
                                         }
+                                    } else if (!user) {
+                                        isLockedForUser = true;
                                     }
                                     
                                     return (

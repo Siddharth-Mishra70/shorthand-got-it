@@ -659,7 +659,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 setAudioTests(cleanAud.map(a => ({ ...a, audio: a.audio_url || a.audio })));
             }
 
-            const { data: demoAud } = await supabase.from('exercises').select('*').eq('category', 'demo_audio').neq('is_hidden', true).order('created_at', { ascending: false });
+            const { data: demoAud } = await supabase.from('exercises').select('*').or('is_demo.eq.true,category.eq.demo_audio').neq('is_hidden', true).order('created_at', { ascending: false });
             if (demoAud) {
                 const seenIds = new Set();
                 const cleanAud = demoAud.filter(a => { if (seenIds.has(a.id)) return false; seenIds.add(a.id); return true; });
@@ -1338,28 +1338,26 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     };
 
     const handleDeleteDemoAudio = async (id) => {
-        if (!window.confirm('Remove this from Demo Section? It will be moved to the Main Section and locked for unpaid users.')) return;
+        if (!window.confirm('Remove this from Demo Section? It will remain in the Main Section as a paid exercise.')) return;
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
-                const { error } = await supabase.from('exercises').update({ category: 'Audio Dictation' }).eq('id', id);
+                const { error } = await supabase.from('exercises').update({ is_demo: false, category: 'Audio Dictation' }).eq('id', id);
                 if (error) throw error;
             }
             
-            // Find the test to move
-            const testToMove = demoAudioTests.find(t => t.id === id);
-            if (testToMove) {
-                // Add to main tests
-                const updatedAudioTests = [{ ...testToMove, category: 'audio' }, ...audioTests];
-                setAudioTests(updatedAudioTests);
-                try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
-            }
-
-            // Remove from demo tests
+            // Remove from demo list
             const updatedDemoTests = demoAudioTests.filter(t => t.id !== id);
             setDemoAudioTests(updatedDemoTests);
             try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch(e) {}
+
+            // Keep/Update in main audio tests list with is_demo: false
+            const testToUpdate = demoAudioTests.find(t => t.id === id);
+            const mainCopy = { ...(testToUpdate || {}), category: 'audio', is_demo: false };
+            const updatedAudioTests = [mainCopy, ...audioTests.filter(t => t.id !== id)];
+            setAudioTests(updatedAudioTests);
+            try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
         } catch (err) {
-            console.error('Demo audio move failed:', err);
+            console.error('Demo audio remove failed:', err);
             alert('Operation failed.');
         }
     };
@@ -1396,7 +1394,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
         const isEdit = !!editingAudioId;
         const testId = isEdit ? editingAudioId : crypto.randomUUID();
         const newStateVal = audioState === 'None' ? null : (audioState || null);
-        const targetCategory = audioUploadSection === 'demo' ? 'demo_audio' : 'Audio Dictation';
+        const isDemoSelection = audioUploadSection === 'demo';
         
         let finalAudioUrl = pendingAudio;
         const encodedText = JSON.stringify({
@@ -1422,7 +1420,8 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     title: audioTitle,
                     audio_url: finalAudioUrl,
                     original_text: encodedText,
-                    category: targetCategory,
+                    category: 'Audio Dictation',
+                    is_demo: isDemoSelection,
                     is_hidden: false
                 };
 
@@ -1445,25 +1444,26 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 test_type: globalTestType, 
                 original_text: encodedText, 
                 audio: finalAudioUrl,
-                category: targetCategory,
+                category: 'Audio Dictation',
+                is_demo: isDemoSelection,
                 state: newStateVal, 
                 created_at: new Date().toISOString() 
             };
             
-            if (audioUploadSection === 'demo') {
-                const updatedDemoTests = isEdit 
-                    ? demoAudioTests.map(t => t.id === testId ? { ...t, ...newTest } : t)
-                    : [{ ...newTest }, ...demoAudioTests];
+            if (isDemoSelection) {
+                const updatedDemoTests = [newTest, ...demoAudioTests.filter(t => t.id !== testId)];
+                const updatedAudioTests = [newTest, ...audioTests.filter(t => t.id !== testId)];
                 setDemoAudioTests(updatedDemoTests);
-                setAudioTests(audioTests.filter(t => t.id !== testId));
-                try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch (e) {}
-            } else {
-                const updatedAudioTests = isEdit
-                    ? audioTests.map(t => t.id === testId ? { ...t, ...newTest } : t)
-                    : [{ ...newTest, category: 'audio' }, ...audioTests];
                 setAudioTests(updatedAudioTests);
-                setDemoAudioTests(demoAudioTests.filter(t => t.id !== testId));
+                try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch (e) {}
                 try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
+            } else {
+                const updatedAudioTests = [newTest, ...audioTests.filter(t => t.id !== testId)];
+                const updatedDemoTests = demoAudioTests.filter(t => t.id !== testId);
+                setAudioTests(updatedAudioTests);
+                setDemoAudioTests(updatedDemoTests);
+                try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
+                try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch (e) {}
             }
             
             if (newStateVal) {
