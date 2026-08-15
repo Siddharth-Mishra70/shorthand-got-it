@@ -1338,17 +1338,28 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
     };
 
     const handleDeleteDemoAudio = async (id) => {
-        if (!window.confirm('Delete this Demo Audio? This will NOT remove it from the Main section.')) return;
+        if (!window.confirm('Remove this from Demo Section? It will be moved to the Main Section and locked for unpaid users.')) return;
         try {
             if (supabase && !supabase.supabaseUrl?.includes('placeholder')) {
-                const { error } = await supabase.from('exercises').update({ is_hidden: true }).eq('id', id);
+                const { error } = await supabase.from('exercises').update({ category: 'Audio Dictation' }).eq('id', id);
                 if (error) throw error;
             }
+            
+            // Find the test to move
+            const testToMove = demoAudioTests.find(t => t.id === id);
+            if (testToMove) {
+                // Add to main tests
+                const updatedAudioTests = [{ ...testToMove, category: 'audio' }, ...audioTests];
+                setAudioTests(updatedAudioTests);
+                try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
+            }
+
+            // Remove from demo tests
             const updatedDemoTests = demoAudioTests.filter(t => t.id !== id);
             setDemoAudioTests(updatedDemoTests);
             try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch(e) {}
         } catch (err) {
-            console.error('Demo audio delete failed:', err);
+            console.error('Demo audio move failed:', err);
             alert('Operation failed.');
         }
     };
@@ -1418,12 +1429,9 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                     if (error) throw error;
                 } else {
                     if (audioUploadSection === 'demo') {
-                        const mainPayload = { ...dbPayload, id: testId, category: 'Audio Dictation' };
-                        const demoPayload = { ...dbPayload, id: demoTestId, category: 'demo_audio' };
-                        const { error: err1 } = await supabase.from('exercises').insert(mainPayload);
-                        if (err1) throw err1;
-                        const { error: err2 } = await supabase.from('exercises').insert(demoPayload);
-                        if (err2) throw err2;
+                        const demoPayload = { ...dbPayload, id: testId, category: 'demo_audio' };
+                        const { error } = await supabase.from('exercises').insert(demoPayload);
+                        if (error) throw error;
                     } else {
                         const { error } = await supabase.from('exercises').insert({ id: testId, ...dbPayload, category: 'Audio Dictation' });
                         if (error) throw error;
@@ -1455,11 +1463,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                 try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch (e) {}
             } else {
                 if (audioUploadSection === 'demo') {
-                    const updatedAudioTests = [{ ...newTest, category: 'audio' }, ...audioTests];
-                    setAudioTests(updatedAudioTests);
-                    try { localStorage.setItem('admin_published_audio_list', JSON.stringify(updatedAudioTests)); } catch (e) {}
-                    
-                    const updatedDemoTests = [{ ...newTest, id: demoTestId, category: 'demo_audio' }, ...demoAudioTests];
+                    const updatedDemoTests = [{ ...newTest, category: 'demo_audio' }, ...demoAudioTests];
                     setDemoAudioTests(updatedDemoTests);
                     try { localStorage.setItem('admin_demo_audio_list', JSON.stringify(updatedDemoTests)); } catch (e) {}
                 } else {
@@ -2258,7 +2262,7 @@ const AdminPanel = ({ user, onLogout, supabase }) => {
                                         </label>
                                         <label className="flex items-center cursor-pointer">
                                             <input type="radio" value="demo" checked={audioUploadSection === 'demo'} onChange={(e) => setAudioUploadSection(e.target.value)} className="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300" />
-                                            <span className="ml-2 text-sm text-gray-700 font-medium">Demo Section (Also saves to Main)</span>
+                                            <span className="ml-2 text-sm text-gray-700 font-medium">Demo Section (Free to all users)</span>
                                         </label>
                                     </div>
                                 </div>
